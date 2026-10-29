@@ -68,6 +68,10 @@ already have them (`4.75`, `120.00`). Rows are applied as soon as you
 submit; each import's rows are kept with the original text for reference.
 Don't submit the same file twice; there's no duplicate detection yet.
 
+> **Fixed 2026-10-29:** imports before this date posted a tenth of each
+> amount (`4.75` posted 0.475 BD). `db/reports/adjustment-import-shortfall.sql`
+> lists every affected row; see `docs/fixes/adjustment-import-amounts.md`.
+
 ## Settlement ops
 
 **Re-run a daily batch** — pick a business date (and optionally one
