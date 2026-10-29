@@ -4,6 +4,7 @@ import { createPaymentLink } from "../../api/paymentLinks.js";
 import { describeError } from "../../api/client.js";
 import { useDashboardAuth } from "../../auth/DashboardAuthContext.js";
 import { localDateTimeToIso } from "../../format.js";
+import { ErrorBanner } from "../../components/ui.js";
 
 /**
  * `POST /v1/merchants/:merchantId/payment-links`, `owner`/`finance`
@@ -72,7 +73,7 @@ export function PaymentLinkCreatePage() {
     <section>
       <h1>New payment link</h1>
 
-      {error ? <p className="dash-error">{error}</p> : null}
+      {error ? <ErrorBanner message={error} /> : null}
 
       <form className="dash-form" onSubmit={(e) => void handleSubmit(e)}>
         <label>

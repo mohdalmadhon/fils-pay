@@ -9,6 +9,7 @@ import type {
   BatchReplayResult,
   WebhookDeliveryStatus,
 } from "../../types.js";
+import { ErrorBanner } from "../../components/ui.js";
 
 const REPLAYABLE_STATUSES: WebhookDeliveryStatus[] = [
   "exhausted",
@@ -117,7 +118,7 @@ export function WebhookReplayPage() {
       <section>
         <h1>Webhook replay</h1>
         <p className="admin-muted">Pick the merchant whose endpoint needs a replay.</p>
-        {error ? <p className="admin-error">{error}</p> : null}
+        {error ? <ErrorBanner message={error} /> : null}
         <form className="admin-form admin-form-inline" onSubmit={(e) => void handleSearch(e)}>
           <label>
             Search merchants
@@ -161,7 +162,7 @@ export function WebhookReplayPage() {
         )}
       </p>
 
-      {error ? <p className="admin-error">{error}</p> : null}
+      {error ? <ErrorBanner message={error} /> : null}
 
       {detail && endpoints.length === 0 ? (
         <p className="admin-muted">This merchant has no webhook endpoints registered.</p>

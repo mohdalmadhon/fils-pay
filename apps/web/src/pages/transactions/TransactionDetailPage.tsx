@@ -10,6 +10,7 @@ import { ApiError, describeError } from "../../api/client.js";
 import { RequireRole } from "../../auth/RequireRole.js";
 import { bhd, dash, dateTime } from "../../format.js";
 import type { TransactionDto, TransactionEventDto } from "../../types.js";
+import { EmptyState, Loading, StatePanel, statusLabel } from "../../components/ui.js";
 
 type LoadState =
   | { kind: "loading" }
@@ -109,17 +110,22 @@ export function TransactionDetailPage() {
   }
 
   if (state.kind === "loading") {
-    return <p>Loading...</p>;
+    return <Loading />;
   }
   if (state.kind === "not_found") {
     return (
-      <section>
-        <h1>Transaction not found</h1>
-        <p>
-          No transaction with this id exists on your account.{" "}
-          <Link to="/dashboard/transactions">Back to transactions</Link>
-        </p>
-      </section>
+      <StatePanel
+        scene="lost"
+        code="Not found"
+        title="Transaction not found"
+        actions={
+          <Link className="dash-button dash-button-primary" to="/dashboard/transactions">
+            Back to transactions
+          </Link>
+        }
+      >
+        <p>No transaction with this id exists on your account.</p>
+      </StatePanel>
     );
   }
   if (state.kind === "error") {
@@ -145,7 +151,7 @@ export function TransactionDetailPage() {
       <dl className="dash-dl">
         <dt>Status</dt>
         <dd>
-          <span className={`dash-status dash-status-${txn.status}`}>{txn.status}</span>
+          <span className={`dash-status dash-status-${txn.status}`}>{statusLabel(txn.status)}</span>
         </dd>
         <dt>Authorized amount</dt>
         <dd>{bhd(txn.amountFils)}</dd>
@@ -252,7 +258,9 @@ export function TransactionDetailPage() {
           ))}
           {events.length === 0 ? (
             <tr>
-              <td colSpan={4}>No events recorded.</td>
+              <td colSpan={4} className="fp-empty-cell">
+                <EmptyState title="No events recorded." />
+              </td>
             </tr>
           ) : null}
         </tbody>

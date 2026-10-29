@@ -3,6 +3,7 @@ import { getReconciliation } from "../../api/settlement.js";
 import { ApiError, describeError } from "../../api/client.js";
 import { bhd } from "../../format.js";
 import type { ReconciliationReport } from "../../types.js";
+import { ErrorBanner, Loading } from "../../components/ui.js";
 
 /**
  * `from`/`to` are required by this endpoint (`400 invalid_request` without
@@ -101,7 +102,7 @@ export function ReconciliationPage() {
         </button>
       </form>
 
-      {error ? <p className="dash-error">{error}</p> : null}
+      {error ? <ErrorBanner message={error} /> : null}
 
       {report ? (
         <>
@@ -139,7 +140,7 @@ export function ReconciliationPage() {
         </>
       ) : null}
 
-      {loading && !report ? <p>Loading...</p> : null}
+      {loading && !report ? <Loading /> : null}
     </section>
   );
 }

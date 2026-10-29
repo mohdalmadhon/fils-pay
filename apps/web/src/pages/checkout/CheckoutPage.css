@@ -1,72 +1,544 @@
+/* Public checkout (/pay/:token): the order summary on the left, the payment
+ * form on the right, stacked on phones. Tokens come from theme.css. */
+
 .checkout-page {
-  max-width: 420px;
-  margin: 2rem auto;
-  padding: 1.5rem;
-  font-family: system-ui, sans-serif;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  background: var(--c-surface);
+}
+
+/* Summary ------------------------------------------------------------------ */
+
+.checkout-sea {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: var(--sp-8) var(--sp-12) var(--sp-12);
+  background: var(--c-bg);
+  border-right: 1px solid var(--c-line);
+}
+
+.checkout-brandbar,
+.checkout-summary {
+  width: 100%;
+  max-width: 26rem;
+}
+
+.checkout-brandbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-16);
+}
+
+.checkout-secure-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  color: var(--c-ink-3);
+}
+
+.checkout-secure-tag svg {
+  width: 14px;
+  height: 14px;
+}
+
+.checkout-payee {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin: 0 0 var(--sp-3);
+  font-size: var(--text-md);
+  font-weight: 500;
+  color: var(--c-ink-2);
+}
+
+.checkout-payee-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--c-on-primary);
+  background: var(--c-primary);
+  border-radius: var(--r-2);
 }
 
 .checkout-amount {
-  font-size: 2rem;
+  margin: 0 0 var(--sp-8);
+  font-size: clamp(2.25rem, 4vw, 3rem);
+  line-height: 1.1;
+  color: var(--c-ink);
+}
+
+.checkout-amount .fp-amount-bd {
   font-weight: 600;
-  margin: 0.5rem 0;
 }
 
-.checkout-description,
-.checkout-reference {
-  color: #555;
-  margin: 0.25rem 0;
+.checkout-lines {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sp-3) 0;
+  margin: 0;
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--c-line);
 }
 
-.checkout-error {
-  color: #b00020;
-  margin: 1rem 0;
+.checkout-lines dt {
+  font-size: var(--text-sm);
+  color: var(--c-ink-3);
+}
+
+.checkout-lines dd {
+  margin: 0;
+  padding-left: var(--sp-6);
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.checkout-lines .checkout-total {
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--c-line);
+  font-weight: 600;
+  color: var(--c-ink);
+}
+
+/* Form --------------------------------------------------------------------- */
+
+.checkout-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  max-width: 28rem;
+  padding: var(--sp-12) var(--sp-12) var(--sp-12);
+}
+
+/* The card turns in 3D: it leans toward the pointer and flips over for the
+ * CVV. */
+.checkout-card3d {
+  width: 100%;
+  max-width: 20rem;
+  margin: 0 0 var(--sp-8);
+  perspective: 1100px;
+}
+
+.checkout-card-shaker.is-shaking {
+  animation: checkout-shake 420ms var(--ease);
+}
+
+@keyframes checkout-shake {
+  20%,
+  60% {
+    transform: translateX(-8px);
+  }
+  40%,
+  80% {
+    transform: translateX(8px);
+  }
+}
+
+.checkout-card-inner {
+  --tx: 0;
+  --ty: 0;
+  position: relative;
+  aspect-ratio: 1.586;
+  transform-style: preserve-3d;
+  transform: rotateY(calc(var(--tx) * 8deg)) rotateX(calc(var(--ty) * -6deg));
+  transition: transform 600ms var(--ease);
+}
+
+.checkout-card-inner[data-flipped="true"] {
+  transform: rotateY(180deg);
+}
+
+.checkout-card {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--sp-5);
+  color: #f4f4f5;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.07), transparent 45%),
+    repeating-linear-gradient(180deg, transparent 0 15px, rgba(255, 255, 255, 0.025) 15px 16px),
+    #1c1c20;
+  border-radius: 14px;
+  box-shadow: 0 20px 40px -20px rgba(24, 24, 27, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+}
+
+:root[data-costume="halloween"] .checkout-card {
+  background:
+    linear-gradient(135deg, rgba(255, 205, 178, 0.25), transparent 50%),
+    linear-gradient(160deg, #3a2028, #1a0f14);
+  box-shadow: 0 20px 40px -18px rgba(255, 180, 162, 0.35), inset 0 0 0 1px rgba(255, 205, 178, 0.18);
+}
+
+/* A slow sheen crosses the card once a brand is recognised. */
+.checkout-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.12) 48%, transparent 60%);
+  transform: translateX(-70%);
+  transition: transform 900ms var(--ease);
+  pointer-events: none;
+}
+
+.checkout-card[data-brand="visa"]::after,
+.checkout-card[data-brand="mastercard"]::after,
+.checkout-card[data-brand="amex"]::after {
+  transform: translateX(70%);
+}
+
+.checkout-card-back {
+  transform: rotateY(180deg);
+  justify-content: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-5) 0 var(--sp-4);
+}
+
+.checkout-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.checkout-card-chip {
+  width: 36px;
+  height: 27px;
+}
+
+.checkout-card-brand {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #d4d4d8;
+}
+
+.checkout-card-number {
+  font-family: var(--font-mono);
+  font-size: clamp(1rem, 4.2vw, 1.2rem);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+
+.checkout-card-bottom {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: #a1a1aa;
+}
+
+.checkout-card-stripe {
+  display: block;
+  height: 36px;
+  background: #09090b;
+}
+
+.checkout-card-sign {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 var(--sp-5);
+  padding: 6px;
+  background: repeating-linear-gradient(-45deg, #f4f4f5 0 5px, #e4e4e7 5px 10px);
+  border-radius: var(--r-1);
+}
+
+.checkout-card-cvv {
+  padding: 1px 8px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: #18181b;
+  background: #ffffff;
+  border-radius: 3px;
+}
+
+.checkout-card-backnote {
+  margin: 0 var(--sp-5);
+  font-size: var(--text-xs);
+  color: #a1a1aa;
 }
 
 .checkout-form {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
+  gap: var(--sp-4);
 }
 
 .checkout-form label {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.875rem;
+  gap: 6px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--c-ink-2);
 }
 
 .checkout-form input {
-  padding: 0.5rem;
-  font-size: 1rem;
+  width: 100%;
+  min-width: 0;
+  height: var(--control-h-lg);
+  padding: 0 var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  color: var(--c-ink);
+  background: var(--c-surface);
+  border: 1px solid var(--c-line-2);
+  border-radius: var(--r-2);
+  box-shadow: var(--shadow-xs);
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+
+.checkout-form input::placeholder {
+  color: var(--c-ink-4);
+}
+
+.checkout-form input:hover {
+  border-color: var(--c-ink-4);
+}
+
+.checkout-form input:focus {
+  outline: none;
+  border-color: var(--c-accent);
+  box-shadow: var(--ring);
 }
 
 .checkout-form-row {
-  display: flex;
-  gap: 0.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  gap: var(--sp-3);
 }
 
-.checkout-form button {
-  padding: 0.75rem;
-  font-size: 1rem;
+.checkout-form button[type="submit"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  height: 48px;
+  margin-top: var(--sp-2);
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--c-on-primary);
+  background: var(--c-primary);
+  border: 0;
+  border-radius: var(--r-2);
   cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
 
-.checkout-form button:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
+.checkout-form button[type="submit"] svg {
+  width: 16px;
+  height: 16px;
 }
 
-/* YA: cosmetic only, never sent to the server */
-.checkout-brand-hint {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #555;
+.checkout-form button[type="submit"] .fp-scene-waiting {
+  color: currentColor;
+}
+
+.checkout-form button[type="submit"]:hover {
+  background: var(--c-primary-hover);
+}
+
+:root[data-costume="halloween"] .checkout-form button[type="submit"] {
+  background-image: var(--hw-gradient);
+  box-shadow: 0 10px 28px -10px rgba(255, 180, 162, 0.8);
+}
+
+.checkout-form button[type="submit"]:active {
+  transform: translateY(1px);
+}
+
+.checkout-form button[type="submit"]:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+
+.checkout-error {
+  margin: 0 0 var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--c-ink);
+  background: var(--c-danger-soft);
+  border: 1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);
+  border-left: 3px solid var(--c-danger);
+  border-radius: var(--r-2);
+}
+
+.checkout-secure {
+  margin: var(--sp-5) 0 0;
+  font-size: var(--text-xs);
+  color: var(--c-ink-3);
 }
 
 .checkout-help {
-  margin-top: 1.5rem;
-  font-size: 0.75rem;
-  color: #777;
+  margin-top: var(--sp-3);
+  font-size: var(--text-xs);
+  color: var(--c-ink-3);
+}
+
+.checkout-help summary {
+  cursor: pointer;
+  color: var(--c-ink-2);
+}
+
+.checkout-help p {
+  margin: var(--sp-2) 0 0;
+}
+
+/* Outcomes (paid, expired, not found) -------------------------------------- */
+
+.checkout-outcome {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-5);
+  padding: var(--sp-8) var(--sp-4);
+  background: var(--c-bg);
+}
+
+.checkout-outcome-card {
+  width: 100%;
+  max-width: 30rem;
+  padding: var(--sp-8) var(--sp-6);
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.checkout-outcome .fp-state {
+  margin: 0 auto;
+  padding: 0;
+}
+
+.checkout-paid-amount {
+  margin: var(--sp-2) 0 var(--sp-6);
+  font-size: var(--text-3xl);
+  line-height: 1.1;
+  color: var(--c-ink);
+}
+
+.checkout-receipt {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sp-2) var(--sp-4);
+  margin: 0 0 var(--sp-4);
+  padding: var(--sp-4) 0 0;
+  text-align: left;
+  border-top: 1px dashed var(--c-line-2);
+}
+
+.checkout-receipt dt {
+  font-size: var(--text-sm);
+  color: var(--c-ink-3);
+}
+
+.checkout-receipt dd {
+  margin: 0;
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.checkout-note {
+  font-size: var(--text-xs);
+  color: var(--c-ink-3);
+}
+
+.checkout-print {
+  height: var(--control-h);
+  padding: 0 var(--sp-4);
+  font: inherit;
+  font-weight: 500;
+  color: var(--c-ink);
+  background: var(--c-surface);
+  border: 1px solid var(--c-line-2);
+  border-radius: var(--r-2);
+  cursor: pointer;
+}
+
+.checkout-print:hover {
+  background: var(--c-surface-2);
+}
+
+.checkout-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--c-ink-3);
+}
+
+.checkout-footer svg {
+  width: 14px;
+  height: 14px;
+}
+
+@media print {
+  .checkout-print,
+  .checkout-footer,
+  .fp-hw-toggle,
+  .fp-hw-layer {
+    display: none !important;
+  }
+  .checkout-outcome {
+    min-height: 0;
+    background: #fff;
+  }
+}
+
+@media (max-width: 860px) {
+  .checkout-page {
+    grid-template-columns: 1fr;
+  }
+  .checkout-sea {
+    align-items: stretch;
+    padding: var(--sp-4) var(--sp-5) var(--sp-6);
+    border-right: 0;
+    border-bottom: 1px solid var(--c-line);
+  }
+  .checkout-brandbar,
+  .checkout-summary {
+    max-width: none;
+  }
+  .checkout-brandbar {
+    margin-bottom: var(--sp-6);
+  }
+  .checkout-amount {
+    margin-bottom: var(--sp-4);
+    font-size: 2.25rem;
+  }
+  .checkout-lines .checkout-total {
+    display: none;
+  }
+  .checkout-panel {
+    max-width: none;
+    padding: var(--sp-6) var(--sp-5) var(--sp-16);
+  }
+  .checkout-card3d {
+    max-width: 18rem;
+    margin: 0 auto var(--sp-6);
+  }
+  .checkout-form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .checkout-form-row label:last-child {
+    grid-column: span 2;
+  }
 }

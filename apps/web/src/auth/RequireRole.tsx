@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useDashboardAuth } from "./DashboardAuthContext.js";
 import type { MerchantRole } from "../types.js";
+import { StatePanel } from "../components/ui.js";
 
 /**
  * A UI-only convenience gate. It is **explicitly not** the security boundary
@@ -62,13 +63,12 @@ export function RoleGatedPage({
     <RequireRole
       allow={allow}
       fallback={
-        <section>
-          <h1>{title}</h1>
-          <p className="dash-error">
-            You don&apos;t have permission to use this page — ask an owner or finance
-            user on your account.
+        <StatePanel scene="locked" code="Not permitted" title={title}>
+          <p>
+            Your role can view payments but can&apos;t open this page. An owner or finance user on
+            your account can do this for you, or change your role.
           </p>
-        </section>
+        </StatePanel>
       }
     >
       {children}

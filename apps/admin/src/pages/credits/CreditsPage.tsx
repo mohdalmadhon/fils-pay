@@ -112,12 +112,12 @@ export function CreditsPage() {
         <code>super_admin</code> operator — not the one who raised it — approves it.
       </p>
 
-      <nav className="admin-nav">
+      <nav className="admin-tabs fp-segment" aria-label="Credit status">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.value}
             type="button"
-            disabled={tab.value === status}
+            aria-pressed={tab.value === status}
             onClick={() => setStatus(tab.value)}
           >
             {tab.label}

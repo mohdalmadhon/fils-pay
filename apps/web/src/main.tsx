@@ -2,6 +2,14 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
 import { router } from "./router.js";
+import { initTheme } from "./components/kit/theme.js";
+import { HalloweenToggle, initCostume } from "./components/kit/Halloween.js";
+import "./theme.css";
+import "./dashboard.css";
+
+// Light or night, and the costume, decided before the first paint.
+initTheme();
+initCostume();
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
@@ -11,5 +19,6 @@ if (!rootElement) {
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <RouterProvider router={router} />
+    <HalloweenToggle />
   </React.StrictMode>,
 );

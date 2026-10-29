@@ -9,6 +9,7 @@ import { describeError } from "../../api/client.js";
 import { useDashboardAuth } from "../../auth/DashboardAuthContext.js";
 import { dateTime } from "../../format.js";
 import type { WebhookEndpointDto } from "../../types.js";
+import { EmptyState, ErrorBanner, Loading, statusLabel } from "../../components/ui.js";
 
 /**
  * `GET /v1/merchants/:merchantId/webhook-endpoints`. Unlike most
@@ -95,7 +96,7 @@ export function WebhookEndpointListPage() {
         </Link>
       </p>
 
-      {error ? <p className="dash-error">{error}</p> : null}
+      {error ? <ErrorBanner message={error} /> : null}
 
       <table className="dash-table">
         <thead>
@@ -117,7 +118,7 @@ export function WebhookEndpointListPage() {
                 <code>{endpoint.secretPrefix}</code>
               </td>
               <td>
-                <span className={`dash-status dash-status-${endpoint.status}`}>{endpoint.status}</span>
+                <span className={`dash-status dash-status-${endpoint.status}`}>{statusLabel(endpoint.status)}</span>
               </td>
               <td>{dateTime(endpoint.createdAt)}</td>
               <td>
@@ -142,13 +143,15 @@ export function WebhookEndpointListPage() {
           ))}
           {endpoints.length === 0 && !loading && !error ? (
             <tr>
-              <td colSpan={5}>No webhook endpoints registered.</td>
+              <td colSpan={5} className="fp-empty-cell">
+                <EmptyState title="No webhook endpoints registered." />
+              </td>
             </tr>
           ) : null}
         </tbody>
       </table>
 
-      {loading ? <p>Loading...</p> : null}
+      {loading ? <Loading /> : null}
     </section>
   );
 }

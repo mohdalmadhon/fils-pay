@@ -6,6 +6,11 @@ import { StalenessBadge } from "../../components/StalenessBadge.js";
 import { bhd, dash, dateTime } from "../../format.js";
 import { formatCount } from "../../utils/helpers.js";
 import type { PayoutTrendsResponse, TopLinksResponse, VolumesResponse } from "../../types.js";
+import { Amount, EmptyState, ErrorBanner } from "../../components/ui.js";
+import { useDashboardAuth } from "../../auth/DashboardAuthContext.js";
+import { AreaChart } from "../../components/kit/AreaChart.js";
+import { useCountUp } from "../../components/kit/CountUp.js";
+import { icons } from "../../components/art/Icons.js";
 
 /** 60s: comfortably above the reporting worker's 15s worst-case lag, and
  *  more than often enough for a dashboard. Poll, not push —
@@ -65,9 +70,65 @@ export function OverviewPage() {
 
   const peakGross = Math.max(1, ...(volumes?.points.map((point) => point.capturedGrossFils) ?? [1]));
 
+  const { me } = useDashboardAuth();
+  const totals = {
+    gross: volumes?.points.reduce((sum, p) => sum + p.capturedGrossFils, 0) ?? 0,
+    count: volumes?.points.reduce((sum, p) => sum + p.capturedCount, 0) ?? 0,
+    net: payouts?.points.reduce((sum, p) => sum + p.netPayoutFils, 0) ?? 0,
+    topLink: topLinks?.links[0] ?? null,
+  };
+  const hour = new Date().getHours();
+  const greeting = hour < 5 ? "Working late" : hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
   return (
     <section>
       <h1>Overview</h1>
+      <p className="ov-greeting">
+        {greeting}
+        {me ? `, ${me.merchant.displayName}` : ""}. Here is where your money stands.
+      </p>
+
+      <div className="ov-tiles">
+        <Tile label="Captured volume" icon={icons.transactions}>
+          <RollingAmount fils={totals.gross} />
+        </Tile>
+        <Tile label="Payments captured" icon={icons.check}>
+          <RollingCount value={totals.count} />
+        </Tile>
+        <Tile label="Net paid out" icon={icons.settlement}>
+          <RollingAmount fils={totals.net} />
+        </Tile>
+        <Tile label="Top payment link" icon={icons.links}>
+          {totals.topLink ? (
+            <>
+              <RollingAmount fils={totals.topLink.amountFils} />
+              <span className="ov-tile-sub">{dash(totals.topLink.reference)}</span>
+            </>
+          ) : (
+            <span className="ov-tile-none">None paid yet</span>
+          )}
+        </Tile>
+      </div>
+
+      <div className="ov-chart-card">
+        <div className="ov-chart-head">
+          <h2>Daily captured volume</h2>
+          {volumes ? <StalenessBadge readModelAsOf={volumes.readModelAsOf} live={volumes.live} /> : null}
+        </div>
+        {volumes && volumes.points.length > 0 ? (
+          <AreaChart
+            points={volumes.points.map((p) => ({ label: p.date, value: p.capturedGrossFils }))}
+            format={(v) => bhd(v)}
+            label={`Captured volume over ${volumes.points.length} days, peaking at ${bhd(peakGross)}.`}
+          />
+        ) : (
+          <EmptyState title={loading && !volumes ? "Loading volume" : "No captured volume in this window yet."}>
+            Volume appears here once the reporting worker has counted your captures.
+          </EmptyState>
+        )}
+      </div>
+
+      <h2 className="ov-details-title">Details</h2>
 
       <form
         className="dash-form dash-form-inline"
@@ -99,7 +160,7 @@ export function OverviewPage() {
         </button>
       </form>
 
-      {error ? <p className="dash-error">{error}</p> : null}
+      {error ? <ErrorBanner message={error} /> : null}
 
       <h2>
         Captured volume{" "}
@@ -134,7 +195,9 @@ export function OverviewPage() {
           ))}
           {volumes && volumes.points.length === 0 ? (
             <tr>
-              <td colSpan={5}>No captured volume in this window.</td>
+              <td colSpan={5} className="fp-empty-cell">
+                <EmptyState title="No captured volume in this window." />
+              </td>
             </tr>
           ) : null}
         </tbody>
@@ -170,7 +233,9 @@ export function OverviewPage() {
           ))}
           {payouts && payouts.points.length === 0 ? (
             <tr>
-              <td colSpan={6}>No settled batches in this window.</td>
+              <td colSpan={6} className="fp-empty-cell">
+                <EmptyState title="No settled batches in this window." />
+              </td>
             </tr>
           ) : null}
         </tbody>
@@ -206,11 +271,33 @@ export function OverviewPage() {
           ))}
           {topLinks && topLinks.links.length === 0 ? (
             <tr>
-              <td colSpan={5}>No paid payment links in this window.</td>
+              <td colSpan={5} className="fp-empty-cell">
+                <EmptyState title="No paid payment links in this window." />
+              </td>
             </tr>
           ) : null}
         </tbody>
       </table>
     </section>
   );
+}
+
+function Tile({ label, icon, children }: { label: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="ov-tile">
+      <span className="ov-tile-label">
+        {icon}
+        {label}
+      </span>
+      <span className="ov-tile-value">{children}</span>
+    </div>
+  );
+}
+
+function RollingAmount({ fils }: { fils: number }) {
+  return <Amount fils={useCountUp(fils)} />;
+}
+
+function RollingCount({ value }: { value: number }) {
+  return <>{formatCount(useCountUp(value))}</>;
 }
