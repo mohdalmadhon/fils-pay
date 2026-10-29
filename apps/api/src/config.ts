@@ -60,6 +60,10 @@ export interface Config {
   /** Bounded lifetime of a "view as merchant" grant. Checked on every
    *  lookup — there is no "until logout" path. */
   impersonationTtlMinutes: number;
+  /** Largest adjustment-import request body accepted, in bytes (the CSV is sent as JSON). */
+  adjustmentImportMaxBytes: number;
+  /** Most data rows one adjustment import may contain; larger files are split. */
+  adjustmentImportMaxRows: number;
 
   /** Base URL of apps/settlement's internal HTTP server, reachable only
    *  inside the compose network. The API delegates settlement operations
@@ -243,6 +247,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 
     impersonationCookieName: env.IMPERSONATION_COOKIE_NAME ?? "fp_impersonation",
     impersonationTtlMinutes: parseIntEnv(env.IMPERSONATION_TTL_MINUTES, 15),
+    adjustmentImportMaxBytes: parseIntEnv(env.ADJUSTMENT_IMPORT_MAX_BYTES, 10 * 1024 * 1024),
+    adjustmentImportMaxRows: parseIntEnv(env.ADJUSTMENT_IMPORT_MAX_ROWS, 20_000),
 
     settlementInternalUrl: env.SETTLEMENT_INTERNAL_URL ?? "http://settlement:8091",
     settlementInternalToken,

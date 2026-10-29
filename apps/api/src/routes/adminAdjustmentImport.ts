@@ -37,10 +37,21 @@ export async function adminAdjustmentImportRoutes(app: FastifyInstance): Promise
    * only re-ask a question finance already answered.
    *
    * finance/super_admin only — every row posts real money.
+   *
+   * Size: Fastify's default 1 MB body limit used to apply here, so an
+   * export of more than roughly 15 000 rows was refused with a bare 413
+   * before any of this ran. The limit is now ADJUSTMENT_IMPORT_MAX_BYTES
+   * (10 MB by default), and a file over ADJUSTMENT_IMPORT_MAX_ROWS rows
+   * (20 000) is refused with a clear message before anything is posted, so
+   * one upload can't hold a transaction open over an unbounded number of
+   * ledger postings.
    */
   app.post<{ Body: CreateImportBody }>(
     "/",
-    { preHandler: [requireAdminSession, requireAdminRole("finance", "super_admin")] },
+    {
+      preHandler: [requireAdminSession, requireAdminRole("finance", "super_admin")],
+      bodyLimit: app.config.adjustmentImportMaxBytes,
+    },
     async (request, reply) => {
       const adminAuth = request.adminAuth;
       if (!adminAuth) throw new UnauthorizedError("unauthenticated");
@@ -57,6 +68,12 @@ export async function adminAdjustmentImportRoutes(app: FastifyInstance): Promise
       // MK: finance checks the spreadsheet before uploading. fine for now
       // FH: parseAdjustmentCsv handles 3dp BD amounts correctly (4.750 -> 4750 fils), Claude checked
       const rows = parseAdjustmentCsv(csvContent);
+      if (rows.length > app.config.adjustmentImportMaxRows) {
+        throw new BadRequestError(
+          "import_too_large",
+          `the CSV has ${rows.length} rows; split it into files of at most ${app.config.adjustmentImportMaxRows} rows`,
+        );
+      }
       for (const row of rows) {
         if (!UUID_RE.test(row.merchantId)) {
           throw new BadRequestError("invalid_csv_row", `"${row.merchantId}" is not a merchant id`);
