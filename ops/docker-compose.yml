@@ -84,6 +84,9 @@ services:
       DATABASE_URL: postgres://filspay:filspay_dev_password@postgres:5432/filspay?sslmode=disable
       # TODO(YA, Jan): give the api its own role before anything is hosted.
       SETTLEMENT_INTERNAL_URL: http://settlement:8091
+      # The browser apps' origins (apps/web, apps/admin dev servers). Without
+      # this the API answers no CORS and the browser blocks every request.
+      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:5174
     depends_on:
       postgres:
         condition: service_healthy

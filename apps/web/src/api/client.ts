@@ -32,9 +32,9 @@ export class ApiError extends Error {
  * (`FST_ERR_CTP_EMPTY_JSON_BODY`). Same fix apps/admin's client.ts already
  * carries, for the same reason.
  */
-// FH: credentials include needs allow-credentials CORS on the api. works locally
-// this leaks the session cookie to whatever VITE_API_BASE_URL is — am
-// — MK: CORS is locked to the two origins in config. fine
+// Cross-origin with credentials: the API must list this app's origin in
+// CORS_ALLOWED_ORIGINS (apps/api/src/plugins/cors.ts), or the browser blocks
+// every call with "Failed to fetch". Only listed origins get the cookie back.
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const hasBody = init?.body !== undefined && init.body !== null;
   const res = await fetch(`${API_BASE_URL}${path}`, {

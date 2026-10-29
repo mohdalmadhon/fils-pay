@@ -55,6 +55,7 @@ first.
 | Service | Needs | Where it comes from in compose |
 |---|---|---|
 | api | `DATABASE_URL`, `SETTLEMENT_INTERNAL_URL` | `environment:` |
+| api | `CORS_ALLOWED_ORIGINS` | `environment:`; defaults to `http://localhost:5173,http://localhost:5174` outside production, **required** in production (the dashboard's and admin console's real origins) |
 | api | `WEBHOOK_SECRET_ENCRYPTION_KEY` | only outside dev; a dev key is used otherwise |
 | api | `ACQUIRER_CALLBACK_SIGNING_SECRET`, `NODE_ENV` | `.env.docker` |
 | settlement | `DATABASE_URL` | `environment:` |
