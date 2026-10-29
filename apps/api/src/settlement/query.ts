@@ -1,5 +1,6 @@
 import type { Pool } from "pg";
-import { estimateFeeFils } from "../fees/estimate.js";
+import { effectiveMdrBpsAt, settlementFeeFils, type FeeScheduleRow } from "../fees/settlementFee.js";
+import { VOLUME_TIER_BONUS_BPS, VOLUME_TIER_THRESHOLD_FILS } from "../fees/platformVolumeTier.js";
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
@@ -281,8 +282,10 @@ function bahrainLocalMidnightUtc(dateStr: string): Date {
  * @param input.from  inclusive business date (YYYY-MM-DD)
  * @param input.to    exclusive business date (YYYY-MM-DD)
  * @returns explained === true iff gapFils === 0. The pending figure is
- *          computed with the same rate the capture path used, including
- *          the effective-dated fee schedule and the platform volume tier.
+ *          what settlement will pay for each not-yet-batched capture,
+ *          priced exactly as CloseBatch prices it: the fee schedule row in
+ *          effect at the capture (else merchants.mdr_bps), less the platform
+ *          volume-tier bonus, with the negotiated discount, in integer fils.
  */
 export async function getReconciliationReport(
   pool: Pool,
@@ -291,7 +294,7 @@ export async function getReconciliationReport(
   const windowStart = bahrainLocalMidnightUtc(input.from);
   const windowEnd = bahrainLocalMidnightUtc(input.to);
 
-  const [ledgerResult, settlementResult, pendingResult, merchantResult] = await Promise.all([
+  const [ledgerResult, settlementResult, pendingResult, merchantResult, scheduleResult, platformResult] = await Promise.all([
     pool.query<{ net: string }>(
       `SELECT COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount_fils ELSE -amount_fils END), 0) AS net
          FROM ledger_entries
@@ -307,8 +310,8 @@ export async function getReconciliationReport(
           AND status IN ('closed', 'paid')`,
       [input.merchantId, input.from, input.to],
     ),
-    pool.query<{ amount_fils: string | number }>(
-      `SELECT te.amount_fils
+    pool.query<{ amount_fils: string | number; occurred_at: Date }>(
+      `SELECT te.amount_fils, te.occurred_at
          FROM transaction_events te
          JOIN transactions t ON t.id = te.transaction_id
         WHERE t.merchant_id = $1 AND te.event_type IN ('captured', 'partially_captured')
@@ -320,19 +323,35 @@ export async function getReconciliationReport(
       `SELECT mdr_bps, negotiated_discount_bps FROM merchants WHERE id = $1`,
       [input.merchantId],
     ),
+    pool.query<{ effective_from: Date; created_at: Date; mdr_bps: number }>(
+      `SELECT effective_from, created_at, mdr_bps FROM fee_schedules WHERE merchant_id = $1`,
+      [input.merchantId],
+    ),
+    pool.query<{ total_processed_fils: string | number }>(`SELECT total_processed_fils FROM platform_stats WHERE id = 1`),
   ]);
 
-  // MK: merchants.mdr_bps is kept in sync with the current fee_schedules row by the 0046 trigger,
-  // so reading it here is the same as resolving the schedule
+  // merchants.mdr_bps is only the fallback for a merchant with no schedule
+  // row yet. It is NOT kept in sync with fee_schedules (an old comment here
+  // claimed a 0046 trigger did that; no such trigger exists), so pending
+  // captures are priced from the schedule history, per capture instant.
   const merchant = merchantResult.rows[0];
-  const mdrBps = merchant?.mdr_bps ?? 0;
+  const fallbackMdrBps = merchant?.mdr_bps ?? 0;
   const discountBps = merchant?.negotiated_discount_bps ?? 0;
+  const schedules: FeeScheduleRow[] = scheduleResult.rows.map((row) => ({
+    effectiveFrom: row.effective_from,
+    createdAt: row.created_at,
+    mdrBps: row.mdr_bps,
+  }));
+  // CloseBatch reads the platform volume tier when the batch closes, so the
+  // current counter is the best prediction of what the batch will apply.
+  const tierBonusBps =
+    Number(platformResult.rows[0]?.total_processed_fils ?? 0) >= VOLUME_TIER_THRESHOLD_FILS ? VOLUME_TIER_BONUS_BPS : 0;
 
   let pendingUnbatchedFils = 0;
   for (const row of pendingResult.rows) {
     const amountFils = Number(row.amount_fils);
-    const feeFils = estimateFeeFils(amountFils, mdrBps, discountBps);
-    pendingUnbatchedFils += amountFils - feeFils;
+    const mdrBps = Math.max(0, effectiveMdrBpsAt(schedules, row.occurred_at, fallbackMdrBps) - tierBonusBps);
+    pendingUnbatchedFils += amountFils - settlementFeeFils(amountFils, mdrBps, discountBps);
   }
 
   const ledgerMerchantPayableNetFils = Number(ledgerResult.rows[0]?.net ?? 0);
