@@ -4,7 +4,7 @@ import { verifyApiKey } from "../apiKeys/verify.js";
 import { lookupImpersonationGrant } from "../admin/impersonation.js";
 import { lookupSession } from "./sessions.js";
 
-/** @property role null only for API keys. An impersonation actor always carries "support". */
+/** @property role null only for API keys. An impersonation actor carries "support" (view-only), or "owner" for a super_admin. */
 export interface MerchantAuthContext {
   merchantId: string;
   actorType: "merchant_session" | "merchant_api_key" | "admin_impersonation";
