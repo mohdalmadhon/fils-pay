@@ -73,7 +73,15 @@ export async function acquirerCallbackRoutes(app: FastifyInstance): Promise<void
       note: body.note,
     };
 
-    await withCallbackRetry(() => applyAcquirerCallback(app.db, callback));
+    const { duplicate } = await withCallbackRetry(() => applyAcquirerCallback(app.db, callback));
+    if (duplicate) {
+      // A redelivery of a callback we already saved. Still answer 200 so the
+      // acquirer stops retrying; nothing new is written.
+      request.log.info(
+        { callbackId: callback.callbackId, transactionId: callback.transactionId },
+        "acquirer callback redelivery ignored",
+      );
+    }
     reply.code(200).send({ received: true });
   });
 }
