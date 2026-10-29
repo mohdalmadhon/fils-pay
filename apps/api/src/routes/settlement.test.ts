@@ -515,6 +515,28 @@ test("GET /v1/settlement/reconciliation prices a pending capture at the merchant
   assert.equal(report.explained, true);
 });
 
+test("GET /v1/settlement/reconciliation rounds a half-fil fee the way the ledger does", async () => {
+  // 10,100 fils x 2.5% = 252.5 fils. Capture (applyRateFils) rounds half to
+  // even: 252. The old float estimate's Math.round gave 253 and a 1-fil gap.
+  const { rawKey } = await createApprovedMerchantWithApiKey("reconciliation-half-fil", 250);
+  const txn = await authorize(rawKey, 10_100);
+  await capture(rawKey, txn.id);
+
+  const businessDate = todayBahrainDateString();
+  const res = await app.inject({
+    method: "GET",
+    url: `/v1/settlement/reconciliation?from=${businessDate}&to=${addOneCalendarDay(businessDate)}`,
+    headers: authHeader(rawKey),
+  });
+  assert.equal(res.statusCode, 200, res.body);
+  const report = res.json() as { gapFils: number; pendingUnbatchedFils: number; ledgerMerchantPayableNetFils: number };
+
+  assert.equal(Number(applyRateFils(toFils(10_100), 250)), 252);
+  assert.equal(report.ledgerMerchantPayableNetFils, 10_100 - 252);
+  assert.equal(report.pendingUnbatchedFils, 10_100 - 252);
+  assert.equal(report.gapFils, 0);
+});
+
 test("GET /v1/settlement/summary sums captured amounts for transactions with a single capture event", async () => {
   const { rawKey } = await createApprovedMerchantWithApiKey("summary-single-event", 250);
   const txn1 = await authorize(rawKey, 10_000);
