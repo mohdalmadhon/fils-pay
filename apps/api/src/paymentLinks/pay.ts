@@ -8,7 +8,6 @@ export interface PayPaymentLinkInput {
   token: string;
   card: SimulatedCardInput;
   idempotencyKey: string;
-  submittedAt?: string;
 }
 
 export interface PayPaymentLinkResult {
@@ -26,11 +25,20 @@ interface ClaimedLinkRow {
 
 interface LinkStatusRow {
   status: string;
-  expires_at: Date;
+  /** Computed by Postgres against its own now(), the same clock the claim UPDATE uses. */
+  expired: boolean;
 }
 
-/** A pay request is judged against when the buyer pressed pay, so a
- * retry that lands after midnight is not penalised. */
+/**
+ * @deprecated Not used by the pay flow, and it must never be used to decide
+ * whether a link has expired. It returns whatever instant the caller
+ * supplied, and `submittedAt` arrives in the unauthenticated public pay
+ * request body, so a buyer (or anyone with the link) could backdate it to
+ * pay an expired link, or postdate it to block a valid payment. Expiry is
+ * judged only against the database clock (see the claim UPDATE below).
+ * Kept only because the locked test file pay.test.ts still imports it;
+ * delete both together.
+ */
 export function expiryReferenceTime(submittedAt?: string): Date {
   if (!submittedAt) return new Date();
   const parsed = new Date(submittedAt);
@@ -57,10 +65,13 @@ export async function payPaymentLink(
   config: { paymentLinkReservationTimeoutSeconds: number },
   input: PayPaymentLinkInput,
 ): Promise<PayPaymentLinkResult> {
-  const expiryCheckTime = expiryReferenceTime(input.submittedAt);
-
   // Step 1 — claim. A single UPDATE is already atomic; no explicit
   // transaction needed.
+  //
+  // Expiry is checked against the database's own now() and nothing else.
+  // Nothing the caller sends (this route is public and unauthenticated) is
+  // allowed to move the instant the link is judged at — see the
+  // expiryReferenceTime deprecation note above.
   // YA: one conditional UPDATE = atomic claim, no explicit txn needed. correct
   const claimResult = await pool.query<ClaimedLinkRow>(
     `UPDATE payment_links
@@ -70,14 +81,14 @@ export async function payPaymentLink(
              status = 'active'
              OR (status = 'reserved' AND reserved_at < now() - ($2 || ' seconds')::interval)
             )
-        AND expires_at > $3
+        AND expires_at > now()
       RETURNING id, merchant_id, amount_fils, reference`,
-    [input.token, config.paymentLinkReservationTimeoutSeconds, expiryCheckTime],
+    [input.token, config.paymentLinkReservationTimeoutSeconds],
   );
 
   const claimedRow = claimResult.rows[0];
   if (!claimedRow) {
-    return classifyClaimFailure(pool, input.token, config.paymentLinkReservationTimeoutSeconds, expiryCheckTime);
+    return classifyClaimFailure(pool, input.token);
   }
 
   const link = {
@@ -202,12 +213,11 @@ async function releaseReservation(pool: Pool, linkId: string): Promise<void> {
 async function classifyClaimFailure(
   pool: Pool,
   token: string,
-  reservationTimeoutSeconds: number,
-  expiryCheckTime: Date,
 ): Promise<PayPaymentLinkResult> {
-  const result = await pool.query<LinkStatusRow>(`SELECT status, expires_at FROM payment_links WHERE token = $1`, [
-    token,
-  ]);
+  const result = await pool.query<LinkStatusRow>(
+    `SELECT status, expires_at <= now() AS expired FROM payment_links WHERE token = $1`,
+    [token],
+  );
   const row = result.rows[0];
 
   if (!row) {
@@ -219,7 +229,9 @@ async function classifyClaimFailure(
   if (row.status === "canceled") {
     return { statusCode: 409, body: { error: "payment_link_canceled" } };
   }
-  if (row.status === "active" && row.expires_at.getTime() <= expiryCheckTime.getTime()) {
+  // Any unpaid, uncanceled link past expiry is expired, including one whose
+  // reservation lapsed: the claim UPDATE refuses both for the same reason.
+  if ((row.status === "active" || row.status === "reserved") && row.expired) {
     return { statusCode: 410, body: { error: "payment_link_expired" } };
   }
   if (row.status === "reserved") {
