@@ -127,23 +127,30 @@ export async function processRefund(
     }
     const requestedAmount = validation.amountFils;
 
-    // The fee this transaction was actually charged at capture, read from
-    // the ledger rather than recomputed from the merchant's current
-    // mdr_bps, so a rate change after capture can never retroactively alter
-    // what a refund reverses.
+    // The fee this transaction was actually charged, read from the ledger
+    // rather than recomputed from the merchant's current mdr_bps, so a rate
+    // change after capture can never retroactively alter what a refund
+    // reverses. "Actually charged" is net of the negotiated discount: a
+    // capture credits the full MDR to platform_fee_revenue, and
+    // applyCaptureDiscountAdjustment then debits the merchant's discount back
+    // out of it. Summing only the credits (as this used to) reversed the
+    // discounted part a second time, so a merchant with a discount got back
+    // more fee than they ever paid. Earlier refunds' own fee reversals are
+    // excluded here; they are accounted for by the proportion below.
     const feeResult = await client.query<{ fee_fils: string }>(
-      `SELECT COALESCE(SUM(amount_fils), 0)::text AS fee_fils
+      `SELECT COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount_fils ELSE -amount_fils END), 0)::text AS fee_fils
          FROM ledger_entries
         WHERE transaction_id = $1
           AND account_id = 'platform_fee_revenue'
-          AND direction = 'credit'`,
+          AND description IS DISTINCT FROM 'refund: MDR fee reversal'`,
       [txn.id],
     );
     const feeRow = feeResult.rows[0];
     if (!feeRow) {
       throw new Error("processRefund: fee aggregate returned no row");
     }
-    const feeChargedFils = toFils(Number(feeRow.fee_fils));
+    // Never negative: a discount can at most cancel the fee.
+    const feeChargedFils = toFils(Math.max(0, Number(feeRow.fee_fils)));
 
     // Acquirer call with the row lock still held (same client, same open
     // transaction) — no other refund, capture or void of this transaction
