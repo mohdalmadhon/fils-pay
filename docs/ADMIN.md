@@ -41,6 +41,9 @@ merchant through the usual secure channel.
 **Recompute transaction statuses** — tidies up transaction statuses for
 merchants whose refunds were processed before the refunds release (the
 manual refunds finance did over email in Q1). Safe to run more than once.
+It never changes whether a merchant is in test mode. (Before 2026-10-29 it
+switched test merchants to live; `db/reports/test-merchants-made-live-by-recompute.sql`
+lists every merchant it did that to.)
 
 ## Money
 
