@@ -1,6 +1,6 @@
 /** Numbers that roll up to their value when they appear or change. */
 import { useEffect, useRef, useState } from "react";
-import { prefersReducedMotion } from "./coinDraw.js";
+import { prefersReducedMotion } from "./motion.js";
 
 export function useCountUp(target: number, duration = 900): number {
   const [value, setValue] = useState(target);

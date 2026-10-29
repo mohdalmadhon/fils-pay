@@ -1,10 +1,10 @@
 /**
  * A small dependency-free area chart: a smooth line that draws itself in,
- * a dusk gradient under it, and a crosshair with a tooltip that follows the
+ * a light accent wash under it, and a crosshair with a tooltip that follows the
  * pointer (or arrow keys when focused). The data table on the page stays the
  * accessible source; the chart carries a one-line summary as its label.
  */
-import { useId, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 export interface ChartPoint {
   label: string;
@@ -34,7 +34,6 @@ function smooth(pts: Array<[number, number]>): string {
 }
 
 export function AreaChart({ points, format, label }: { points: ChartPoint[]; format: (value: number) => string; label: string }) {
-  const id = useId().replace(/:/g, "");
   const [hover, setHover] = useState<number | null>(null);
 
   const geo = useMemo(() => {
@@ -78,22 +77,11 @@ export function AreaChart({ points, format, label }: { points: ChartPoint[]; for
       }}
     >
       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden>
-        <defs>
-          <linearGradient id={`${id}-fill`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--fp-rose)" stopOpacity="0.45" />
-            <stop offset="100%" stopColor="var(--fp-rose)" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id={`${id}-line`} x1="0" x2="1">
-            <stop offset="0%" stopColor="var(--fp-plum)" />
-            <stop offset="60%" stopColor="var(--fp-rose)" />
-            <stop offset="100%" stopColor="var(--fp-apricot)" />
-          </linearGradient>
-        </defs>
         {[0.25, 0.5, 0.75].map((f) => (
           <line key={f} x1={PAD.left} x2={W - PAD.right} y1={PAD.top + (H - PAD.top - PAD.bottom) * f} y2={PAD.top + (H - PAD.top - PAD.bottom) * f} className="fp-chart-grid" />
         ))}
-        <path d={geo.area} fill={`url(#${id}-fill)`} className="fp-chart-area" />
-        <path d={geo.line} fill="none" stroke={`url(#${id}-line)`} strokeWidth="3" strokeLinecap="round" pathLength={1} className="fp-chart-line" vectorEffect="non-scaling-stroke" />
+        <path d={geo.area} className="fp-chart-area" />
+        <path d={geo.line} fill="none" strokeWidth="2" strokeLinecap="round" pathLength={1} className="fp-chart-line" vectorEffect="non-scaling-stroke" />
         {active ? <line x1={active[0]} x2={active[0]} y1={PAD.top} y2={H - PAD.bottom} className="fp-chart-cross" /> : null}
       </svg>
       {active ? (

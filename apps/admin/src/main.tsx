@@ -3,12 +3,14 @@ import ReactDOM from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
 import { AdminAuthProvider } from "./auth/AdminAuthContext.js";
 import { router } from "./router.js";
-import { initTheme } from "./components/fun/theme.js";
+import { initTheme } from "./components/kit/theme.js";
+import { HalloweenToggle, initCostume } from "./components/kit/Halloween.js";
 import "./theme.css";
 import "./admin.css";
 
-// Dusk or night, decided before the first paint.
+// Light or night, and the costume, decided before the first paint.
 initTheme();
+initCostume();
 
 const rootElement = document.getElementById("root");
 if (!rootElement) {
@@ -19,6 +21,7 @@ ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
     <AdminAuthProvider>
       <RouterProvider router={router} />
+    <HalloweenToggle />
     </AdminAuthProvider>
   </React.StrictMode>,
 );
