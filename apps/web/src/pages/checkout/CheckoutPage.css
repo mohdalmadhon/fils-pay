@@ -272,7 +272,7 @@
   gap: 0.5rem 1rem;
   margin: 0 auto 1rem;
   padding: 1rem 1.25rem;
-  max-width: 26rem;
+  max-width: 31rem;
   text-align: left;
   background: var(--fp-shell);
   border: 1px solid var(--fp-line);
@@ -294,6 +294,7 @@
 }
 
 .checkout-footer {
+  max-width: none;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -67,23 +67,26 @@ export function CheckoutPage() {
       if (err instanceof ApiError) {
         const { statusCode, body } = err;
         if (statusCode === 402) {
-          const stageLabel = body.stage === "capture" ? "Your payment could not be completed." : "Your card was declined.";
+          const stageLabel =
+            body.stage === "capture"
+              ? "Your card was approved but the payment couldn't be completed. No payment was taken. Try again."
+              : "Your card was declined. Try another card, or contact your bank.";
           setPayState({ kind: "declined", message: stageLabel, retryable: true });
         } else if (statusCode === 502) {
-          setPayState({ kind: "declined", message: "The acquirer is temporarily unavailable. Please try again.", retryable: true });
+          setPayState({ kind: "declined", message: "The card network didn't respond. No payment was taken. Try again in a moment.", retryable: true });
         } else if (statusCode === 409 && body.error === "payment_link_already_paid") {
           setPayState({ kind: "terminal", message: "This invoice has already been paid." });
         } else if (statusCode === 409 && body.error === "payment_link_canceled") {
           setPayState({ kind: "terminal", message: "This payment link is no longer available." });
         } else if (statusCode === 409) {
-          setPayState({ kind: "declined", message: "A payment is already being processed for this link. Please try again shortly.", retryable: true });
+          setPayState({ kind: "declined", message: "Someone is paying this link right now. Wait a moment, then refresh the page.", retryable: true });
         } else if (statusCode === 410) {
           setPayState({ kind: "terminal", message: "This payment link has expired." });
         } else {
-          setPayState({ kind: "declined", message: body.message ?? "Something went wrong. Please try again.", retryable: true });
+          setPayState({ kind: "declined", message: body.message ?? "The payment didn't go through. Try again.", retryable: true });
         }
       } else {
-        setPayState({ kind: "declined", message: "Something went wrong. Please try again.", retryable: true });
+        setPayState({ kind: "declined", message: "Can't reach FilsPay. Check your connection and try again.", retryable: true });
       }
     }
   }
