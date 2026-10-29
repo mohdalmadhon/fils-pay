@@ -47,3 +47,10 @@ func BusinessDayWindow(date time.Time) (start, end time.Time) {
 	end = start.AddDate(0, 0, 1)
 	return start, end
 }
+
+// BusinessDayWindowAt returns the business-day window containing an instant.
+// Convert the instant before extracting its date; BusinessDayWindow itself
+// deliberately accepts a calendar-date label, including CLI dates in UTC.
+func BusinessDayWindowAt(instant time.Time) (start, end time.Time) {
+	return BusinessDayWindow(instant.In(businessDayLocation))
+}

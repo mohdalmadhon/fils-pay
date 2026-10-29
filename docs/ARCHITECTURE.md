@@ -45,8 +45,12 @@ The daemon also refreshes it at 02:00 Bahrain time, and the console's
 ## Settlement
 
 A settlement business day runs from midnight to midnight Asia/Bahrain
-(UTC+3, no DST). The daemon closes the previous business day shortly after
-local midnight. Batch lifecycle: **close** claims unbatched capture events
+(UTC+3, no DST). The daemon closes the previous business day after local
+midnight plus `SETTLEMENT_DAEMON_RUN_DELAY_MINUTES` (15 minutes by default;
+zero makes it due at midnight), on the first subsequent poll. Scheduling
+converts the current instant to Bahrain before extracting the date; see
+[the daily-close timing fix](solved-problems/008-daily-close-bahrain-time.md).
+Batch lifecycle: **close** claims unbatched capture events
 and computes gross/fee/net; **pay** posts payout legs and records
 disbursement; **notify** enqueues `settlement.paid`. Re-running a day is
 safe; closed and paid batches are left alone.

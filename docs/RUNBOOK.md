@@ -46,6 +46,28 @@ already closed or paid is left alone.
 
 > **— unsigned:** re-running a date from before a merchant went live can settle their test captures. check go-live dates first
 
+## Daily close timing
+
+The settlement daemon uses the Asia/Bahrain calendar to close the business
+day that just ended. It becomes due at local midnight plus
+`SETTLEMENT_DAEMON_RUN_DELAY_MINUTES`, which defaults to 15: **00:15 Bahrain
+time**, or **21:15 UTC on the previous UTC date**. Set that variable to `0`
+for a midnight due time if the grace period is not required. The daemon
+checks immediately on startup and then every
+`SETTLEMENT_DAEMON_POLL_INTERVAL_SECONDS` (60 seconds by default), so an
+actual start can be up to one polling interval after it becomes due.
+
+Rebuild and restart the settlement daemon to load the timing fix or changed
+configuration. Changing `TZ` only changes log rendering; it is not the fix
+for the previous UTC-date selection bug. Log-only "next check-in" estimates
+are not the scheduling decision. Compare the `RunDailyBatch(YYYY-MM-DD)`
+business date with the instant rendered in Bahrain time when investigating.
+
+Restart catch-up still covers only the most recently completed business
+day. Review older missed dates separately before using manual batch runs;
+the timing fix does not backfill or reopen historical batches. See
+[the cause, references, and verification](solved-problems/008-daily-close-bahrain-time.md).
+
 ## A merchant's balance looks wrong
 
 `merchant_balances` is a cache. Recompute it:

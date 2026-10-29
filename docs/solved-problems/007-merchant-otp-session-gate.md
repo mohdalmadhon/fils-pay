@@ -111,7 +111,23 @@ regression-locked test files remain unchanged.
 - Admin password-only login remained blocked until its own OTP was verified.
   Merchant and admin cookies did not cross-authenticate.
 
-Full-suite and type-check results are recorded after the final checks.
+Final checks:
+
+- API TypeScript checking passed.
+- In the full PostgreSQL-backed `npm test` run, existing merchant session
+  tests passed for promoted, unknown, revoked, and expired tokens. The full
+  signup → password → OTP → authenticated `/v1/auth/me` test passed too.
+- The npm suite as a whole did not pass. It retains previously documented
+  fee-display expectations and missing-schema failures, including
+  `adjustment_imports`, `credit_requests`, and `reporting_saved_filters`.
+  The session lookup no longer requires the missing `live_sessions` view
+  on the main local database.
+- The required full Go suite still has the two balance-refresh and four
+  finalized-MDR expectation failures recorded in
+  [003](003-admin-balance-rebuild-source.md#verification) and
+  [004](004-mdr-finalized-batches.md#verification). No Go code changed here.
+- Documentation file references and `git diff --check` passed. There is no
+  claim of a green full backend suite.
 
 ## Scope and activation
 
@@ -126,3 +142,7 @@ complete valid OTP challenges. API instances must load the new code before
 the guard is effective. No automatic session purge or production deployment
 is included, and legitimate API keys remain an independent authentication
 method rather than being subjected to browser OTP.
+
+The local API process started during this session was gracefully restarted
+with the corrected lookup. It serves port 3000; runtime logs are in
+`/tmp/filspay-api.log`. This local activation is not a production deployment.
