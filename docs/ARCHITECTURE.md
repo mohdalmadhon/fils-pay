@@ -31,6 +31,11 @@ rates are integer basis points. `applyRateFils` rounds half-to-even.
 The card scheme settles in two decimals. `apps/settlement` truncates each
 exported line to a multiple of 10 fils at batch close.
 
+The ordinary-payout lifetime monitoring counter also holds integer fils
+after migration 0073. Its historical name has no `_fils` suffix; it is not
+BD. It does not feed payout calculations and excludes split payouts.
+See [the precision fix and migration plan](solved-problems/009-lifetime-payout-estimate.md).
+
 ## The ledger
 
 `ledger_entries` is the record of money movements. Every movement is a group

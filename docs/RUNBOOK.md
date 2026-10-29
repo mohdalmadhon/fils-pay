@@ -160,6 +160,24 @@ batch; larger differences require further investigation.
 See [the split payout fix record](solved-problems/002-split-payout-allocation.md)
 for affected code, verification, and a read-only audit query.
 
+## Lifetime payout monitoring estimate
+
+`merchants.lifetime_net_payout_monitoring_estimate` is integer fils after
+migration 0073. `PayoutBatch` adds the paid net transactionally; retries
+skip paid batches. This counter covers ordinary payouts, not split payouts.
+It is monitoring data and must not be used to decide how much to pay.
+
+Migration 0073 changes the type and reconstructs existing totals from
+ordinary payout ledger debit legs. Prepare DBA approval and a maintenance
+window: stop payout workers and other writers, snapshot the old estimates,
+confirm historical payout ledger coverage, apply the migration transaction,
+then deploy/restart the settlement worker and reconnect database clients.
+The migration locks batches, merchants, and ledger tables and can block
+other requests. Never replay payouts to rebuild this counter. Casting the
+old REAL totals alone cannot recover lost fils.
+
+See [the detailed deployment plan, audit query, and reference trail](solved-problems/009-lifetime-payout-estimate.md).
+
 ## MDR recalculation
 
 **Recalculate MDR** refreshes provisional totals only for existing open

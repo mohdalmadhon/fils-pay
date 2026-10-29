@@ -459,7 +459,6 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
         // transaction_events (already marked as belonging to that batch,
         // exactly as CloseBatch would leave them), ledger entries and
         // scheme export lines. Every other merchant skips this entirely.
-        const highVolumeDayNets: Fils[] = [];
         if (fixture.key === HIGH_VOLUME_MERCHANT_KEY) {
           for (let dayIndex = 0; dayIndex < HIGH_VOLUME_DAYS; dayIndex++) {
             const dayOffset = -(HIGH_VOLUME_DAYS + 1 - dayIndex); // -61 .. -2
@@ -488,7 +487,6 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
               dayFee = addFils(dayFee, fee);
               dayNet = addFils(dayNet, subtractFils(txn.capturedFils, fee));
             }
-            highVolumeDayNets.push(dayNet);
 
             await client.query(
               `INSERT INTO settlement_batches
@@ -625,20 +623,9 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
         );
         settlementBatchCount += 1;
 
-        // merchants.lifetime_net_payout_monitoring_estimate (0040) as
-        // apps/settlement would have left it: PayoutBatch adds each batch's
-        // net payout to the running total as that batch is paid, so the
-        // seed replays the same additions in the same chronological order.
-        // Math.fround matches the column's `real` precision, so the seeded
-        // figure is what a live run of apps/settlement would have left.
-        let lifetimeEstimate = Math.fround(0);
-        for (const batchNet of [...highVolumeDayNets, netFils]) {
-          lifetimeEstimate = Math.fround(lifetimeEstimate + Math.fround(Number(batchNet)));
-        }
-        await client.query(`UPDATE merchants SET lifetime_net_payout_monitoring_estimate = $2 WHERE id = $1`, [
-          merchantId,
-          lifetimeEstimate,
-        ]);
+        // These batches are closed, not paid. Leave the exact lifetime
+        // payout counter at its default zero; PayoutBatch increments it
+        // transactionally when an actual payout is posted (migration 0073).
 
         // A few outbox events, enqueued inside this same transaction as the
         // writes that produced them. Payload shapes here must match the
