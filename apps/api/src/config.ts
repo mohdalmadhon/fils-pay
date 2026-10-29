@@ -39,6 +39,12 @@ export interface Config {
   cookieName: string;
   cookieSecure: boolean;
 
+  /** Browser origins allowed to call this API with credentials (CORS):
+   *  the merchant dashboard and the admin console. CORS_ALLOWED_ORIGINS,
+   *  comma-separated. Defaults to the two local dev servers outside
+   *  production, and to none in production, where it must be set. */
+  corsAllowedOrigins: string[];
+
   /** Cookie carrying an `admin_sessions` token. A completely separate name,
    *  table, and code path from `cookieName`/`sessions` — `requireAdminSession`
    *  reads only this one and `requireMerchantAuth` never reads it at all, so
@@ -145,6 +151,22 @@ function parseIntEnv(value: string | undefined, fallback: number): number {
   return parsed;
 }
 
+/** Comma-separated exact origins ("https://dash.example.com"), no paths,
+ *  no wildcards: a credentialed CORS response must name one origin. */
+function parseOriginList(value: string | undefined, fallback: string[]): string[] {
+  if (value === undefined) return fallback;
+  const origins = value
+    .split(",")
+    .map((o) => o.trim().replace(/\/+$/, ""))
+    .filter((o) => o !== "");
+  for (const origin of origins) {
+    if (origin === "*" || !/^https?:\/\/[^/\s]+$/.test(origin)) {
+      throw new Error(`loadConfig: CORS_ALLOWED_ORIGINS entry "${origin}" must be an exact origin like https://dash.example.com`);
+    }
+  }
+  return origins;
+}
+
 function parseFloatEnv(value: string | undefined, fallback: number): number {
   if (value === undefined || value === "") return fallback;
   const parsed = Number.parseFloat(value);
@@ -237,6 +259,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 
     cookieName: env.COOKIE_NAME ?? "fp_sid",
     cookieSecure: parseBoolEnv(env.COOKIE_SECURE, nodeEnv === "production"),
+    corsAllowedOrigins: parseOriginList(
+      env.CORS_ALLOWED_ORIGINS,
+      nodeEnv === "production" ? [] : ["http://localhost:5173", "http://localhost:5174"],
+    ),
 
     adminCookieName: env.ADMIN_COOKIE_NAME ?? "fp_admin_sid",
     adminSessionTtlHours: parseIntEnv(env.ADMIN_SESSION_TTL_HOURS, 8),
