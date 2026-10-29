@@ -1,10 +1,10 @@
 import { isRouteErrorResponse, Link, useLocation, useRouteError } from "react-router-dom";
-import { Orbs, Wordmark } from "../../components/art/Art.js";
+import { Wordmark } from "../../components/art/Art.js";
+import { useCostume } from "../../components/kit/Halloween.js";
 import { StatePanel, usePageTitle } from "../../components/ui.js";
-import { CatchTheFils } from "../../components/fun/CatchTheFils.js";
 
-/** Frame for pages shown outside the dashboard shell: brand at the top,
- *  dusk glow along the bottom. */
+/** Frame for pages shown outside the console shell: the name in a top bar,
+ *  the state centred below. */
 function StandaloneFrame({ children }: { children: React.ReactNode }) {
   return (
     <div className="fp-standalone">
@@ -14,21 +14,21 @@ function StandaloneFrame({ children }: { children: React.ReactNode }) {
         </Link>
       </header>
       <main id="main">{children}</main>
-      <Orbs className="fp-standalone-orbs" />
     </div>
   );
 }
 
-/** Any address the app doesn't know, with a small game for the lost. */
+/** Any address the app doesn't know. */
 export function NotFoundPage() {
   const location = useLocation();
+  const { on: costume } = useCostume();
   usePageTitle("Page not found");
   return (
     <StandaloneFrame>
       <StatePanel
         scene="lost"
         code="404"
-        title="This page rolled away"
+        title={costume ? "This page has vanished into the night" : "We can\u2019t find that page"}
         actions={
           <>
             <Link className="dash-button dash-button-primary" to="/dashboard">
@@ -45,7 +45,6 @@ export function NotFoundPage() {
           your dashboard.
         </p>
       </StatePanel>
-      <CatchTheFils className="fp-404-game" />
     </StandaloneFrame>
   );
 }
@@ -67,7 +66,7 @@ export function RouteErrorPage() {
       <StatePanel
         scene="storm"
         code="Error"
-        title="This page hit rough water"
+        title="Something went wrong on this page"
         actions={
           <>
             <button type="button" className="dash-button dash-button-primary" onClick={() => window.location.reload()}>

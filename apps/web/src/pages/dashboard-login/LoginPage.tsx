@@ -9,7 +9,7 @@ import {
 } from "../../auth/DashboardAuthContext.js";
 import type { DashboardLoginResponse } from "../../types.js";
 import { Wordmark } from "../../components/art/Art.js";
-import { CoinPit } from "../../components/fun/CoinPit.js";
+import { icons } from "../../components/art/Icons.js";
 import { ErrorBanner, usePageTitle } from "../../components/ui.js";
 
 type Step = { kind: "credentials" } | { kind: "otp"; challenge: DashboardLoginResponse };
@@ -124,17 +124,35 @@ export function LoginPage() {
 
   return (
     <div className="dash-login">
-      <CoinPit className="dash-login-sea">
+      <aside className="dash-login-aside" aria-label="About FilsPay">
         <Wordmark />
         <div className="dash-login-pitch">
-          <h2>
-            Every fils,
-            <br />
-            <em>accounted for.</em>
-          </h2>
-          <p>Card payments, payment links and daily settlement for merchants across Bahrain.</p>
+          <p className="dash-login-kicker">Merchant dashboard</p>
+          <p className="dash-login-figure" aria-label="0.001 BHD, one fils">
+            <span>
+              <span className="dim">0.00</span>
+              <mark>1</mark>
+            </span>
+            <small>BHD</small>
+          </p>
+          <h2>One fils is the smallest amount we move. Every one of them is accounted for.</h2>
+          <ul className="dash-login-points">
+            <li>
+              {icons.links}
+              Card payments and payment links
+            </li>
+            <li>
+              {icons.settlement}
+              Daily settlement to your bank account
+            </li>
+            <li>
+              {icons.reconciliation}
+              Reconciliation down to the fils
+            </li>
+          </ul>
         </div>
-      </CoinPit>
+        <p className="dash-login-foot">FilsPay · Payments for merchants in Bahrain</p>
+      </aside>
 
       <main className="dash-login-panel">
         <div className="dash-centered">

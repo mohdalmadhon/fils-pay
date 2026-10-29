@@ -1,13 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { formatBhd, toFils } from "@filspay/money";
 import { getPaymentLink, payPaymentLink } from "../../api/paymentLinks.js";
 import { ApiError } from "../../api/client.js";
 import type { PaymentLinkPublicDto, PayPaymentLinkResponse, SimulatedCardInput } from "../../types.js";
-import { Coin, type SceneName } from "../../components/art/Art.js";
-import { CoinPit } from "../../components/fun/CoinPit.js";
-import { CoinPhysics, type CoinPhysicsHandle } from "../../components/fun/CoinPhysics.js";
-import { useCountUp } from "../../components/fun/CountUp.js";
+import { Scene, Wordmark, type SceneName } from "../../components/art/Art.js";
+import { icons } from "../../components/art/Icons.js";
+import { useCountUp } from "../../components/kit/CountUp.js";
 import { Amount, Loading, StatePanel, usePageTitle } from "../../components/ui.js";
 import "./CheckoutPage.css";
 
@@ -33,7 +32,6 @@ export function CheckoutPage() {
   const [brandHint, setBrandHint] = useState<string | null>(null);
   const [cvvFocused, setCvvFocused] = useState(false);
   const [declines, setDeclines] = useState(0);
-  const pit = useRef<CoinPhysicsHandle>(null);
 
   // FH: memory leak — this effect never aborts the fetch on unmount (React warning in console?)
   // theres a cancelled flag in the cleanup tho. warning must be from somewhere else — am
@@ -123,8 +121,16 @@ export function CheckoutPage() {
 
   if (payState.kind === "success") {
     return (
-      <CheckoutOutcome scene="success" title={`Paid to ${link.merchantDisplayName}`} tone="success">
-        <CoinShower />
+      <CheckoutOutcome
+        scene="success"
+        title={`Paid to ${link.merchantDisplayName}`}
+        tone="success"
+        actions={
+          <button type="button" className="checkout-print" onClick={() => window.print()}>
+            Print receipt
+          </button>
+        }
+      >
         <p className="checkout-paid-amount">
           <RollingAmount fils={payState.result.amountFils ?? link.amountFils} />
         </p>
@@ -190,20 +196,37 @@ export function CheckoutPage() {
 
   return (
     <CheckoutFrame
-      pit={pit}
       summary={
         <div className="checkout-summary">
           <p className="checkout-payee">
-            {link.merchantDisplayName}
+            <span className="checkout-payee-mark" aria-hidden>
+              {link.merchantDisplayName.trim().charAt(0).toUpperCase()}
+            </span>
+            Pay {link.merchantDisplayName}
           </p>
           <p className="checkout-amount">
             <Amount fils={link.amountFils} />
           </p>
-          {link.description ? <p className="checkout-description">{link.description}</p> : null}
-          {link.reference ? <p className="checkout-reference">Reference {link.reference}</p> : null}
-          <p className="checkout-expiry">
-            Link valid until {new Date(link.expiresAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
-          </p>
+          <dl className="checkout-lines">
+            {link.description ? (
+              <>
+                <dt>For</dt>
+                <dd>{link.description}</dd>
+              </>
+            ) : null}
+            {link.reference ? (
+              <>
+                <dt>Reference</dt>
+                <dd>{link.reference}</dd>
+              </>
+            ) : null}
+            <dt>Link valid until</dt>
+            <dd>{new Date(link.expiresAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}</dd>
+            <dt className="checkout-total">Total due</dt>
+            <dd className="checkout-total">
+              <Amount fils={link.amountFils} />
+            </dd>
+          </dl>
         </div>
       }
     >
@@ -227,9 +250,6 @@ export function CheckoutPage() {
             value={card.pan}
             onChange={(e) => {
               const pan = e.target.value;
-              // Every new digit drops a fils into the pile on the left.
-              const added = pan.replace(/\D/g, "").length - card.pan.replace(/\D/g, "").length;
-              if (added > 0) pit.current?.drop(Math.min(added, 19));
               setCard({ ...card, pan });
               const digits = pan.replace(/\D/g, "");
               if (digits.length >= 1) {
@@ -284,7 +304,17 @@ export function CheckoutPage() {
           </label>
         </div>
         <button type="submit" disabled={submitting}>
-          {submitting ? "Processing payment" : `Pay ${amount} BHD`}
+          {submitting ? (
+            <>
+              <Scene name="waiting" />
+              Processing payment
+            </>
+          ) : (
+            <>
+              {icons.lock}
+              Pay {amount} BHD
+            </>
+          )}
         </button>
       </form>
 
@@ -304,22 +334,21 @@ export function CheckoutPage() {
   );
 }
 
-/** Page frame: the dusk coin pit with the amount on one side, the form on
- *  the other; stacked on phones. */
-function CheckoutFrame({
-  summary,
-  children,
-  pit,
-}: {
-  summary?: React.ReactNode;
-  children: React.ReactNode;
-  pit?: React.Ref<CoinPhysicsHandle>;
-}) {
+/** Page frame: the order summary on one side, the payment form on the
+ *  other; stacked on phones. */
+function CheckoutFrame({ summary, children }: { summary?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="checkout-page">
-      <CoinPit ref={pit} className="checkout-sea" initial={8} hint={pit ? "Every digit you type drops a fils" : undefined}>
+      <aside className="checkout-sea" aria-label="Order summary">
+        <div className="checkout-brandbar">
+          <Wordmark />
+          <span className="checkout-secure-tag">
+            {icons.lock}
+            Secure checkout
+          </span>
+        </div>
         {summary}
-      </CoinPit>
+      </aside>
       <main className="checkout-panel">{children}</main>
     </div>
   );
@@ -330,18 +359,23 @@ function CheckoutOutcome({
   title,
   children,
   tone,
+  actions,
 }: {
   scene: SceneName;
   title: string;
   children: React.ReactNode;
   tone?: "success";
+  actions?: React.ReactNode;
 }) {
   return (
     <div className={`checkout-outcome${tone === "success" ? " checkout-outcome-success" : ""}`}>
-      <StatePanel scene={scene} title={title}>
-        {typeof children === "string" ? <p>{children}</p> : children}
-      </StatePanel>
+      <div className="checkout-outcome-card">
+        <StatePanel scene={scene} title={title} actions={actions}>
+          {typeof children === "string" ? <p>{children}</p> : children}
+        </StatePanel>
+      </div>
       <p className="checkout-footer">
+        {icons.lock}
         Payments by FilsPay
       </p>
     </div>
@@ -352,23 +386,6 @@ function CheckoutOutcome({
 function RollingAmount({ fils }: { fils: number }) {
   const value = useCountUp(fils, 1400);
   return <Amount fils={value} />;
-}
-
-/** A burst of coins over the whole paid screen; they pile up along the
- *  bottom, then fade away. */
-function CoinShower() {
-  const coins = useRef<CoinPhysicsHandle>(null);
-  useEffect(() => {
-    const timers = [0, 350, 700].map((delay, i) =>
-      window.setTimeout(() => coins.current?.burst(i === 0 ? 34 : 14, window.innerWidth * (0.3 + 0.2 * i), window.innerHeight), delay),
-    );
-    return () => timers.forEach((t) => window.clearTimeout(t));
-  }, []);
-  return (
-    <div className="fp-shower" aria-hidden>
-      <CoinPhysics ref={coins} />
-    </div>
-  );
 }
 
 /** A live card that fills in as the buyer types and tilts toward the
@@ -402,7 +419,7 @@ function CardPreview({ card, brand, flipped, shake }: { card: SimulatedCardInput
         >
           <div className="checkout-card checkout-card-front" data-brand={brandLabel ?? "none"}>
             <div className="checkout-card-top">
-              <Coin size={30} />
+              <CardChip />
               <span className="checkout-card-brand">{brandLabel ?? "Card"}</span>
             </div>
             <div className="checkout-card-number">{groups}</div>
@@ -423,5 +440,15 @@ function CardPreview({ card, brand, flipped, shake }: { card: SimulatedCardInput
         </div>
       </div>
     </div>
+  );
+}
+
+/** The card's contact chip. */
+function CardChip() {
+  return (
+    <svg className="checkout-card-chip" viewBox="0 0 40 30" aria-hidden focusable={false}>
+      <rect x="0.5" y="0.5" width="39" height="29" rx="5" fill="#e3c891" stroke="#b89a5a" />
+      <path d="M0 10h12M0 20h12M28 10h12M28 20h12M12 0v30M28 0v30M12 15h16" stroke="#b89a5a" strokeWidth="1" fill="none" />
+    </svg>
   );
 }

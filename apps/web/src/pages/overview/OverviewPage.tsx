@@ -8,8 +8,8 @@ import { formatCount } from "../../utils/helpers.js";
 import type { PayoutTrendsResponse, TopLinksResponse, VolumesResponse } from "../../types.js";
 import { Amount, EmptyState, ErrorBanner } from "../../components/ui.js";
 import { useDashboardAuth } from "../../auth/DashboardAuthContext.js";
-import { AreaChart } from "../../components/fun/AreaChart.js";
-import { useCountUp } from "../../components/fun/CountUp.js";
+import { AreaChart } from "../../components/kit/AreaChart.js";
+import { useCountUp } from "../../components/kit/CountUp.js";
 import { icons } from "../../components/art/Icons.js";
 
 /** 60s: comfortably above the reporting worker's 15s worst-case lag, and
@@ -78,27 +78,27 @@ export function OverviewPage() {
     topLink: topLinks?.links[0] ?? null,
   };
   const hour = new Date().getHours();
-  const greeting = hour < 5 ? "Up late" : hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const greeting = hour < 5 ? "Working late" : hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   return (
     <section>
       <h1>Overview</h1>
       <p className="ov-greeting">
         {greeting}
-        {me ? `, ${me.merchant.displayName}` : ""}. Here&apos;s how your fils are flowing.
+        {me ? `, ${me.merchant.displayName}` : ""}. Here is where your money stands.
       </p>
 
       <div className="ov-tiles">
-        <Tile label="Captured volume" icon={icons.transactions} tone="plum">
+        <Tile label="Captured volume" icon={icons.transactions}>
           <RollingAmount fils={totals.gross} />
         </Tile>
-        <Tile label="Payments captured" icon={icons.check} tone="rose">
+        <Tile label="Payments captured" icon={icons.check}>
           <RollingCount value={totals.count} />
         </Tile>
-        <Tile label="Net paid out" icon={icons.settlement} tone="apricot">
+        <Tile label="Net paid out" icon={icons.settlement}>
           <RollingAmount fils={totals.net} />
         </Tile>
-        <Tile label="Top payment link" icon={icons.links} tone="sand">
+        <Tile label="Top payment link" icon={icons.links}>
           {totals.topLink ? (
             <>
               <RollingAmount fils={totals.topLink.amountFils} />
@@ -282,13 +282,13 @@ export function OverviewPage() {
   );
 }
 
-function Tile({ label, icon, tone, children }: { label: string; icon: React.ReactNode; tone: "plum" | "rose" | "apricot" | "sand"; children: React.ReactNode }) {
+function Tile({ label, icon, children }: { label: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className={`ov-tile ov-tile-${tone}`}>
-      <span className="ov-tile-icon" aria-hidden>
+    <div className="ov-tile">
+      <span className="ov-tile-label">
         {icon}
+        {label}
       </span>
-      <span className="ov-tile-label">{label}</span>
       <span className="ov-tile-value">{children}</span>
     </div>
   );
