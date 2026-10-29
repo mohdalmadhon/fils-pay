@@ -59,7 +59,7 @@ BEGIN
     IF v_net <> 0 THEN
         RAISE EXCEPTION 'ledger_entries group % does not balance: net % fils', v_group_id, v_net;
     END IF;
-
+    
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
