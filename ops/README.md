@@ -17,6 +17,21 @@ apps/web and apps/admin aren't part of this compose file — they're plain
 Vite dev servers that talk to apps/api over HTTP (`npm run dev` inside
 each package), not services with their own database connection.
 
+## Checking a deployment end to end
+
+After deploying (or after `migrate` + `seed` locally), run the payment check
+against the API. It creates a link, pays it, follows the money through the
+ledger, settlement and payout, verifies the webhooks, and checks
+reconciliation is zero:
+
+```
+API_URL=https://<api host> WEBHOOK_URL=<public receiver> node scripts/e2e/payment-check.mjs
+```
+
+Use staging, not production; it creates real rows. The full options, and
+what a passing run looks like, are in
+`docs/verification/end-to-end-2026-10-30.md`.
+
 ## Files
 
 | File | Purpose |

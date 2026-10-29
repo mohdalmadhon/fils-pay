@@ -51,6 +51,12 @@ SELECT filename FROM schema_migrations WHERE filename LIKE '005%' ORDER BY 1;
 `db/migrate.integration.test.ts` applies every migration to an empty
 database; run it before shipping a new migration.
 
+## Is the money flow healthy end to end?
+
+`node scripts/e2e/payment-check.mjs` (see `docs/verification/`) takes one
+payment from link to payout on a dev or staging stack and prints PASS/FAIL
+for each step: ledger balance, residue, payout, webhooks, reconciliation.
+
 ## Settlement didn't run for a day
 
 The daemon only catches up the most recent business day on restart. For
