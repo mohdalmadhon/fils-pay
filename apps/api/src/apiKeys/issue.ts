@@ -78,6 +78,21 @@ export async function issueApiKeyInTx(
     throw new Error("issueApiKeyInTx: insert into api_keys returned no row");
   }
 
+  if (input.rotatedFromKeyId) {
+    // A rotation replaces the key: the old one stops authenticating in the
+    // same commit that creates the new one (migration 0037's design). This
+    // used to be documented here and never done, so a "rotated" key, which
+    // is usually rotated because it leaked, kept working indefinitely.
+    const revoked = await client.query(
+      `UPDATE api_keys SET revoked_at = now(), revoked_reason = 'rotated'
+        WHERE id = $1 AND merchant_id = $2 AND revoked_at IS NULL`,
+      [input.rotatedFromKeyId, input.merchantId],
+    );
+    if ((revoked.rowCount ?? 0) !== 1) {
+      throw new Error("issueApiKeyInTx: the key being rotated is not an active key of this merchant");
+    }
+  }
+
   return { id: row.id, prefix: keyPrefix, rawKey, createdAt: row.created_at };
 }
 
@@ -132,8 +147,6 @@ export async function listApiKeys(pool: Pool, merchantId: string): Promise<ApiKe
 
 /** Always merchant-scoped by construction — revoking another merchant's key
  *  by guessing an ID must be impossible, not merely disallowed by convention. */
-// FH: admin rotation (admin/apiKeys.ts) should call this — it doesn't
-// it does, around line 47 — am
 export async function revokeApiKey(pool: Pool, merchantId: string, apiKeyId: string): Promise<boolean> {
   const result = await pool.query(
     `UPDATE api_keys SET revoked_at = now() WHERE id = $1 AND merchant_id = $2 AND revoked_at IS NULL`,
