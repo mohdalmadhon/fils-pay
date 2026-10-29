@@ -231,18 +231,33 @@ and [ADR 0008](adr/0008-mdr-finalized-batches.md).
 
 ## Month-end residue (finance)
 
-Until residue posting is automated (see ARCHITECTURE, "The scheme
-boundary"), finance runs a month-end script modelled on
-`scripts/reconcile_march.ts`:
+`scripts/reconcile_march.ts` is a March-2026-only recovery tool, not a generic
+monthly sweep or a Q1 reconciliation. Do not copy it to later months. The
+earlier claim that it checked for an existing description was incorrect.
 
-1. Copy the script, change the window constants at the top to the new
-   month (UTC calendar month, `YYYY-MM-01T00:00Z` to the first of the next
-   month).
-2. Run it once against production with finance on the call.
-3. Attach the log from `scripts/out/` to the month-end ticket.
+With the intended `DATABASE_URL` configured, preview without posting:
 
-The script checks for an existing posting with the same description, so a
-second run is a no-op.
+```bash
+npx tsx scripts/reconcile_march.ts --dry-run
+```
+
+Omitting the flag also previews. Unknown flags and `--apply --dry-run` fail.
+An apply requires the updated script and an explicit `--apply`. Review the
+preview and the selected transactions/accounts with finance first. Apply
+in maintenance: the script briefly blocks transaction and ledger writes,
+with a 10-second lock-acquisition timeout. Retire old script copies first.
+
+Matching new-format postings are skipped. Any legacy posting, duplicate,
+changed source fingerprint, or malformed prior group blocks the entire
+apply with a nonzero exit status. Resolve historical uncertainty through
+ledger review, not by rerunning, deleting, or renaming old postings.
+
+Keep console receipts separately for each invocation or append them; do not
+treat one log timestamp as proof of one successful run. Successful posting
+evidence is the ledger group and its stored creation/effective timestamps.
+The script does not automatically create `scripts/out/` or a log file.
+
+See [the fix, references, audit query, and verification](solved-problems/012-march-sweep-repeat-postings.md).
 
 > **Huda** (#fp-finance): please don't run anything for April onwards until March (FP-187) is resolved
 
