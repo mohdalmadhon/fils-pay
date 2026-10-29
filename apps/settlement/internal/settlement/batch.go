@@ -249,10 +249,12 @@ func CloseBatch(ctx context.Context, db *pgxpool.Pool, merchantID uuid.UUID, bus
 
 	for i, line := range lines {
 		truncated := TruncateToSchemeAmount(line.grossFils)
+		// Derive both stored amounts from the same quantized fils. Passing
+		// gross BD to NUMERIC(10,2) rounds instead of truncating.
 		_, err = tx.Exec(ctx, `
 			INSERT INTO scheme_export_lines (settlement_batch_id, transaction_id, amount_fils, amount, line_sequence)
 			VALUES ($1, $2, $3, $4, $5)
-		`, batchID, line.transactionID, int64(truncated), SchemeAmountBD(line.grossFils), i+1)
+		`, batchID, line.transactionID, int64(truncated), formatFilsAsTwoDecimalString(truncated), i+1)
 		if err != nil {
 			return BatchResult{}, fmt.Errorf("settlement: CloseBatch: insert scheme export line: %w", err)
 		}
