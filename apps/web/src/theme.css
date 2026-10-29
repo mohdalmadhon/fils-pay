@@ -1,0 +1,373 @@
+/* FilsPay design system: "pearl & tide".
+ *
+ * Tokens, base typography and the art/scene styles shared by the dashboard
+ * and the public checkout. Page-level components live in dashboard.css and
+ * pages/checkout/CheckoutPage.css. */
+
+:root {
+  /* Sea */
+  --fp-abyss: #0b2e35;
+  --fp-abyss-2: #123f48;
+  --fp-deep: #0e3940;
+  --fp-lagoon: #147a78;
+  --fp-lagoon-ink: #0f5f5d;
+  --fp-lagoon-soft: #cfe5e3;
+  --fp-foam: #e3efed;
+  /* Pearl */
+  --fp-nacre: #eef3f1;
+  --fp-shell: #ffffff;
+  --fp-line: #d4e0dd;
+  --fp-line-strong: #b5c7c3;
+  /* Money */
+  --fp-gold: #c79a2b;
+  --fp-gold-deep: #8f6c17;
+  --fp-gold-soft: #f6ecd2;
+  /* Outcomes */
+  --fp-coral: #c43d3d;
+  --fp-coral-ink: #8e2424;
+  --fp-coral-soft: #f8dcda;
+  --fp-amber: #a86a00;
+  --fp-amber-soft: #fbedd3;
+  --fp-kelp: #1d7a46;
+  --fp-kelp-soft: #d9efe2;
+
+  --fp-ink: #0b2e35;
+  --fp-ink-2: #3f5c62;
+  --fp-ink-3: #6b8388;
+
+  --fp-font: "Readex Pro", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --fp-mono: ui-monospace, "Cascadia Mono", "SFMono-Regular", Menlo, monospace;
+
+  /* Type scale (1.25, 16px base) */
+  --fp-step--1: 0.8rem;
+  --fp-step-0: 1rem;
+  --fp-step-1: 1.25rem;
+  --fp-step-2: 1.5625rem;
+  --fp-step-3: 1.953rem;
+  --fp-step-4: 2.441rem;
+  --fp-step-5: 3.052rem;
+
+  --fp-radius-s: 8px;
+  --fp-radius-m: 14px;
+  --fp-radius-l: 22px;
+  --fp-shadow: 0 1px 0 rgba(11, 46, 53, 0.04), 0 12px 32px -18px rgba(11, 46, 53, 0.35);
+  --fp-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --fp-focus: 0 0 0 3px rgba(20, 122, 120, 0.35);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--fp-font);
+  font-size: var(--fp-step-0);
+  line-height: 1.55;
+  color: var(--fp-ink);
+  background: var(--fp-nacre);
+  font-feature-settings: "tnum" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin: 0 0 0.6em;
+}
+
+h1 {
+  font-size: var(--fp-step-3);
+  font-weight: 600;
+}
+
+h2 {
+  font-size: var(--fp-step-1);
+  font-weight: 600;
+  margin-top: 2rem;
+}
+
+h3 {
+  font-size: var(--fp-step-0);
+  font-weight: 600;
+}
+
+p {
+  margin: 0 0 1em;
+  max-width: 72ch;
+}
+
+a {
+  color: var(--fp-lagoon-ink);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+a:hover {
+  color: var(--fp-lagoon);
+}
+
+code {
+  font-family: var(--fp-mono);
+  font-size: 0.86em;
+  padding: 0.08em 0.35em;
+  border-radius: 5px;
+  background: var(--fp-foam);
+  color: var(--fp-abyss-2);
+  word-break: break-all;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--fp-focus);
+  border-radius: 6px;
+}
+
+::selection {
+  background: var(--fp-lagoon-soft);
+}
+
+/* Brand ------------------------------------------------------------------ */
+
+.fp-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 700;
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+  color: inherit;
+  text-decoration: none;
+}
+
+.fp-wordmark-text span {
+  font-weight: 300;
+}
+
+.fp-icon {
+  flex: none;
+}
+
+/* Tide lines ------------------------------------------------------------- */
+
+.fp-tide {
+  display: block;
+  width: 100%;
+  height: 120px;
+  overflow: visible;
+}
+
+.fp-tide-layer {
+  transform-box: fill-box;
+}
+
+.fp-tide-animated .fp-tide-1 {
+  animation: fp-drift 26s linear infinite;
+}
+
+.fp-tide-animated .fp-tide-2 {
+  animation: fp-drift 18s linear infinite reverse;
+}
+
+.fp-tide-animated .fp-tide-3 {
+  animation: fp-drift 34s linear infinite;
+}
+
+@keyframes fp-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Sea scene (login, checkout) ------------------------------------------- */
+
+.fp-sea {
+  position: relative;
+  overflow: hidden;
+  color: #e9f4f2;
+  background:
+    radial-gradient(120% 70% at 80% 0%, rgba(199, 154, 43, 0.22), transparent 55%),
+    linear-gradient(180deg, #164b55 0%, var(--fp-abyss) 55%, #072328 100%);
+  isolation: isolate;
+}
+
+.fp-sea-sky {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(40% 25% at 78% 18%, rgba(255, 236, 190, 0.35), transparent 70%);
+  z-index: -1;
+}
+
+.fp-sea-dhow {
+  position: absolute;
+  width: 92px;
+  right: 14%;
+  bottom: 96px;
+  color: #06222a;
+  opacity: 0.85;
+  animation: fp-bob 7s ease-in-out infinite;
+  z-index: 1;
+}
+
+@keyframes fp-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1.5deg);
+  }
+  50% {
+    transform: translateY(5px) rotate(1.5deg);
+  }
+}
+
+.fp-sea-tide {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 200%;
+  color: #8fd0c9;
+  z-index: 2;
+}
+
+.fp-sea-pearls {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.fp-sea-pearl {
+  position: absolute;
+  bottom: -30px;
+  opacity: 0;
+  animation: fp-rise 14s linear infinite;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.35));
+}
+
+.fp-sea-pearl-0 { left: 8%; animation-delay: 0s; }
+.fp-sea-pearl-1 { left: 22%; animation-delay: 4s; animation-duration: 17s; }
+.fp-sea-pearl-2 { left: 38%; animation-delay: 9s; }
+.fp-sea-pearl-3 { left: 54%; animation-delay: 2s; animation-duration: 19s; }
+.fp-sea-pearl-4 { left: 66%; animation-delay: 6s; }
+.fp-sea-pearl-5 { left: 80%; animation-delay: 11s; animation-duration: 16s; }
+.fp-sea-pearl-6 { left: 92%; animation-delay: 7s; animation-duration: 21s; }
+
+@keyframes fp-rise {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  60% {
+    transform: translateY(-55vh) translateX(12px);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-95vh) translateX(-8px);
+    opacity: 0;
+  }
+}
+
+.fp-sea-content {
+  position: relative;
+  z-index: 3;
+}
+
+/* Spot scenes ------------------------------------------------------------ */
+
+.fp-scene {
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+}
+
+.fp-scene-rise {
+  animation: fp-surface 900ms var(--fp-ease) both;
+}
+
+@keyframes fp-surface {
+  from {
+    transform: translateY(26px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.fp-wait-dot {
+  animation: fp-wait 1.2s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.fp-wait-dot-1 { animation-delay: 0.15s; }
+.fp-wait-dot-2 { animation-delay: 0.3s; }
+
+@keyframes fp-wait {
+  0%,
+  100% {
+    transform: translateY(0) scale(0.85);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(-6px) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Amounts: whole dinars large, fils lighter ------------------------------ */
+
+.fp-amount {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.05em;
+  font-feature-settings: "tnum" 1;
+  white-space: nowrap;
+}
+
+.fp-amount-bd {
+  font-weight: 600;
+}
+
+.fp-amount-fils {
+  font-weight: 300;
+  font-size: 0.62em;
+  opacity: 0.85;
+}
+
+.fp-amount-cur {
+  font-size: 0.42em;
+  font-weight: 500;
+  margin-left: 0.4em;
+  color: var(--fp-gold-deep);
+  letter-spacing: 0.04em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .fp-sea-pearl {
+    display: none;
+  }
+}
