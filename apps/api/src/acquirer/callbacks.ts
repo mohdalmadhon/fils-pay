@@ -23,8 +23,17 @@ interface TransactionMerchantRow {
  * informational, not a state transition, so this never touches
  * transactions.status or the ledger; a confirmed-fraud outcome still needs
  * a human decision to void/refund, exactly as today.
+ *
+ * Idempotent per (transaction, callbackId): the acquirer redelivers a
+ * callback when our acknowledgement is slow, and a redelivery must not save a
+ * second note. The unique index from migration 0073 enforces this, so it holds
+ * even for concurrent redeliveries and for withCallbackRetry re-running this
+ * function. Returns `duplicate: true` when the callback had already been saved.
  */
-export async function applyAcquirerCallback(pool: Pool, callback: AcquirerCallbackInput): Promise<void> {
+export async function applyAcquirerCallback(
+  pool: Pool,
+  callback: AcquirerCallbackInput,
+): Promise<{ duplicate: boolean }> {
   const txnResult = await pool.query<TransactionMerchantRow>(
     `SELECT merchant_id FROM transactions WHERE id = $1`,
     [callback.transactionId],
@@ -34,10 +43,11 @@ export async function applyAcquirerCallback(pool: Pool, callback: AcquirerCallba
     throw new NotFoundError("transaction_not_found");
   }
 
-  await pool.query(
+  const inserted = await pool.query(
     `INSERT INTO acquirer_callback_notes
         (transaction_id, merchant_id, callback_id, callback_type, outcome, note, received_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     ON CONFLICT (transaction_id, callback_id) DO NOTHING`,
     [
       callback.transactionId,
       txnRow.merchant_id,
@@ -48,6 +58,7 @@ export async function applyAcquirerCallback(pool: Pool, callback: AcquirerCallba
       callback.occurredAt,
     ],
   );
+  return { duplicate: (inserted.rowCount ?? 0) === 0 };
 }
 
 /**
