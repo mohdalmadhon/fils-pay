@@ -73,6 +73,8 @@ reconciliation match what finance agreed with them.
 already have them (`4.75`, `120.00`). Rows are applied as soon as you
 submit; each import's rows are kept with the original text for reference.
 Don't submit the same file twice; there's no duplicate detection yet.
+One file can hold up to 20 000 rows (`ADJUSTMENT_IMPORT_MAX_ROWS`) and 10 MB
+(`ADJUSTMENT_IMPORT_MAX_BYTES`); split anything bigger.
 
 > **Fixed 2026-10-29:** imports before this date posted a tenth of each
 > amount (`4.75` posted 0.475 BD). `db/reports/adjustment-import-shortfall.sql`
@@ -107,8 +109,10 @@ deliveries.
 archive the endpoint's history; after they register the new one, restore
 the archive against it to backfill. No screen for this yet — it's
 `POST /v1/admin/merchants/:id/webhook-endpoints/:endpointId/archive` and
-`.../archive/:archiveId/replay`. Archives are written in pages of 1000
-deliveries, so any range is fine.
+`.../archive/:archiveId/replay`. Each archived delivery is stored as its
+own row and the copy and restore run inside the database, so any date
+range works, however large. (Before 2026-10-29 an archive was one big JSON
+value built in the API's memory, and a large range could fail.)
 
 ## Incident review: duplicate `settlement.paid` (2026-08-21)
 
