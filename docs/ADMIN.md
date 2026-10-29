@@ -58,9 +58,12 @@ shows the corrected balance straight away; no need to wait for the next
 settlement run.
 
 **Recalculate MDR** — after a merchant's rate changes, run this over the
-date range you want the new rate applied to. Their batches are recalculated
-at the current rate and the difference is posted, so their history and
-reconciliation match what finance agreed with them.
+date range of existing open batches whose provisional totals you want to
+refresh. Closed and paid batches are skipped. No ledger entries or cached
+balance adjustments are posted; closing the batch computes its final fees
+using the settlement fee rules. Historical fee corrections require a
+separately approved adjustment, not a rewrite of finalized batches. See
+[the MDR investigation](solved-problems/004-mdr-finalized-batches.md).
 
 **Import adjustments** — paste a CSV of corrections with a
 `merchantId,amount,reason` header. Amounts are in BD as finance's sheets

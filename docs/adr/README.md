@@ -12,3 +12,4 @@ one that supersedes it and update the status line of the old one.
 | 0005 | [Settlement v2 and the shadow ledger](0005-settlement-v2-shadow-ledger.md) | Proposed (paused) | 2026-05-18 |
 | 0006 | [Adjustments are display corrections, not postings](0006-display-adjustments.md) | Accepted | 2026-05-04 |
 | 0007 | [Admin and CLI balance rebuilds use the payable ledger](0007-ledger-backed-admin-balance-rebuild.md) | Accepted | 2026-10-29 |
+| 0008 | [MDR recalculation preserves finalized batches](0008-mdr-finalized-batches.md) | Accepted | 2026-10-29 |

@@ -138,6 +138,27 @@ batch; larger differences require further investigation.
 See [the split payout fix record](solved-problems/002-split-payout-allocation.md)
 for affected code, verification, and a read-only audit query.
 
+## MDR recalculation
+
+**Recalculate MDR** refreshes provisional totals only for existing open
+batches in the selected merchant/date range. It skips closed and paid
+batches, including closed batches that have not yet been paid. A range
+containing only finalized batches returns zero considered batches.
+
+No ledger adjustment or cached balance movement is posted by this action.
+`CloseBatch` still computes the final fees and net using its settlement
+rules when the batch closes. Historical fee corrections require a separate
+approved adjustment; do not reopen a paid batch to force a recalculation.
+
+For older discrepancies, compare the original payout instructions, stored
+child allocations, ledger groups described as `MDR recalculation adjustment`,
+and the `mdr_recalculation` admin audit events. Existing stored batch totals
+may already have been rewritten by the previous implementation. Do not
+assume a rerun will restore history.
+
+See [the investigation and references](solved-problems/004-mdr-finalized-batches.md)
+and [ADR 0008](adr/0008-mdr-finalized-batches.md).
+
 ## Month-end residue (finance)
 
 Until residue posting is automated (see ARCHITECTURE, "The scheme

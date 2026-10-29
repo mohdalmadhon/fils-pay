@@ -10,6 +10,7 @@ data repair.
 | [001 — Scheme export rounding mismatch](001-scheme-export-rounding.md) | Derive both scheme amount columns from the same truncated integer fils value | Reconcile historical exports, confirm the acquirer's conversion rule, resolve the separate migration failure |
 | [002 — Split payouts do not conserve the parent total](002-split-payout-allocation.md) | Validate weights total 100%; distribute remaining whole fils deterministically; verify the posted total | Audit historical batches and production weights; investigate discrepancies larger than rounding can explain |
 | [003 — Admin/CLI balance rebuild mismatch (problem 4)](003-admin-balance-rebuild-source.md) | Make the admin button call the full CLI's payable-ledger rebuild | Verify the reported incident against production history; assess timeout and concurrency concerns separately |
+| [004 — MDR recalculation rewrites finalized batches](004-mdr-finalized-batches.md) | Recalculate provisional open-batch totals only; preserve closed/paid history and financial postings | Audit historical recalculations; any remediation requires separately approved adjustments |
 
 For future entries, use the next number and a descriptive filename. Include
 before/after examples and links to the affected code. Line numbers reflect
