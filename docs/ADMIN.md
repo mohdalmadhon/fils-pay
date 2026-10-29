@@ -38,6 +38,8 @@ merchant through the usual secure channel before their next API call.
 
 **View as merchant** — opens the merchant's dashboard as they see it, for
 15 minutes. Use **Exit impersonation** when you're done.
+Support and finance admins can only look; only a super_admin can make changes
+while viewing. Disabling an admin ends their view-as session immediately.
 
 **Recompute transaction statuses** — tidies up transaction statuses for
 merchants whose refunds were processed before the refunds release (the
