@@ -6,9 +6,16 @@ export interface CreditActor {
   displayName: string;
 }
 
-/** Two-person control: the operator who approves a credit must not be the one who requested it. */
+/**
+ * Two-person control: the operator who approves a credit must not be the one
+ * who requested it. "The same operator" means the same admin account, so
+ * this compares admin user ids. It used to compare display names, which are
+ * free text and not unique: two different people with the same name couldn't
+ * approve each other's credits, and an operator whose name on the request
+ * differed from their current name could approve their own.
+ */
 export function assertDistinctApprover(requester: CreditActor, approver: CreditActor): void {
-  if (approver.displayName === requester.displayName) {
+  if (approver.adminUserId === requester.adminUserId) {
     throw new ConflictError("self_approval_forbidden");
   }
 }
