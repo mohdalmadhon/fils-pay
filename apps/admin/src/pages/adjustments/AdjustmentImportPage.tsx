@@ -102,6 +102,7 @@ export function AdjustmentImportPage() {
         Applies a CSV of manual balance corrections immediately — one balanced ledger posting per
         row. Uploading is gated server-side to the <code>finance</code> and{" "}
         <code>super_admin</code> roles.
+        {" "}Amounts are in BD with up to three decimal places: 4.75 means 4.750 BD.
       </p>
 
       <RequireRole

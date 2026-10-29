@@ -150,10 +150,9 @@ export interface AdminMerchantDetail {
 }
 
 /** `apps/api/src/fees/currentFeeScheduleDisplay.ts`'s
- *  `CurrentFeeScheduleDisplay`, JSON-serialized. Note: this is the newest
- *  *entered* schedule row for this merchant, not necessarily the one
- *  currently governing capture/settlement — see the merchant detail page's
- *  own note next to where this renders. */
+ *  `CurrentFeeScheduleDisplay`, JSON-serialized. The latest schedule already
+ *  effective at lookup time, using capture's date ordering; null means the
+ *  merchant's base MDR applies. Other fee modifiers are not included. */
 export interface CurrentFeeScheduleDisplay {
   mdrBps: number;
   effectiveFrom: string;

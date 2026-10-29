@@ -1,5 +1,13 @@
 # Fix report: settlement splits were always a few fils short
 
+**Merge integration:** the general `ChildShares` helper retains proportional
+weights and nonpositive-total compatibility. Actual `PayoutSplitBatch` uses
+the finance branch's checked allocator: weights must total 10,000 bps and
+negative payouts fail without posting. Zero shares have audit rows without
+zero-value ledger legs. This supersedes the database normalization policy
+below; existing helper tests stay unchanged. See
+[merge decisions](../solved-problems/013-finance-main-merge.md).
+
 | | |
 |---|---|
 | **Status** | Fixed (5 commits, not pushed) |

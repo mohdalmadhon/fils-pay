@@ -66,7 +66,7 @@ export async function adminAdjustmentImportRoutes(app: FastifyInstance): Promise
 
       // am: no dry run and no idempotency key — uploading the same csv twice posts it twice
       // MK: finance checks the spreadsheet before uploading. fine for now
-      // FH: parseAdjustmentCsv handles 3dp BD amounts correctly (4.750 -> 4750 fils), Claude checked
+      // Keep amount cells as text; applyAdjustmentImport parses BD to exact fils.
       const rows = parseAdjustmentCsv(csvContent);
       if (rows.length > app.config.adjustmentImportMaxRows) {
         throw new BadRequestError(
