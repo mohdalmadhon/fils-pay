@@ -20,12 +20,15 @@ import (
 // individually, is the one place this logic needs to exist regardless of
 // which of the two paid the batch.
 //
-// Idempotent by construction: the NOT EXISTS guard means re-running this
-// scan — on every daemon tick, or a second time after a crash before this
-// function's own commit landed — never enqueues a second outbox event for
-// the same batch.
-// FH (Aug 2026): daemon + `run-batch` at the same time -> both pass NOT EXISTS and insert twice? claude: "No, outbox_events has a unique index on (event_type, aggregate_id)."
-// MK: fine for now. daemon and CLI never overlap.
+// Idempotent, including when several runs overlap (incident 2026-08-21):
+// the NOT EXISTS guard below only keeps the scan small. It is a read, so two
+// runs started at the same moment (the daemon's tick and a manual
+// `run-batch`, or two daemon replicas) both pass it. The guarantee is the
+// partial unique index uq_outbox_settlement_paid_per_batch (migration 0075):
+// at most one live settlement.paid event per batch. Each insert uses
+// ON CONFLICT DO NOTHING against it, so a run that loses the race inserts
+// nothing for that batch, and the returned count only includes events this
+// call actually enqueued.
 func EnqueuePayoutNotifications(ctx context.Context, db *pgxpool.Pool) (int, error) {
 	// Ordered by paid_at so notifications go out in payout order. LIMIT 500
 	// bounds one scan; the next tick picks up whatever is left.
@@ -37,6 +40,7 @@ func EnqueuePayoutNotifications(ctx context.Context, db *pgxpool.Pool) (int, err
 		   AND NOT EXISTS (
 		     SELECT 1 FROM outbox_events oe
 		      WHERE oe.event_type = 'settlement.paid' AND oe.aggregate_id = sb.id
+		        AND oe.superseded_by IS NULL
 		   )
 		 ORDER BY sb.paid_at ASC
 		 LIMIT 500
@@ -83,14 +87,20 @@ func EnqueuePayoutNotifications(ctx context.Context, db *pgxpool.Pool) (int, err
 		if err != nil {
 			return count, fmt.Errorf("settlement: EnqueuePayoutNotifications: marshal payload: %w", err)
 		}
-		_, err = db.Exec(ctx, `
+		// The conflict target must name the partial index's predicate exactly.
+		// A conflict means another run already enqueued this batch's event
+		// (possibly a moment ago, after our scan): not an error, just nothing
+		// for us to do.
+		tag, err := db.Exec(ctx, `
 			INSERT INTO outbox_events (event_type, aggregate_type, aggregate_id, payload)
 			VALUES ('settlement.paid', 'settlement_batch', $1, $2)
+			ON CONFLICT (aggregate_id) WHERE event_type = 'settlement.paid' AND superseded_by IS NULL
+			DO NOTHING
 		`, b.id, payload)
 		if err != nil {
 			return count, fmt.Errorf("settlement: EnqueuePayoutNotifications: insert batch %s: %w", b.id, err)
 		}
-		count++
+		count += int(tag.RowsAffected())
 	}
 	return count, nil
 }
