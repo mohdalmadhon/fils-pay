@@ -178,7 +178,25 @@ export async function processRefund(
       capturedFils,
       refundedTotalFils: newRefundedTotal,
     });
-    const feeReversedFils = calculateRefundFee(capturedFils, feeChargedFils, requestedAmount);
+    // Across several partial refunds, each proportional share is rounded on
+    // its own, so the shares could add up to more than the fee that was
+    // charged (e.g. fee 3, captured 2, two refunds of 1 → 2 + 2). Cap every
+    // reversal at what is left of the fee, and let the refund that returns
+    // the last of the captured amount reverse exactly the remainder, so the
+    // total reversed always equals the fee charged and never exceeds it.
+    const reversedSoFar = await client.query<{ fils: string }>(
+      `SELECT COALESCE(SUM(fee_reversed_fils), 0)::text AS fils
+         FROM refunds WHERE transaction_id = $1 AND status = 'succeeded'`,
+      [txn.id],
+    );
+    const feeLeftFils = toFils(Math.max(0, feeChargedFils - Number(reversedSoFar.rows[0]?.fils ?? 0)));
+    const proportionalFee = calculateRefundFee(capturedFils, feeChargedFils, requestedAmount);
+    const feeReversedFils =
+      compareFils(newRefundedTotal, capturedFils) >= 0
+        ? feeLeftFils
+        : compareFils(proportionalFee, feeLeftFils) > 0
+          ? feeLeftFils
+          : proportionalFee;
 
     const refundResult = await client.query<{ id: string; occurred_at: Date }>(
       `INSERT INTO refunds
