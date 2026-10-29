@@ -7,9 +7,16 @@ import { ConflictError, NotFoundError } from "../lib/errors.js";
 
 export interface RotatedApiKey extends IssuedApiKey {
   previousKeyId: string;
+  /** When the previous key stopped authenticating: the rotation itself. */
+  previousKeyRevokedAt: Date;
 }
 
-/** Rotates a merchant's API key, atomically with its audit row. */
+/**
+ * Rotates a merchant's API key: issues the replacement, revokes the old key
+ * (reason 'rotated') and writes the audit row, all in one transaction. The
+ * old key stops working the moment this commits. There is no overlap window,
+ * so the new key has to reach the merchant before their next call.
+ */
 export async function rotateApiKeyAsAdmin(
   pool: Pool,
   config: Pick<Config, "nodeEnv">,
@@ -40,9 +47,14 @@ export async function rotateApiKeyAsAdmin(
       action: "api_key_rotate",
       targetType: "api_key",
       targetId: input.apiKeyId,
-      metadata: { merchantId: input.merchantId, newKeyId: issued.id },
+      metadata: { merchantId: input.merchantId, newKeyId: issued.id, previousKeyRevoked: true },
     });
 
-    return { ...issued, previousKeyId: input.apiKeyId };
+    const revokedRow = await client.query<{ revoked_at: Date }>(
+      `SELECT revoked_at FROM api_keys WHERE id = $1`,
+      [input.apiKeyId],
+    );
+
+    return { ...issued, previousKeyId: input.apiKeyId, previousKeyRevokedAt: revokedRow.rows[0]!.revoked_at };
   });
 }
