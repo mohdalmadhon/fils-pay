@@ -2,6 +2,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import type { Config } from "./config.js";
 import { createAcquirerSimulator } from "./acquirer/simulator.js";
+import { corsPlugin } from "./plugins/cors.js";
 import { cookiesPlugin } from "./plugins/cookies.js";
 import { multipartPlugin } from "./plugins/multipart.js";
 import { errorHandler } from "./plugins/errorHandler.js";
@@ -46,6 +47,9 @@ export function buildApp(config: Config, pool: Pool, options: BuildAppOptions = 
   app.decorate("acquirer", createAcquirerSimulator(config));
   app.decorate("webhookTransport", options.webhookTransport ?? createFetchTransport());
 
+  // First, so the CORS headers (and preflight answers) are on every
+  // response, errors and 404s included.
+  app.register(corsPlugin);
   app.register(cookiesPlugin);
   app.register(multipartPlugin, { config });
   app.setErrorHandler(errorHandler);
