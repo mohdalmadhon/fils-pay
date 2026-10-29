@@ -1,6 +1,6 @@
-// Package ledger rebuilds merchant_balances from ledger_entries. Nothing
-// automatic calls this — the incremental path is in internal/balances.
-// This is for the manual `rebuild-balances` CLI subcommand.
+// Package ledger rebuilds merchant_balances from ledger_entries for the
+// manual rebuild-balances CLI and the admin button. The incremental path
+// is in internal/balances.
 package ledger
 
 import (
@@ -50,7 +50,7 @@ func (d RebuildDiff) Changed() bool {
 
 // RebuildAllBalances recomputes every merchant's balance the same way and
 // overwrites merchant_balances in one transaction. Returns the full
-// before/after map so a caller (the rebuild-balances CLI subcommand) can
+// before/after map so a caller (the CLI or admin button) can
 // print exactly what changed. The only function in this codebase that
 // writes merchant_balances from a full ledger recompute rather than an
 // incremental delta.

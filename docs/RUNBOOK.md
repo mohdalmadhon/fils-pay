@@ -55,10 +55,17 @@ settlement rebuild-balances                       # prints before/after per merc
 settlement rebuild-balances --merchant=<uuid>
 ```
 
-If you don't have shell access, the console's **Rebuild cached balances**
-does the same for all merchants. If the rebuilt figure is still wrong, use
-**Adjust balance** for the remaining difference and note the ticket in the
-reason.
+The full CLI rebuild and the console's **Rebuild cached balances** now use
+the same payable-ledger calculation for all merchants. The `--merchant`
+option currently calculates and prints that merchant's ledger balance; it
+does not update the cache.
+
+Rebuilds overwrite cache-only display adjustments. Investigate any remaining
+difference against the ledger and statement history before applying another
+display adjustment. The button can take as long as the full ledger rebuild;
+the existing HTTP timeout and concurrent-write limitations are unchanged.
+See [the problem 4 investigation](solved-problems/003-admin-balance-rebuild-source.md)
+and [ADR 0007](adr/0007-ledger-backed-admin-balance-rebuild.md).
 
 ## Dashboards look stale
 

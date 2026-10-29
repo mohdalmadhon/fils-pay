@@ -75,10 +75,13 @@ merchant). Days that are already closed or paid are skipped, so re-running
 is always safe.
 
 **Rebuild cached balances** — refreshes every merchant's cached balance.
-Run it whenever a balance looks off or after any manual correction.
-It only rewrites the balance cache, never the ledger, so it's safe to run
-as often as you like; it asks for confirmation because it covers every
-merchant at once. The nightly recompute does the same thing at 02:00.
+Uses the same payable-ledger calculation as the full `settlement
+rebuild-balances` CLI: credits minus debits in `merchant_payable`. It changes
+the cache, not ledger entries. Cache-only display adjustments are overwritten.
+The previous scheme-export calculation was replaced under
+[ADR 0007](adr/0007-ledger-backed-admin-balance-rebuild.md); see the
+[investigation](solved-problems/003-admin-balance-rebuild-source.md) for the
+reason and current performance limitations.
 
 **Rebuild analytics** — dashboards lag a little behind live activity by
 design. If they look stale, rebuild them from scratch here instead of
