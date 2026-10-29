@@ -10,6 +10,7 @@ import {
   createWebhookDeliveryArchive,
   replayWebhookDeliveryArchive,
   type ArchivedDeliveryEntry,
+  readArchiveEntries,
 } from "./archiveReplay.js";
 import { ConflictError, NotFoundError } from "../lib/errors.js";
 
@@ -109,13 +110,15 @@ test("captures every delivery in the window, in capture order, round-tripping as
 
   assert.equal(created.deliveryCount, 3);
 
-  const stored = await pool.query<{ archive_payload: string; delivery_count: number }>(
-    `SELECT archive_payload, delivery_count FROM webhook_delivery_archives WHERE id = $1`,
+  const stored = await pool.query<{ delivery_count: number }>(
+    `SELECT delivery_count FROM webhook_delivery_archives WHERE id = $1`,
     [created.archiveId],
   );
   assert.equal(stored.rows[0]!.delivery_count, 3);
 
-  const entries = JSON.parse(stored.rows[0]!.archive_payload) as ArchivedDeliveryEntry[];
+  // Entries are stored one row per delivery (migration 0077), not as one
+  // JSON blob in archive_payload; read them back through the pager.
+  const entries: ArchivedDeliveryEntry[] = await readArchiveEntries(pool, { merchantId, archiveId: created.archiveId });
   assert.deepEqual(entries.map((e) => e.deliveryId), ids);
   assert.equal(entries[0]!.eventType, "transaction.captured");
   assert.equal(entries[1]!.eventType, "transaction.voided");
