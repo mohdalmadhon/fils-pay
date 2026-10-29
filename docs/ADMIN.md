@@ -76,8 +76,13 @@ separately approved adjustment, not a rewrite of finalized batches. See
 
 **Import adjustments** — paste a CSV of corrections with a
 `merchantId,amount,reason` header. Amounts are in BD as finance's sheets
-already have them (`4.75`, `120.00`). Rows are applied as soon as you
-submit; each import's rows are kept with the original text for reference.
+already have them: `4.755` becomes 4,755 fils, and both `4.75` and `4.750`
+become 4,750 fils. Up to three decimal places are accepted; extra decimals
+or malformed values reject the entire import rather than being rounded or
+truncated. Signed amounts are supported. Rows are applied as soon as you
+submit; each import's rows retain the amount text and parsed fils for
+reference. See [the BD parsing fix](solved-problems/006-adjustment-import-bhd-parsing.md)
+for the previous tenfold error and historical investigation steps.
 Don't submit the same file twice; there's no duplicate detection yet.
 
 ## Settlement ops

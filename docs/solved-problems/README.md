@@ -12,6 +12,7 @@ data repair.
 | [003 — Admin/CLI balance rebuild mismatch (problem 4)](003-admin-balance-rebuild-source.md) | Make the admin button call the full CLI's payable-ledger rebuild | Verify the reported incident against production history; assess timeout and concurrency concerns separately |
 | [004 — MDR recalculation rewrites finalized batches](004-mdr-finalized-batches.md) | Recalculate provisional open-batch totals only; preserve closed/paid history and financial postings | Audit historical recalculations; any remediation requires separately approved adjustments |
 | [005 — Fee display selects a historical backfill](005-fee-schedule-display.md) | Select the schedule already in effect using capture's effective-date ordering | Confirm the actual production screen and rows if they differ from the saved fixture; other fee modifiers remain separate |
+| [006 — CSV adjustment import misreads BD as two-decimal minor units](006-adjustment-import-bhd-parsing.md) | Parse signed BD with the validated `parseBhdToFils` helper, preserving three decimals | Audit old raw amount text against posted fils; any correction must avoid duplicating existing imports |
 
 For future entries, use the next number and a descriptive filename. Include
 before/after examples and links to the affected code. Line numbers reflect
