@@ -60,6 +60,23 @@ Existing class names (`dash-*`, `admin-*`, `checkout-*`) are kept, so pages
 pick up the system without changes: a form's submit button is the primary
 action, tables and `<dl>`s become cards, `dash-status-*` become pills.
 
+## Play: what makes it fun
+
+FilsPay is about the smallest coin, so the interface lets people handle
+coins. Everything playful is decorative or optional, never in the way of a
+payment, and all of it calms down under `prefers-reduced-motion`.
+
+| Piece | Where | What it does |
+|---|---|---|
+| `CoinPhysics` | `components/fun/CoinPhysics.tsx` | canvas coins with gravity, bounce, spin and stacking; flick them with the pointer, click to drop one. Sleeps when every coin is at rest; under reduced motion the pile is settled instantly and drawn once |
+| `CoinPit` | `components/fun/CoinPit.tsx` | the dusk panel on sign-in and checkout: a low sun over rose dunes, a live coin pile, and a chip that counts your flicks |
+| Checkout | `pages/checkout` | every card digit typed drops a fils into the pile; the card leans toward the pointer, turns over for the CVV and shakes on a decline; the paid screen rains coins and rolls the amount up from zero |
+| `CatchTheFils` | `components/fun/CatchTheFils.tsx` | the 404 mini-game: 20 seconds, steer a purse with pointer, finger or arrow keys, gold 10 fils, rose 50, big 100, red chargebacks cost 50; best score kept in the browser |
+| `CommandPalette` | `components/fun/CommandPalette.tsx` | Ctrl+K / Cmd+K in both consoles: jump to any page or run an action (new payment link, switch theme, log out) with forgiving matching and full keyboard control |
+| Night mode | `theme.css`, `components/fun/theme.ts` | a dark "night" palette behind `data-theme="night"`; the sidebar switch or the palette toggles it, the choice is remembered, and the system setting decides otherwise |
+| Overview | `pages/overview` | a time-of-day greeting, four tiles whose totals roll up, and a self-drawing area chart with a crosshair tooltip (pointer or arrow keys); the tables stay below as the accessible data |
+| Easter egg | `components/fun/useKonami.ts` | up up down down left right left right B A rains coins over the console (also "Make it rain fils" in the palette) |
+
 ## Errors and empty states
 
 - Every error says what happened and what to do next, in the interface's
@@ -82,7 +99,7 @@ action, tables and `<dl>`s become cards, `dash-status-*` become pills.
 - Touch targets are at least 42–44px. Focus is a visible rose ring. There
   is a skip-to-content link. Status is never shown by colour alone (every
   pill has its label).
-- Every animation (floating coin, parallax, orbs, loading) stops under
+- Every animation (coins, parallax, orbs, chart drawing, count-ups, loading) stops under
   `prefers-reduced-motion`.
 - Tab titles follow the page heading: "Transactions | FilsPay", "Merchants
   | FilsPay Ops".
