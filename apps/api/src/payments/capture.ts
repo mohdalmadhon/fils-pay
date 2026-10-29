@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { ZERO_FILS, addFils, applyRateFils, compareFils, subtractFils, toFils, type Fils } from "@filspay/money";
 import { enqueueEvent } from "@filspay/events";
 import { withTransaction } from "../db/withTransaction.js";
@@ -89,177 +89,189 @@ export async function captureTransaction(
   acquirer: AcquirerSimulator,
   input: CaptureInput,
 ): Promise<CaptureResult> {
+  return withTransaction(pool, (client) => captureTransactionWithClient(client, acquirer, input));
+}
+
+/**
+ * The same capture, run inside a transaction the caller already holds, so it
+ * commits or rolls back together with the caller's own writes. Used by the
+ * payment-link pay flow, which must capture and mark the link paid
+ * atomically while it holds the link's row lock.
+ */
+export async function captureTransactionWithClient(
+  client: PoolClient,
+  acquirer: AcquirerSimulator,
+  input: CaptureInput,
+): Promise<CaptureResult> {
   const requestHash = hashRequest({ amountFils: input.amountFils ?? null });
 
-  return withTransaction(pool, async (client) => {
-    const claim = await claimIdempotencyKey(client, {
-      merchantId: input.merchantId,
-      endpoint: ENDPOINT,
-      key: input.idempotencyKey,
-      requestHash,
-    });
+  const claim = await claimIdempotencyKey(client, {
+    merchantId: input.merchantId,
+    endpoint: ENDPOINT,
+    key: input.idempotencyKey,
+    requestHash,
+  });
 
-    if (claim.outcome === "conflict_hash_mismatch") {
-      throw new UnprocessableEntityError("idempotency_key_reused");
-    }
-    if (claim.outcome === "conflict_in_progress") {
-      throw new ConflictError("request_in_progress");
-    }
-    if (claim.outcome === "replay") {
-      // No row lock is ever taken on this call.
-      return { statusCode: claim.row.responseStatusCode ?? 200, body: claim.row.responseBody };
-    }
-    // 'fresh' / 'retry_after_failure' — continue.
+  if (claim.outcome === "conflict_hash_mismatch") {
+    throw new UnprocessableEntityError("idempotency_key_reused");
+  }
+  if (claim.outcome === "conflict_in_progress") {
+    throw new ConflictError("request_in_progress");
+  }
+  if (claim.outcome === "replay") {
+    // No row lock is ever taken on this call.
+    return { statusCode: claim.row.responseStatusCode ?? 200, body: claim.row.responseBody };
+  }
+  // 'fresh' / 'retry_after_failure' — continue.
 
-    // Acquire the row lock FIRST, before any validation. Ownership is
-    // enforced by input.merchantId, which the caller derives only from
-    // request.merchantAuth — never from a merchantId in the request body —
-    // so ownership can never be satisfied by a value the caller controls
-    // independently of how they authenticated.
-    const lockResult = await client.query<LockedTransactionRow>(
-      `SELECT id, merchant_id, status, amount_fils, captured_fils, acquirer_reference
-         FROM transactions
-        WHERE id = $1 AND merchant_id = $2
-        FOR UPDATE`,
-      [input.transactionId, input.merchantId],
-    );
-    const txn = lockResult.rows[0];
-    if (!txn) {
-      const body = { error: "transaction_not_found" };
-      await completeIdempotencyKey(client, claim.row.id, { statusCode: 404, body });
-      return { statusCode: 404, body };
-    }
+  // Acquire the row lock FIRST, before any validation. Ownership is
+  // enforced by input.merchantId, which the caller derives only from
+  // request.merchantAuth — never from a merchantId in the request body —
+  // so ownership can never be satisfied by a value the caller controls
+  // independently of how they authenticated.
+  const lockResult = await client.query<LockedTransactionRow>(
+    `SELECT id, merchant_id, status, amount_fils, captured_fils, acquirer_reference
+       FROM transactions
+      WHERE id = $1 AND merchant_id = $2
+      FOR UPDATE`,
+    [input.transactionId, input.merchantId],
+  );
+  const txn = lockResult.rows[0];
+  if (!txn) {
+    const body = { error: "transaction_not_found" };
+    await completeIdempotencyKey(client, claim.row.id, { statusCode: 404, body });
+    return { statusCode: 404, body };
+  }
 
-    // Validate current state, still holding the lock, before calling the
-    // acquirer.
-    if (txn.status !== "authorized" && txn.status !== "partially_captured") {
-      const body = { error: "not_capturable", status: txn.status };
-      await completeIdempotencyKey(client, claim.row.id, { statusCode: 409, body });
-      return { statusCode: 409, body };
-    }
+  // Validate current state, still holding the lock, before calling the
+  // acquirer.
+  if (txn.status !== "authorized" && txn.status !== "partially_captured") {
+    const body = { error: "not_capturable", status: txn.status };
+    await completeIdempotencyKey(client, claim.row.id, { statusCode: 409, body });
+    return { statusCode: 409, body };
+  }
 
-    // — YA: authorised vs captured. finance says "amount" and means both.
-    const amountAuthorized = toFils(Number(txn.amount_fils));
-    const capturedSoFar = toFils(Number(txn.captured_fils));
-    const remaining = subtractFils(amountAuthorized, capturedSoFar);
-    const requestedAmount = input.amountFils ?? remaining;
+  // — YA: authorised vs captured. finance says "amount" and means both.
+  const amountAuthorized = toFils(Number(txn.amount_fils));
+  const capturedSoFar = toFils(Number(txn.captured_fils));
+  const remaining = subtractFils(amountAuthorized, capturedSoFar);
+  const requestedAmount = input.amountFils ?? remaining;
 
-    if (compareFils(requestedAmount, ZERO_FILS) <= 0 || compareFils(requestedAmount, remaining) > 0) {
-      const body = { error: "capture_exceeds_remaining", remainingFils: remaining };
-      await completeIdempotencyKey(client, claim.row.id, { statusCode: 422, body });
-      return { statusCode: 422, body };
-    }
+  if (compareFils(requestedAmount, ZERO_FILS) <= 0 || compareFils(requestedAmount, remaining) > 0) {
+    const body = { error: "capture_exceeds_remaining", remainingFils: remaining };
+    await completeIdempotencyKey(client, claim.row.id, { statusCode: 422, body });
+    return { statusCode: 422, body };
+  }
 
-    const merchantResult = await client.query<{ mdr_bps: number }>(
-      `SELECT mdr_bps FROM merchants WHERE id = $1`,
-      [input.merchantId],
-    );
-    const merchant = merchantResult.rows[0];
-    if (!merchant) {
-      throw new Error("captureTransaction: merchant row disappeared mid-transaction");
-    }
+  const merchantResult = await client.query<{ mdr_bps: number }>(
+    `SELECT mdr_bps FROM merchants WHERE id = $1`,
+    [input.merchantId],
+  );
+  const merchant = merchantResult.rows[0];
+  if (!merchant) {
+    throw new Error("captureTransaction: merchant row disappeared mid-transaction");
+  }
 
-    // Fee rate resolution: effective-dated (apps/api/src/fees/feeSchedule.ts),
-    // falling back to this merchant's plain mdr_bps when no schedule row
-    // applies yet — the ordinary case for every merchant that has never had
-    // a negotiated rate change recorded. Resolved at the instant of capture,
-    // inside the same locked transaction that computes and journals the fee.
-    const effectiveMdrBps = await getEffectiveMdrBps(client, input.merchantId, new Date(), merchant.mdr_bps);
-    const volumeTierBonusBps = await getVolumeTierBonusBps(client);
+  // Fee rate resolution: effective-dated (apps/api/src/fees/feeSchedule.ts),
+  // falling back to this merchant's plain mdr_bps when no schedule row
+  // applies yet — the ordinary case for every merchant that has never had
+  // a negotiated rate change recorded. Resolved at the instant of capture,
+  // inside the same locked transaction that computes and journals the fee.
+  const effectiveMdrBps = await getEffectiveMdrBps(client, input.merchantId, new Date(), merchant.mdr_bps);
+  const volumeTierBonusBps = await getVolumeTierBonusBps(client);
 
-    // Call the acquirer — awaited here, with the row lock from above still
-    // held (same client, same open transaction). No other process can
-    // read-lock, write-lock, or update this transaction row while this
-    // call is in flight.
-    const acquirerResult = await acquirer.capture({
-      acquirerReference: txn.acquirer_reference,
-      amountFils: requestedAmount,
-      idempotencyKey: `${claim.row.id}:${claim.row.attemptCount}`,
-    });
+  // Call the acquirer — awaited here, with the row lock from above still
+  // held (same client, same open transaction). No other process can
+  // read-lock, write-lock, or update this transaction row while this
+  // call is in flight.
+  const acquirerResult = await acquirer.capture({
+    acquirerReference: txn.acquirer_reference,
+    amountFils: requestedAmount,
+    idempotencyKey: `${claim.row.id}:${claim.row.attemptCount}`,
+  });
 
-    if (acquirerResult.outcome === "declined") {
-      // Note: AcquirerCaptureResult carries no
-      // declineReason field the way AcquirerAuthorizeResult does — capture
-      // declines are reported by outcome alone.
-      const body = { error: "card_captured_declined" };
-      await completeIdempotencyKey(client, claim.row.id, { statusCode: 402, body });
-      return { statusCode: 402, body };
-    }
-    if (acquirerResult.outcome === "error") {
-      const body = { error: "acquirer_unavailable" };
-      await failIdempotencyKey(client, claim.row.id, { statusCode: 502, body });
-      return { statusCode: 502, body };
-    }
+  if (acquirerResult.outcome === "declined") {
+    // Note: AcquirerCaptureResult carries no
+    // declineReason field the way AcquirerAuthorizeResult does — capture
+    // declines are reported by outcome alone.
+    const body = { error: "card_captured_declined" };
+    await completeIdempotencyKey(client, claim.row.id, { statusCode: 402, body });
+    return { statusCode: 402, body };
+  }
+  if (acquirerResult.outcome === "error") {
+    const body = { error: "acquirer_unavailable" };
+    await failIdempotencyKey(client, claim.row.id, { statusCode: 502, body });
+    return { statusCode: 502, body };
+  }
 
-    // outcome === 'approved'. Integer math throughout — no float ever
-    // enters this path.
-    const feeFils = applyRateFils(requestedAmount, Math.max(0, effectiveMdrBps - volumeTierBonusBps));
-    const newCapturedFils = addFils(capturedSoFar, requestedAmount);
-    const newStatus = compareFils(newCapturedFils, amountAuthorized) === 0 ? "captured" : "partially_captured";
+  // outcome === 'approved'. Integer math throughout — no float ever
+  // enters this path.
+  const feeFils = applyRateFils(requestedAmount, Math.max(0, effectiveMdrBps - volumeTierBonusBps));
+  const newCapturedFils = addFils(capturedSoFar, requestedAmount);
+  const newStatus = compareFils(newCapturedFils, amountAuthorized) === 0 ? "captured" : "partially_captured";
 
-    const updateResult = await client.query<TransactionRow>(
-      `UPDATE transactions SET status = $2, captured_fils = $3 WHERE id = $1 RETURNING *`,
-      [txn.id, newStatus, newCapturedFils],
-    );
-    const updatedTxn = updateResult.rows[0];
-    if (!updatedTxn) {
-      throw new Error("captureTransaction: update to transactions returned no row");
-    }
+  const updateResult = await client.query<TransactionRow>(
+    `UPDATE transactions SET status = $2, captured_fils = $3 WHERE id = $1 RETURNING *`,
+    [txn.id, newStatus, newCapturedFils],
+  );
+  const updatedTxn = updateResult.rows[0];
+  if (!updatedTxn) {
+    throw new Error("captureTransaction: update to transactions returned no row");
+  }
 
-    // Double-entry journaling. One entry_group_id per capture event; the
-    // fee leg pair is omitted entirely when feeFils = 0 (ledger_entries has
-    // a CHECK (amount_fils > 0), and a zero-value entry carries no
-    // accounting information anyway).
-    const entryGroupId = randomUUID();
+  // Double-entry journaling. One entry_group_id per capture event; the
+  // fee leg pair is omitted entirely when feeFils = 0 (ledger_entries has
+  // a CHECK (amount_fils > 0), and a zero-value entry carries no
+  // accounting information anyway).
+  const entryGroupId = randomUUID();
+  await client.query(
+    `INSERT INTO ledger_entries
+       (entry_group_id, merchant_id, transaction_id, account_id, direction, amount_fils, occurred_at, description)
+     VALUES
+       ($1, $2, $3, 'card_scheme_clearing', 'debit',  $4, now(), 'capture: gross'),
+       ($1, $2, $3, 'merchant_payable',     'credit', $4, now(), 'capture: gross')`,
+    [entryGroupId, input.merchantId, txn.id, requestedAmount],
+  );
+  if (feeFils > 0) {
     await client.query(
       `INSERT INTO ledger_entries
          (entry_group_id, merchant_id, transaction_id, account_id, direction, amount_fils, occurred_at, description)
        VALUES
-         ($1, $2, $3, 'card_scheme_clearing', 'debit',  $4, now(), 'capture: gross'),
-         ($1, $2, $3, 'merchant_payable',     'credit', $4, now(), 'capture: gross')`,
-      [entryGroupId, input.merchantId, txn.id, requestedAmount],
+         ($1, $2, $3, 'merchant_payable',     'debit',  $4, now(), 'capture: MDR fee'),
+         ($1, $2, $3, 'platform_fee_revenue', 'credit', $4, now(), 'capture: MDR fee')`,
+      [entryGroupId, input.merchantId, txn.id, feeFils],
     );
-    if (feeFils > 0) {
-      await client.query(
-        `INSERT INTO ledger_entries
-           (entry_group_id, merchant_id, transaction_id, account_id, direction, amount_fils, occurred_at, description)
-         VALUES
-           ($1, $2, $3, 'merchant_payable',     'debit',  $4, now(), 'capture: MDR fee'),
-           ($1, $2, $3, 'platform_fee_revenue', 'credit', $4, now(), 'capture: MDR fee')`,
-        [entryGroupId, input.merchantId, txn.id, feeFils],
-      );
-    }
+  }
 
-    // Hold lifecycle: released exactly when nothing remains outstanding.
-    if (newStatus === "captured") {
-      await client.query(`UPDATE holds SET status = 'released' WHERE transaction_id = $1 AND status = 'active'`, [
-        txn.id,
-      ]);
-    }
+  // Hold lifecycle: released exactly when nothing remains outstanding.
+  if (newStatus === "captured") {
+    await client.query(`UPDATE holds SET status = 'released' WHERE transaction_id = $1 AND status = 'active'`, [
+      txn.id,
+    ]);
+  }
 
-    await enqueueEvent(client, {
-      eventType: "transaction.captured",
-      aggregateType: "transaction",
-      aggregateId: txn.id,
-      payload: {
-        merchantId: input.merchantId,
-        amountCapturedFils: requestedAmount,
-        feeFils,
-        newStatus,
-        capturedTotalFils: newCapturedFils,
-      },
-    });
-
-    await recordTransactionEvent(client, {
-      transactionId: txn.id,
-      eventType: newStatus === "captured" ? "captured" : "partially_captured",
-      amountFils: requestedAmount,
-      actor: input.actor,
-      metadata: { feeFils, acquirerReference: acquirerResult.acquirerReference },
-    });
-
-    const body = serializeTransaction(updatedTxn);
-    await completeIdempotencyKey(client, claim.row.id, { statusCode: 200, body, resourceId: txn.id });
-    return { statusCode: 200, body };
+  await enqueueEvent(client, {
+    eventType: "transaction.captured",
+    aggregateType: "transaction",
+    aggregateId: txn.id,
+    payload: {
+      merchantId: input.merchantId,
+      amountCapturedFils: requestedAmount,
+      feeFils,
+      newStatus,
+      capturedTotalFils: newCapturedFils,
+    },
   });
+
+  await recordTransactionEvent(client, {
+    transactionId: txn.id,
+    eventType: newStatus === "captured" ? "captured" : "partially_captured",
+    amountFils: requestedAmount,
+    actor: input.actor,
+    metadata: { feeFils, acquirerReference: acquirerResult.acquirerReference },
+  });
+
+  const body = serializeTransaction(updatedTxn);
+  await completeIdempotencyKey(client, claim.row.id, { statusCode: 200, body, resourceId: txn.id });
+  return { statusCode: 200, body };
 }
