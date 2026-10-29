@@ -1,249 +1,424 @@
 /**
- * FilsPay's illustration set: "pearl & tide".
+ * FilsPay's illustration set: "desert dusk".
  *
- * Bahrain's economy ran on pearls and the sea long before card payments, and
- * the fils is its smallest coin. Every piece of art here comes from that
- * world: a nacre pearl (the brand mark), Gulf tide lines, a dhow on the
- * horizon, oyster shells. All inline SVG, coloured from CSS custom
- * properties so it follows the theme, and decorative (aria-hidden) unless a
- * title is passed.
+ * Glossy, softly lit 3D-style sculptures in a plum-to-rose room at dusk:
+ * sand-gold coins stacked on pedestals, a coin floating inside a glowing
+ * apricot ring, rose and apricot spheres, dusky palm fronds. Everything is
+ * inline SVG built from gradients, so it stays sharp at any size. There is
+ * deliberately no logo anywhere: the product name is set as plain text.
+ * Decorative (aria-hidden) unless a title is passed.
  */
-import { useId, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 
 interface ArtProps {
   className?: string;
   title?: string;
 }
 
-function svgA11y(title: string | undefined) {
+const C = {
+  plumDeep: "#3e1b36",
+  plum: "#5b2a4e",
+  rose: "#d9777f",
+  roseDeep: "#b4566a",
+  apricot: "#e8a87c",
+  apricotDeep: "#c97f55",
+  sand: "#e0b15a",
+  sandDeep: "#b8862f",
+  glow: "#ffc9a3",
+};
+
+function useSvgId(): string {
+  return useId().replace(/:/g, "");
+}
+
+function a11y(title: string | undefined) {
   return title ? { role: "img" as const, "aria-label": title } : { "aria-hidden": true as const, focusable: false as const };
 }
 
-/** The nacre gradient every pearl uses. ids are per-instance so several
- *  pearls on one page never clash. */
-function NacreDefs({ id }: { id: string }) {
+/* Shared gradients ------------------------------------------------------- */
+
+function Defs({ id }: { id: string }) {
   return (
     <defs>
-      <radialGradient id={`${id}-nacre`} cx="35%" cy="30%" r="75%">
-        <stop offset="0%" stopColor="#ffffff" />
-        <stop offset="35%" stopColor="#f3eef6" />
-        <stop offset="62%" stopColor="#dfe9ee" />
-        <stop offset="85%" stopColor="#c6d6dc" />
-        <stop offset="100%" stopColor="#a9bcc4" />
+      {/* sand-gold coin face */}
+      <radialGradient id={`${id}-gold`} cx="35%" cy="30%" r="80%">
+        <stop offset="0%" stopColor="#fff4d9" />
+        <stop offset="35%" stopColor="#f0cb7e" />
+        <stop offset="72%" stopColor={C.sand} />
+        <stop offset="100%" stopColor="#9a6c22" />
       </radialGradient>
-      <linearGradient id={`${id}-sheen`} x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stopColor="#f9d9e6" stopOpacity="0.55" />
-        <stop offset="50%" stopColor="#d6f0ee" stopOpacity="0.35" />
-        <stop offset="100%" stopColor="#e7e0fa" stopOpacity="0.5" />
+      {/* coin edge */}
+      <linearGradient id={`${id}-goldEdge`} x1="0" x2="1">
+        <stop offset="0%" stopColor="#8f631d" />
+        <stop offset="40%" stopColor={C.sandDeep} />
+        <stop offset="60%" stopColor="#f3d495" />
+        <stop offset="100%" stopColor="#8f631d" />
       </linearGradient>
+      {/* pedestal bodies, lit from the left */}
+      <linearGradient id={`${id}-roseBody`} x1="0" x2="1">
+        <stop offset="0%" stopColor="#f3c3c5" />
+        <stop offset="45%" stopColor={C.rose} />
+        <stop offset="100%" stopColor={C.roseDeep} />
+      </linearGradient>
+      <linearGradient id={`${id}-sandBody`} x1="0" x2="1">
+        <stop offset="0%" stopColor="#f6dfae" />
+        <stop offset="45%" stopColor={C.sand} />
+        <stop offset="100%" stopColor={C.sandDeep} />
+      </linearGradient>
+      <linearGradient id={`${id}-plumBody`} x1="0" x2="1">
+        <stop offset="0%" stopColor="#a5708f" />
+        <stop offset="45%" stopColor={C.plum} />
+        <stop offset="100%" stopColor={C.plumDeep} />
+      </linearGradient>
+      <linearGradient id={`${id}-apricotBody`} x1="0" x2="1">
+        <stop offset="0%" stopColor="#f8d6bd" />
+        <stop offset="45%" stopColor={C.apricot} />
+        <stop offset="100%" stopColor={C.apricotDeep} />
+      </linearGradient>
+      {/* spheres */}
+      <radialGradient id={`${id}-roseBall`} cx="35%" cy="30%" r="75%">
+        <stop offset="0%" stopColor="#fde3e3" />
+        <stop offset="35%" stopColor="#e9979c" />
+        <stop offset="75%" stopColor={C.rose} />
+        <stop offset="100%" stopColor="#8f3a4f" />
+      </radialGradient>
+      <radialGradient id={`${id}-apricotBall`} cx="35%" cy="30%" r="75%">
+        <stop offset="0%" stopColor="#fff0e3" />
+        <stop offset="35%" stopColor="#f2c19f" />
+        <stop offset="75%" stopColor={C.apricot} />
+        <stop offset="100%" stopColor="#a8603a" />
+      </radialGradient>
+      <radialGradient id={`${id}-plumBall`} cx="35%" cy="30%" r="75%">
+        <stop offset="0%" stopColor="#e6c8da" />
+        <stop offset="35%" stopColor="#9c5f86" />
+        <stop offset="75%" stopColor={C.plum} />
+        <stop offset="100%" stopColor="#2a0f25" />
+      </radialGradient>
+      <filter id={`${id}-glow`} x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="3" result="b" />
+        <feMerge>
+          <feMergeNode in="b" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+      <radialGradient id={`${id}-shadow`}>
+        <stop offset="0%" stopColor="#3e1b36" stopOpacity="0.32" />
+        <stop offset="100%" stopColor="#3e1b36" stopOpacity="0" />
+      </radialGradient>
     </defs>
   );
 }
 
-export function Pearl({ className, title, size = 40 }: ArtProps & { size?: number }) {
-  const id = useId().replace(/:/g, "");
+type Body = "rose" | "sand" | "plum" | "apricot";
+const TOPS: Record<Body, string> = { rose: "#f7cfd1", sand: "#f9e6bd", plum: "#b98aa8", apricot: "#fbdcc6" };
+
+/** A round pedestal: body, lit top, floor shadow. `y` is the top face. */
+function Pedestal({ id, cx, y, r, h, body }: { id: string; cx: number; y: number; r: number; h: number; body: Body }) {
+  const ry = r * 0.24;
   return (
-    <svg className={className} width={size} height={size} viewBox="0 0 40 40" {...svgA11y(title)}>
-      <NacreDefs id={id} />
-      <circle cx="20" cy="20" r="18" fill={`url(#${id}-nacre)`} />
-      <circle cx="20" cy="20" r="18" fill={`url(#${id}-sheen)`} />
-      <ellipse cx="13.5" cy="12.5" rx="5" ry="3.2" fill="#fff" opacity="0.85" transform="rotate(-30 13.5 12.5)" />
-      <circle cx="20" cy="20" r="17.5" fill="none" stroke="#7d97a0" strokeOpacity="0.35" />
-    </svg>
+    <g>
+      <ellipse cx={cx + r * 0.25} cy={y + h + ry * 0.6} rx={r * 1.6} ry={ry * 1.4} fill={`url(#${id}-shadow)`} />
+      <path d={`M${cx - r} ${y} V${y + h} A${r} ${ry} 0 0 0 ${cx + r} ${y + h} V${y} Z`} fill={`url(#${id}-${body}Body)`} />
+      <ellipse cx={cx} cy={y} rx={r} ry={ry} fill={TOPS[body]} />
+    </g>
   );
 }
 
-/** Brand mark: a pearl resting in the lip of an open shell. */
-export function BrandMark({ className, size = 36 }: ArtProps & { size?: number }) {
-  const id = useId().replace(/:/g, "");
+/** A stack of coins seen slightly from above. `y` is the bottom. */
+function CoinStack({ id, cx, y, r, count }: { id: string; cx: number; y: number; r: number; count: number }) {
+  const ry = r * 0.3;
+  const t = Math.max(3, r * 0.18);
   return (
-    <svg className={className} width={size} height={size} viewBox="0 0 48 48" aria-hidden focusable={false}>
-      <NacreDefs id={id} />
-      <path d="M4 30c4 10 12 14 20 14s16-4 20-14c-7 3-13 4-20 4S11 33 4 30Z" fill="var(--fp-gold, #c79a2b)" />
-      <path d="M4 30c7 3 13 4 20 4s13-1 20-4" fill="none" stroke="var(--fp-gold-deep, #8f6c17)" strokeWidth="1.5" />
-      <circle cx="24" cy="21" r="13" fill={`url(#${id}-nacre)`} />
-      <circle cx="24" cy="21" r="13" fill={`url(#${id}-sheen)`} />
-      <ellipse cx="19.5" cy="15.5" rx="3.6" ry="2.3" fill="#fff" opacity="0.9" transform="rotate(-30 19.5 15.5)" />
-    </svg>
+    <g>
+      {Array.from({ length: count }, (_, i) => {
+        const top = y - (i + 1) * t;
+        const dx = (i % 2 === 0 ? 1 : -1) * r * 0.04;
+        return (
+          <g key={i}>
+            <path d={`M${cx - r + dx} ${top} V${top + t} A${r} ${ry} 0 0 0 ${cx + r + dx} ${top + t} V${top} Z`} fill={`url(#${id}-goldEdge)`} />
+            <ellipse cx={cx + dx} cy={top} rx={r} ry={ry} fill={`url(#${id}-gold)`} />
+            <ellipse cx={cx + dx} cy={top} rx={r * 0.72} ry={ry * 0.72} fill="none" stroke="#9a6c22" strokeOpacity="0.4" strokeWidth={Math.max(0.8, r * 0.04)} />
+          </g>
+        );
+      })}
+    </g>
   );
 }
 
+/** An upright coin facing us, with a raised rim and no markings. */
+function CoinFace({ id, cx, cy, r }: { id: string; cx: number; cy: number; r: number }) {
+  return (
+    <g>
+      <circle cx={cx + r * 0.06} cy={cy} r={r} fill="#8f631d" />
+      <circle cx={cx} cy={cy} r={r} fill={`url(#${id}-gold)`} />
+      <circle cx={cx} cy={cy} r={r * 0.78} fill="none" stroke="#9a6c22" strokeOpacity="0.45" strokeWidth={r * 0.06} />
+      <circle cx={cx} cy={cy} r={r * 0.5} fill="none" stroke="#9a6c22" strokeOpacity="0.2" strokeWidth={r * 0.04} />
+      <ellipse cx={cx - r * 0.35} cy={cy - r * 0.4} rx={r * 0.32} ry={r * 0.18} fill="#fff" opacity="0.55" transform={`rotate(-30 ${cx - r * 0.35} ${cy - r * 0.4})`} />
+    </g>
+  );
+}
+
+/** A glowing apricot ring tilted around a point. */
+function GlowRing({ id, cx, cy, rx, ry, tilt = -14 }: { id: string; cx: number; cy: number; rx: number; ry: number; tilt?: number }) {
+  return (
+    <g transform={`rotate(${tilt} ${cx} ${cy})`} filter={`url(#${id}-glow)`}>
+      <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="none" stroke={C.apricot} strokeWidth={Math.max(2, rx * 0.06)} />
+      <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="none" stroke="#fff1e4" strokeWidth={Math.max(0.8, rx * 0.02)} />
+    </g>
+  );
+}
+
+function Ball({ id, cx, cy, r, tone }: { id: string; cx: number; cy: number; r: number; tone: "rose" | "apricot" | "plum" }) {
+  return <circle cx={cx} cy={cy} r={r} fill={`url(#${id}-${tone}Ball)`} />;
+}
+
+/** Dusky palm fronds in a rose pot. */
+function Palm({ id, x, y, s }: { id: string; x: number; y: number; s: number }) {
+  const leaf = (angle: number, len: number, color: string) => (
+    <path
+      key={angle}
+      d={`M0 0 C ${len * 0.25} ${-len * 0.25}, ${len * 0.35} ${-len * 0.8}, 0 ${-len} C ${-len * 0.35} ${-len * 0.8}, ${-len * 0.25} ${-len * 0.25}, 0 0Z`}
+      fill={color}
+      transform={`rotate(${angle})`}
+    />
+  );
+  return (
+    <g transform={`translate(${x} ${y}) scale(${s})`}>
+      <g transform="translate(0 -30)">
+        {leaf(-58, 70, "#6e2f59")}
+        {leaf(-30, 88, "#86416b")}
+        {leaf(0, 98, "#a2577b")}
+        {leaf(28, 86, "#7a3862")}
+        {leaf(55, 66, "#93506f")}
+      </g>
+      <path d="M-22 -32 H22 L16 4 H-16 Z" fill={`url(#${id}-roseBody)`} />
+      <ellipse cx="0" cy="-32" rx="22" ry="5" fill={TOPS.rose} />
+    </g>
+  );
+}
+
+/* Name ------------------------------------------------------------------- */
+
+/** The product name as plain type. No logo mark, by design. */
 export function Wordmark({ className }: ArtProps) {
   return (
     <span className={["fp-wordmark", className].filter(Boolean).join(" ")}>
-      <BrandMark size={34} />
-      <span className="fp-wordmark-text">
-        Fils<span>Pay</span>
-      </span>
+      Fils<span>Pay</span>
     </span>
   );
 }
 
-/** Layered tide lines. `animated` lets them drift (CSS handles
- *  prefers-reduced-motion). */
-export function Tide({ className, animated = false }: ArtProps & { animated?: boolean }) {
-  const wave = (y: number, amp: number) =>
-    `M0 ${y} ` +
-    Array.from({ length: 8 }, (_, i) => {
-      const x = i * 100;
-      return `Q ${x + 25} ${y - amp} ${x + 50} ${y} T ${x + 100} ${y}`;
-    }).join(" ");
+/** A small coin, used where a single object marks a place (card preview). */
+export function Coin({ className, title, size = 40 }: ArtProps & { size?: number }) {
+  const id = useSvgId();
   return (
-    <svg
-      className={["fp-tide", animated ? "fp-tide-animated" : "", className].filter(Boolean).join(" ")}
-      viewBox="0 0 400 120"
-      preserveAspectRatio="none"
-      aria-hidden
-      focusable={false}
-    >
-      <g className="fp-tide-layer fp-tide-1">
-        <path d={wave(40, 10)} fill="none" stroke="currentColor" strokeWidth="1.4" opacity="0.35" />
-      </g>
-      <g className="fp-tide-layer fp-tide-2">
-        <path d={wave(62, 14)} fill="none" stroke="currentColor" strokeWidth="1.4" opacity="0.5" />
-      </g>
-      <g className="fp-tide-layer fp-tide-3">
-        <path d={`${wave(86, 12)} L 800 120 L 0 120 Z`} fill="currentColor" opacity="0.18" />
-      </g>
+    <svg className={className} width={size} height={size} viewBox="0 0 40 40" {...a11y(title)}>
+      <Defs id={id} />
+      <CoinFace id={id} cx={19} cy={20} r={17} />
     </svg>
   );
 }
 
-/** A dhow under sail: the Gulf's trading boat. */
-export function Dhow({ className, title }: ArtProps) {
+/** Soft glowing orbs: the sidebar's quiet decoration. */
+export function Orbs({ className }: ArtProps) {
   return (
-    <svg className={className} viewBox="0 0 120 90" {...svgA11y(title)}>
-      <path d="M58 8v58" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M58 10c-18 10-30 30-36 52h36Z" fill="currentColor" opacity="0.9" />
-      <path d="M62 22c12 8 20 22 22 40H62Z" fill="currentColor" opacity="0.55" />
-      <path d="M10 66h100l-10 14H26Z" fill="currentColor" />
-      <path d="M6 66h10M104 66h10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-/** The deep-sea scene behind login and checkout: horizon dhow, rising
- *  pearls, drifting tide. Purely decorative. */
-export function SeaScene({ className, children }: { className?: string; children?: ReactNode }) {
-  return (
-    <div className={["fp-sea", className].filter(Boolean).join(" ")}>
-      <div className="fp-sea-sky" aria-hidden />
-      <Dhow className="fp-sea-dhow" />
-      <div className="fp-sea-pearls" aria-hidden>
-        {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-          <span key={i} className={`fp-sea-pearl fp-sea-pearl-${i}`}>
-            <Pearl size={10 + (i % 3) * 7} />
-          </span>
-        ))}
-      </div>
-      <Tide className="fp-sea-tide" animated />
-      {children ? <div className="fp-sea-content">{children}</div> : null}
+    <div className={["fp-orbs", className].filter(Boolean).join(" ")} aria-hidden>
+      <span className="fp-orb fp-orb-rose" />
+      <span className="fp-orb fp-orb-apricot" />
+      <span className="fp-orb fp-orb-sand" />
     </div>
   );
 }
 
-export type SceneName = "empty" | "lost" | "locked" | "storm" | "lowtide" | "success" | "waiting";
+/* The dusk stage --------------------------------------------------------- */
 
-/** Spot illustrations for empty, error and outcome states. */
-export function Scene({ name, className }: { name: SceneName; className?: string }) {
-  const id = useId().replace(/:/g, "");
-  const cls = ["fp-scene", `fp-scene-${name}`, className].filter(Boolean).join(" ");
-  const water = (
-    <path
-      d="M0 112 Q 20 104 40 112 T 80 112 T 120 112 T 160 112 T 200 112 V140 H0Z"
-      fill="var(--fp-lagoon-soft, #cfe5e3)"
-    />
+/**
+ * A plum-to-rose room at dusk with sculptures on pedestals: the scene behind
+ * sign-in and checkout. Layers drift slightly with the pointer (depth via
+ * CSS variables) and the floating coin bobs inside its ring. All motion stops
+ * under prefers-reduced-motion.
+ */
+export function StageScene({ className, children }: { className?: string; children?: ReactNode }) {
+  const id = useSvgId();
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let frame = 0;
+    const onMove = (e: PointerEvent) => {
+      const box = el.getBoundingClientRect();
+      const x = (e.clientX - box.left) / box.width - 0.5;
+      const y = (e.clientY - box.top) / box.height - 0.5;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        el.style.setProperty("--px", x.toFixed(3));
+        el.style.setProperty("--py", y.toFixed(3));
+      });
+    };
+    el.addEventListener("pointermove", onMove);
+    return () => {
+      el.removeEventListener("pointermove", onMove);
+      cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  return (
+    <div ref={ref} className={["fp-stage", className].filter(Boolean).join(" ")}>
+      <svg className="fp-stage-art" viewBox="0 0 600 420" preserveAspectRatio="xMidYMax meet" aria-hidden focusable={false}>
+        <Defs id={id} />
+        <defs>
+          <linearGradient id={`${id}-floor`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#c86a74" />
+            <stop offset="100%" stopColor="#e3948a" />
+          </linearGradient>
+          <radialGradient id={`${id}-sun`}>
+            <stop offset="0%" stopColor="#ffe2c8" stopOpacity="0.95" />
+            <stop offset="45%" stopColor={C.apricot} stopOpacity="0.55" />
+            <stop offset="100%" stopColor={C.apricot} stopOpacity="0" />
+          </radialGradient>
+          <linearGradient id={`${id}-arch`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#3e1b36" />
+            <stop offset="100%" stopColor="#8c4566" />
+          </linearGradient>
+        </defs>
+
+        {/* back wall: an arched alcove with the low sun inside it */}
+        <g className="fp-depth fp-depth-1">
+          <path d="M330 330 V170 a95 95 0 0 1 190 0 V330 Z" fill={`url(#${id}-arch)`} opacity="0.85" />
+          <circle cx="425" cy="230" r="80" fill={`url(#${id}-sun)`} />
+        </g>
+        {/* the floor runs past the frame so wide panels never show an edge */}
+        <path d="M-900 330 H1500 V420 H-900 Z" fill={`url(#${id}-floor)`} />
+        <path d="M-900 330 H1500" stroke="#f2b4ad" strokeWidth="2" opacity="0.6" />
+
+        <g className="fp-depth fp-depth-2">
+          <Palm id={id} x={528} y={366} s={1} />
+          <Pedestal id={id} cx={110} y={286} r={50} h={74} body="sand" />
+          <Ball id={id} cx={110} cy={250} r={34} tone="rose" />
+        </g>
+        <g className="fp-depth fp-depth-3">
+          <Pedestal id={id} cx={300} y={232} r={66} h={140} body="plum" />
+          <CoinStack id={id} cx={300} y={236} r={44} count={4} />
+          <g className="fp-float">
+            <GlowRing id={id} cx={300} cy={140} rx={72} ry={20} />
+            <CoinFace id={id} cx={300} cy={140} r={40} />
+          </g>
+        </g>
+        <g className="fp-depth fp-depth-4">
+          <Pedestal id={id} cx={440} y={318} r={40} h={50} body="rose" />
+          <Ball id={id} cx={440} cy={296} r={22} tone="apricot" />
+        </g>
+      </svg>
+      {children ? <div className="fp-stage-content">{children}</div> : null}
+    </div>
   );
+}
+
+/* Spot scenes ------------------------------------------------------------ */
+
+export type SceneName = "empty" | "lost" | "locked" | "storm" | "expired" | "success" | "waiting";
+
+/** Small 3D still lifes for empty, error and outcome states. */
+export function Scene({ name, className }: { name: SceneName; className?: string }) {
+  const id = useSvgId();
+  const cls = ["fp-scene", `fp-scene-${name}`, className].filter(Boolean).join(" ");
+  const floor = <ellipse cx="100" cy="128" rx="90" ry="10" fill="#f3e6e3" />;
+
   switch (name) {
     case "empty":
-      // An open, empty oyster: nothing here yet.
+      // An empty pedestal under a warm spotlight: nothing here yet.
       return (
         <svg className={cls} viewBox="0 0 200 140" aria-hidden focusable={false}>
-          {water}
-          <path d="M40 96c10 18 34 26 60 26s50-8 60-26c-18 6-38 9-60 9s-42-3-60-9Z" fill="var(--fp-gold, #c79a2b)" />
-          <path d="M40 96C44 58 70 38 100 38s56 20 60 58c-18-6-38-9-60-9s-42 3-60 9Z" fill="#e8d6a6" />
-          <path d="M100 40v46M78 46l10 40M122 46l-10 40M58 60l22 30M142 60l-22 30" stroke="#c9b27a" strokeWidth="1.5" />
-          <ellipse cx="100" cy="100" rx="22" ry="5" fill="#fff" opacity="0.6" />
+          <Defs id={id} />
+          <path d="M80 0 H120 L150 124 H50 Z" fill={C.apricot} opacity="0.18" />
+          {floor}
+          <Pedestal id={id} cx={100} y={76} r={34} h={46} body="plum" />
         </svg>
       );
     case "lost":
-      // A dhow adrift with no land in sight: page not found.
+      // The coin rolled off its pedestal: page not found.
       return (
         <svg className={cls} viewBox="0 0 200 140" aria-hidden focusable={false}>
-          <circle cx="160" cy="32" r="13" fill="var(--fp-gold, #c79a2b)" opacity="0.35" />
-          <g color="var(--fp-abyss, #0b2e35)">
-            <svg x="58" y="20" width="96" height="72" viewBox="0 0 120 90" overflow="visible">
-              <g transform="rotate(-9 60 70)">
-                <Dhow />
-              </g>
-            </svg>
+          <Defs id={id} />
+          {floor}
+          <Pedestal id={id} cx={70} y={70} r={34} h={52} body="rose" />
+          <path d="M112 112 q10 -4 18 0 M118 102 q8 -3 14 0" stroke="#d8bcc6" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+          <g transform="rotate(24 160 106)">
+            <CoinFace id={id} cx={160} cy={106} r={18} />
           </g>
-          <path
-            d="M0 100 Q 25 92 50 100 T 100 100 T 150 100 T 200 100 V140 H0Z"
-            fill="var(--fp-lagoon-soft, #cfe5e3)"
-          />
-          <path d="M0 116 Q 25 108 50 116 T 100 116 T 150 116 T 200 116 V140 H0Z" fill="#b9d9d5" />
-          <path d="M28 126 q10-6 20 0 M146 130 q10-6 20 0" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" />
-          <circle cx="36" cy="40" r="3" fill="var(--fp-abyss, #0b2e35)" opacity="0.2" />
-          <circle cx="48" cy="30" r="2" fill="var(--fp-abyss, #0b2e35)" opacity="0.15" />
+          <text x="58" y="50" fontSize="26" fontWeight="700" fill={C.plum} opacity="0.35" fontFamily="Readex Pro, system-ui">?</text>
         </svg>
       );
     case "locked":
-      // A closed oyster with its pearl inside: not permitted.
+      // The coin under a glass dome, with a padlock: not permitted.
       return (
         <svg className={cls} viewBox="0 0 200 140" aria-hidden focusable={false}>
-          <NacreDefs id={id} />
-          {water}
-          <path d="M44 92c8 20 32 30 56 30s48-10 56-30c-16 7-36 10-56 10s-40-3-56-10Z" fill="var(--fp-gold, #c79a2b)" />
-          <path d="M44 92c6-26 30-40 56-40s50 14 56 40c-16 7-36 10-56 10s-40-3-56-10Z" fill="#e8d6a6" />
-          <path d="M44 92c16 7 36 10 56 10s40-3 56-10" stroke="var(--fp-gold-deep, #8f6c17)" strokeWidth="2" fill="none" />
-          <circle cx="100" cy="98" r="6" fill={`url(#${id}-nacre)`} />
-          <rect x="88" y="26" width="24" height="20" rx="4" fill="var(--fp-abyss, #0b2e35)" />
-          <path d="M93 26v-5a7 7 0 0 1 14 0v5" stroke="var(--fp-abyss, #0b2e35)" strokeWidth="3" fill="none" />
+          <Defs id={id} />
+          {floor}
+          <Pedestal id={id} cx={100} y={88} r={44} h={34} body="plum" />
+          <CoinFace id={id} cx={100} cy={64} r={20} />
+          <path d="M62 88 V60 a38 38 0 0 1 76 0 V88" fill="#ffffff" fillOpacity="0.3" stroke="#e6cfd9" strokeWidth="2" />
+          <path d="M74 44 a28 28 0 0 1 16 -12" stroke="#fff" strokeWidth="3" strokeLinecap="round" opacity="0.7" fill="none" />
+          <rect x="128" y="96" width="26" height="22" rx="5" fill={C.rose} />
+          <path d="M133 96 v-6 a8 8 0 0 1 16 0 v6" stroke={C.rose} strokeWidth="4" fill="none" />
         </svg>
       );
     case "storm":
-      // Rough water and a cloud: something on our side or the network failed.
+      // A toppled pedestal, coins scattered: something failed.
       return (
         <svg className={cls} viewBox="0 0 200 140" aria-hidden focusable={false}>
-          <path d="M60 52a18 18 0 0 1 34-8 16 16 0 0 1 30 6 13 13 0 0 1 2 26H64a12 12 0 0 1-4-24Z" fill="#9fb4bb" />
-          <path d="M100 78l-8 16h10l-6 16 16-22h-10l6-10Z" fill="var(--fp-gold, #c79a2b)" />
-          <path d="M0 116 Q 15 100 30 116 T 60 116 T 90 116 T 120 116 T 150 116 T 180 116 T 210 116 V140 H0Z" fill="var(--fp-coral-soft, #f4d3d1)" />
-          <path d="M0 124 Q 15 110 30 124 T 60 124 T 90 124 T 120 124 T 150 124 T 180 124 T 210 124 V140 H0Z" fill="var(--fp-lagoon-soft, #cfe5e3)" />
+          <Defs id={id} />
+          {floor}
+          <g transform="rotate(-62 82 104)">
+            <Pedestal id={id} cx={82} y={70} r={26} h={52} body="plum" />
+          </g>
+          <g transform="rotate(-20 140 116)">
+            <CoinFace id={id} cx={140} cy={116} r={11} />
+          </g>
+          <g transform="rotate(30 166 110)">
+            <CoinFace id={id} cx={166} cy={110} r={8} />
+          </g>
+          <path d="M150 12 l-14 30 h12 l-8 24 24 -34 h-12 l8 -20 Z" fill={C.sand} stroke={C.sandDeep} strokeWidth="1.5" strokeLinejoin="round" />
         </svg>
       );
-    case "lowtide":
-      // The tide has gone out: expired.
+    case "expired":
+      // An hourglass on a pedestal, sand run out: expired.
       return (
         <svg className={cls} viewBox="0 0 200 140" aria-hidden focusable={false}>
-          <path d="M0 108 Q 50 96 100 104 T 200 100 V140 H0Z" fill="#ead9ad" />
-          <path d="M120 120 Q 160 110 200 116 V140 H120Z" fill="var(--fp-lagoon-soft, #cfe5e3)" />
-          <circle cx="50" cy="36" r="16" fill="var(--fp-gold, #c79a2b)" opacity="0.4" />
-          <path d="M62 112c4-6 12-6 16 0" stroke="#c9b27a" strokeWidth="2" fill="none" />
-          <path d="M84 70h28M98 56v28" stroke="var(--fp-abyss, #0b2e35)" strokeWidth="3" strokeLinecap="round" opacity="0.25" />
-          <circle cx="98" cy="70" r="20" fill="none" stroke="var(--fp-abyss, #0b2e35)" strokeWidth="3" opacity="0.35" />
-          <path d="M98 70V58M98 70l8 6" stroke="var(--fp-abyss, #0b2e35)" strokeWidth="3" strokeLinecap="round" />
+          <Defs id={id} />
+          {floor}
+          <Pedestal id={id} cx={100} y={100} r={38} h={22} body="sand" />
+          <rect x="76" y="20" width="48" height="6" rx="3" fill={C.plum} />
+          <rect x="76" y="92" width="48" height="6" rx="3" fill={C.plum} />
+          <path d="M82 26 C82 50 118 50 118 26 Z M82 92 C82 66 118 66 118 92 Z" fill="#ffffff" fillOpacity="0.55" stroke="#dcc2cd" strokeWidth="2" />
+          <path d="M88 92 C90 80 110 80 112 92 Z" fill={C.rose} />
+          <path d="M82 26 C82 50 118 50 118 26 M82 92 C82 66 118 66 118 92" fill="none" stroke="#c9a6b8" strokeWidth="2" />
         </svg>
       );
     case "success":
-      // A pearl surfacing from the shell: paid.
+      // The coin rises in its glowing ring: paid.
       return (
         <svg className={cls} viewBox="0 0 200 140" aria-hidden focusable={false}>
-          <NacreDefs id={id} />
-          {water}
-          <path d="M50 100c8 16 28 24 50 24s42-8 50-24c-15 5-31 8-50 8s-35-3-50-8Z" fill="var(--fp-gold, #c79a2b)" />
-          <circle className="fp-scene-rise" cx="100" cy="64" r="26" fill={`url(#${id}-nacre)`} />
-          <circle className="fp-scene-rise" cx="100" cy="64" r="26" fill={`url(#${id}-sheen)`} />
-          <path className="fp-scene-rise" d="M88 64l8 8 16-16" stroke="var(--fp-lagoon, #147a78)" strokeWidth="5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          <Defs id={id} />
+          {floor}
+          <Pedestal id={id} cx={100} y={102} r={40} h={20} body="plum" />
+          <g className="fp-scene-rise">
+            <GlowRing id={id} cx={100} cy={58} rx={52} ry={14} />
+            <CoinFace id={id} cx={100} cy={58} r={30} />
+            <path d="M88 58 l8 8 16 -16" stroke="#7a5212" strokeWidth="5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          </g>
         </svg>
       );
     case "waiting":
-      // Pearls in a slow loop: loading.
+      // Three spheres bouncing in turn: loading.
       return (
         <svg className={cls} viewBox="0 0 120 40" aria-hidden focusable={false}>
-          <NacreDefs id={id} />
-          {[30, 60, 90].map((cx, i) => (
-            <circle key={cx} className={`fp-wait-dot fp-wait-dot-${i}`} cx={cx} cy="20" r="9" fill={`url(#${id}-nacre)`} stroke="#9fb4bb" strokeOpacity="0.5" />
+          <Defs id={id} />
+          {(["rose", "apricot", "plum"] as const).map((tone, i) => (
+            <g key={tone} className={`fp-wait-dot fp-wait-dot-${i}`}>
+              <Ball id={id} cx={30 + i * 30} cy={20} r={9} tone={tone} />
+            </g>
           ))}
         </svg>
       );

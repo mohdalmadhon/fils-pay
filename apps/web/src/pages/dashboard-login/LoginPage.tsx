@@ -8,7 +8,7 @@ import {
   writeLastMerchantId,
 } from "../../auth/DashboardAuthContext.js";
 import type { DashboardLoginResponse } from "../../types.js";
-import { SeaScene, Wordmark } from "../../components/art/Art.js";
+import { StageScene, Wordmark } from "../../components/art/Art.js";
 import { ErrorBanner, usePageTitle } from "../../components/ui.js";
 
 type Step = { kind: "credentials" } | { kind: "otp"; challenge: DashboardLoginResponse };
@@ -123,13 +123,13 @@ export function LoginPage() {
 
   return (
     <div className="dash-login">
-      <SeaScene className="dash-login-sea">
+      <StageScene className="dash-login-sea">
         <Wordmark />
         <div className="dash-login-pitch">
           <h2>Every fils, accounted for.</h2>
           <p>Card payments, payment links and daily settlement for merchants across Bahrain.</p>
         </div>
-      </SeaScene>
+      </StageScene>
 
       <main className="dash-login-panel">
         <div className="dash-centered">

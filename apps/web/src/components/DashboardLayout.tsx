@@ -3,11 +3,11 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useDashboardAuth } from "../auth/DashboardAuthContext.js";
 import { RequireRole } from "../auth/RequireRole.js";
 import { describeError } from "../api/client.js";
-import { Tide, Wordmark } from "./art/Art.js";
+import { Orbs, Wordmark } from "./art/Art.js";
 import { icons } from "./art/Icons.js";
 import { ErrorBanner } from "./ui.js";
 
-/** Nav shell for every merchant dashboard screen: a sea-dark sidebar on wide
+/** Nav shell for every merchant dashboard screen: a dusk-plum sidebar on wide
  *  screens, a top bar with a slide-in drawer on phones. No impersonation
  *  banner here: nothing in the merchant plane impersonates anyone; when an
  *  admin "views as merchant", they arrive with a `support`-role session and
@@ -129,7 +129,7 @@ export function DashboardLayout() {
             {icons.logout}
             Log out
           </button>
-          <Tide animated />
+          <Orbs />
         </div>
       </aside>
 

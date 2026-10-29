@@ -3,11 +3,11 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../auth/AdminAuthContext.js";
 import { describeError, WEB_BASE_URL } from "../api/client.js";
 import { ImpersonationBanner } from "./ImpersonationBanner.js";
-import { Tide, Wordmark } from "./art/Art.js";
+import { Orbs, Wordmark } from "./art/Art.js";
 import { icons } from "./art/Icons.js";
 import { ErrorBanner, StatePanel } from "./ui.js";
 
-/** Nav shell for every admin-plane screen: a night-sea sidebar (drawer on
+/** Nav shell for every admin-plane screen: a midnight-plum sidebar (drawer on
  *  phones) with who you are signed in as, the section links and log out,
  *  and above all of it the impersonation banner when a grant is live. */
 // YA: nav order per Huda's request (Credits first)
@@ -112,7 +112,7 @@ export function AdminLayout() {
             {icons.logout}
             Log out
           </button>
-          <Tide animated />
+          <Orbs />
         </div>
       </aside>
 

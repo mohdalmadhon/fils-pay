@@ -4,7 +4,7 @@ import { formatBhd, toFils } from "@filspay/money";
 import { getPaymentLink, payPaymentLink } from "../../api/paymentLinks.js";
 import { ApiError } from "../../api/client.js";
 import type { PaymentLinkPublicDto, PayPaymentLinkResponse, SimulatedCardInput } from "../../types.js";
-import { BrandMark, Pearl, SeaScene, type SceneName } from "../../components/art/Art.js";
+import { Coin, StageScene, type SceneName } from "../../components/art/Art.js";
 import { Amount, Loading, StatePanel, usePageTitle } from "../../components/ui.js";
 import "./CheckoutPage.css";
 
@@ -155,7 +155,7 @@ export function CheckoutPage() {
   }
   if (link.status === "expired") {
     return (
-      <CheckoutOutcome scene="lowtide" title="This payment link has expired">
+      <CheckoutOutcome scene="expired" title="This payment link has expired">
         Ask {link.merchantDisplayName} to send you a new link.
       </CheckoutOutcome>
     );
@@ -184,7 +184,6 @@ export function CheckoutPage() {
       summary={
         <div className="checkout-summary">
           <p className="checkout-payee">
-            <BrandMark size={28} />
             {link.merchantDisplayName}
           </p>
           <p className="checkout-amount">
@@ -290,12 +289,12 @@ export function CheckoutPage() {
   );
 }
 
-/** Page frame: the sea panel with the amount on one side, the form on the
+/** Page frame: the dusk stage with the amount on one side, the form on the
  *  other; stacked on phones. */
 function CheckoutFrame({ summary, children }: { summary?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="checkout-page">
-      <SeaScene className="checkout-sea">{summary}</SeaScene>
+      <StageScene className="checkout-sea">{summary}</StageScene>
       <main className="checkout-panel">{children}</main>
     </div>
   );
@@ -318,7 +317,7 @@ function CheckoutOutcome({
         {typeof children === "string" ? <p>{children}</p> : children}
       </StatePanel>
       <p className="checkout-footer">
-        <BrandMark size={20} /> Payments by FilsPay
+        Payments by FilsPay
       </p>
     </div>
   );
@@ -336,7 +335,7 @@ function CardPreview({ card, brand }: { card: SimulatedCardInput; brand: string 
   return (
     <div className="checkout-card" data-brand={brandLabel ?? "none"} aria-hidden>
       <div className="checkout-card-top">
-        <Pearl size={30} />
+        <Coin size={30} />
         <span className="checkout-card-brand">{brandLabel ?? "Card"}</span>
       </div>
       <div className="checkout-card-number">{groups}</div>

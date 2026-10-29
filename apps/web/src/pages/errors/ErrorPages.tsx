@@ -1,9 +1,9 @@
 import { isRouteErrorResponse, Link, useLocation, useRouteError } from "react-router-dom";
-import { Tide, Wordmark } from "../../components/art/Art.js";
+import { Orbs, Wordmark } from "../../components/art/Art.js";
 import { StatePanel, usePageTitle } from "../../components/ui.js";
 
 /** Frame for pages shown outside the dashboard shell: brand at the top,
- *  tide along the bottom. */
+ *  dusk glow along the bottom. */
 function StandaloneFrame({ children }: { children: React.ReactNode }) {
   return (
     <div className="fp-standalone">
@@ -13,7 +13,7 @@ function StandaloneFrame({ children }: { children: React.ReactNode }) {
         </Link>
       </header>
       <main id="main">{children}</main>
-      <Tide className="fp-standalone-tide" animated />
+      <Orbs className="fp-standalone-orbs" />
     </div>
   );
 }
@@ -27,7 +27,7 @@ export function NotFoundPage() {
       <StatePanel
         scene="lost"
         code="404"
-        title="This page drifted off"
+        title="This page rolled away"
         actions={
           <>
             <Link className="dash-button dash-button-primary" to="/dashboard">

@@ -1,4 +1,4 @@
-/* Public checkout (/pay/:token): sea panel with the amount, form beside it.
+/* Public checkout (/pay/:token): dusk stage with the amount, form beside it.
  * Tokens come from theme.css. */
 
 .checkout-page {
@@ -10,7 +10,7 @@
 .checkout-sea {
   display: flex;
   align-items: center;
-  padding: 3rem 3rem 9rem;
+  padding: 3rem 3rem calc(var(--fp-stage-art-h) + 1.5rem);
 }
 
 .checkout-summary {
@@ -44,7 +44,7 @@
 }
 
 .checkout-amount .fp-amount-cur {
-  color: var(--fp-gold);
+  color: var(--fp-sand);
   font-size: 0.28em;
   letter-spacing: 0.08em;
 }
@@ -53,14 +53,14 @@
   margin: 0 0 0.5rem;
   font-size: var(--fp-step-1);
   font-weight: 300;
-  color: #dcebe8;
+  color: #f3dfe6;
 }
 
 .checkout-reference,
 .checkout-expiry {
   margin: 0;
   font-size: 0.92rem;
-  color: #a9c6c2;
+  color: #d6b3c5;
 }
 
 .checkout-expiry {
@@ -92,10 +92,10 @@
   color: #fff;
   border-radius: 18px;
   background:
-    radial-gradient(80% 60% at 100% 0%, rgba(199, 154, 43, 0.45), transparent 60%),
-    radial-gradient(70% 70% at 0% 100%, rgba(63, 167, 159, 0.55), transparent 60%),
-    linear-gradient(135deg, #16505a, var(--fp-abyss));
-  box-shadow: 0 24px 40px -24px rgba(11, 46, 53, 0.7);
+    radial-gradient(80% 60% at 100% 0%, rgba(232, 168, 124, 0.55), transparent 60%),
+    radial-gradient(70% 70% at 0% 100%, rgba(217, 119, 127, 0.6), transparent 60%),
+    linear-gradient(135deg, #7a3a62, var(--fp-plum-deep));
+  box-shadow: 0 24px 40px -24px rgba(62, 27, 54, 0.6);
   overflow: hidden;
   transition: transform 300ms var(--fp-ease);
 }
@@ -139,7 +139,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 0.8rem;
-  color: #cfe5e3;
+  color: #f2d9df;
 }
 
 /* Form ------------------------------------------------------------------- */
@@ -167,7 +167,7 @@
   font: inherit;
   font-size: 1.05rem;
   color: var(--fp-ink);
-  background: var(--fp-shell);
+  background: var(--fp-surface);
   border: 1px solid var(--fp-line-strong);
   border-radius: var(--fp-radius-s);
   font-feature-settings: "tnum" 1;
@@ -175,7 +175,7 @@
 
 .checkout-form input:focus {
   outline: none;
-  border-color: var(--fp-lagoon);
+  border-color: var(--fp-plum);
   box-shadow: var(--fp-focus);
 }
 
@@ -192,7 +192,7 @@
   font-size: 1.1rem;
   font-weight: 500;
   color: #fff;
-  background: var(--fp-lagoon);
+  background: var(--fp-plum);
   border: 0;
   border-radius: 999px;
   cursor: pointer;
@@ -200,7 +200,7 @@
 }
 
 .checkout-form button:hover {
-  background: var(--fp-lagoon-ink);
+  background: var(--fp-plum-ink);
 }
 
 .checkout-form button:active {
@@ -216,9 +216,9 @@
   margin: 0 0 1rem;
   padding: 0.8rem 1rem;
   border-radius: var(--fp-radius-m);
-  color: var(--fp-coral-ink);
-  background: var(--fp-coral-soft);
-  border: 1px solid #efb9b5;
+  color: var(--fp-danger-ink);
+  background: var(--fp-danger-soft);
+  border: 1px solid #efbcc1;
 }
 
 .checkout-secure {
@@ -235,7 +235,7 @@
 
 .checkout-help summary {
   cursor: pointer;
-  color: var(--fp-lagoon-ink);
+  color: var(--fp-plum-ink);
 }
 
 .checkout-help p {
@@ -251,8 +251,8 @@
   justify-content: center;
   padding: 2rem 1rem;
   background:
-    radial-gradient(60% 40% at 50% 0%, rgba(20, 122, 120, 0.12), transparent 70%),
-    var(--fp-nacre);
+    radial-gradient(60% 40% at 50% 0%, rgba(217, 119, 127, 0.16), transparent 70%),
+    var(--fp-page);
 }
 
 .checkout-outcome .fp-state {
@@ -274,7 +274,7 @@
   padding: 1rem 1.25rem;
   max-width: 31rem;
   text-align: left;
-  background: var(--fp-shell);
+  background: var(--fp-surface);
   border: 1px solid var(--fp-line);
   border-radius: var(--fp-radius-m);
 }
@@ -309,7 +309,7 @@
     grid-template-columns: 1fr;
   }
   .checkout-sea {
-    padding: 1.75rem 1.25rem 6.5rem;
+    padding: 1.75rem 1.25rem calc(var(--fp-stage-art-h) + 1rem);
   }
   .checkout-payee {
     margin-bottom: 0.75rem;
