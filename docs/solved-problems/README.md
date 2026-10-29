@@ -17,6 +17,7 @@ data repair.
 | [008 — Daily close rolls over at 03:00 Bahrain time](008-daily-close-bahrain-time.md) | Convert the current instant to the Bahrain calendar before selecting the completed business day | Rebuild/restart the daemon; preserve or explicitly configure the midnight grace period; review missed historical dates separately |
 | [009 — Lifetime payout estimate drifts at high volume](009-lifetime-payout-estimate.md) | Add integer fils; migrate REAL to BIGINT and reconstruct the counter from actual payout ledger legs; stop seeding unpaid totals | DBA review and maintenance deployment of migration 0073; restart connections; verify complete historical ledger coverage |
 | [010 — Test merchants enter real settlement after status recomputation](010-test-merchants-in-settlement.md) | Remove automatic sandbox-to-live promotion from the admin status-recompute action | Deploy API; review prior flag-clearing audit events and affected merchants/batches before historical remediation |
+| [011 — Merchant A can cancel merchant B's payment link](011-payment-link-cancel-ownership.md) | Scope cancellation and status lookup to the authenticated merchant as well as link ID | Deploy API; investigate prior cancellations using retained request/session logs before restoring or replacing links |
 
 For future entries, use the next number and a descriptive filename. Include
 before/after examples and links to the affected code. Line numbers reflect

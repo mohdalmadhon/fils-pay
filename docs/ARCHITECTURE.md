@@ -80,6 +80,10 @@ a `Webhook-Delivery-Id` and is signed with HMAC-SHA256.
   alone does not establish authentication. See the
   [OTP bypass investigation](solved-problems/007-merchant-otp-session-gate.md).
 - Merchant-scoped queries take the merchant from the authenticated context.
+  Payment-link cancellation constrains both its update and its error lookup
+  by link ID and authenticated merchant ID. Checking the path merchant alone
+  does not establish ownership of the link. See the
+  [cancellation ownership fix](solved-problems/011-payment-link-cancel-ownership.md).
 - Outbound webhook signatures are HMAC-SHA256 compared in constant time.
 - KYC uploads are validated by detected content type (magic bytes).
 

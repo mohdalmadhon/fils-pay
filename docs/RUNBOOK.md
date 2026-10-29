@@ -137,6 +137,21 @@ Re-exporting gives an identical file; it's written from rows frozen at
 close. The `amount` column is in the scheme's two-decimal format and is
 what the scheme was paid; finance reconciles against it.
 
+## Payment-link cancellation ownership
+
+Cancellation requires an authenticated owner/finance session or merchant
+API key. The path merchant must match the authenticated merchant; the link
+must also belong to that merchant. A foreign link returns the same
+`404 payment_link_not_found` as a missing link, without changing its status.
+An owned active link returns 204; an owned non-active link returns
+`409 not_cancelable`.
+
+Deploy/restart the API to activate the ownership fix. No migration is
+required. For previously affected links, correlate request/session logs
+with link ownership and cancellation timestamps. The link row does not
+record who canceled it, so timestamps alone cannot establish unauthorized
+access. See [the cause, references, and verification](solved-problems/011-payment-link-cancel-ownership.md).
+
 ## Test merchants and settlement
 
 The daily settlement scan requires `status = 'active' AND test_mode = false`.
