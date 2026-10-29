@@ -32,7 +32,6 @@ export async function recomputeTransactionStatusesForMerchant(
   );
 
   let updated = 0;
-  let openAuthorizations = 0;
 
   for (const row of candidates.rows) {
     const next = nextStatusAfterRefund({
@@ -44,8 +43,16 @@ export async function recomputeTransactionStatusesForMerchant(
       await client.query(`UPDATE transactions SET status = $2 WHERE id = $1`, [row.id, next]);
       updated += 1;
     }
-    if (row.status === "authorized") openAuthorizations += 1;
   }
+
+  // Authorized transactions are deliberately not candidates above (nothing
+  // to re-derive until they are captured or voided), so they have to be
+  // counted separately. Counting them inside the loop always gave 0.
+  const open = await client.query<{ n: string }>(
+    `SELECT count(*)::text AS n FROM transactions WHERE merchant_id = $1 AND status = 'authorized'`,
+    [merchantId],
+  );
+  const openAuthorizations = Number(open.rows[0]?.n ?? 0);
 
   return { merchantId, scanned: candidates.rows.length, updated, openAuthorizations };
 }
