@@ -108,6 +108,29 @@ Re-exporting gives an identical file; it's written from rows frozen at
 close. The `amount` column is in the scheme's two-decimal format and is
 what the scheme was paid; finance reconciles against it.
 
+## Split payouts
+
+For a split parent, the children's configured weights must be positive and
+total exactly 10,000 basis points (100%). Invalid configuration causes the
+payout to fail without posting money or marking the closed batch paid.
+Correct the configuration before retrying the closed batch.
+
+Whole-fils allocations use largest remainders: floor each proportional
+share, then distribute the remaining fils in descending fractional-remainder
+order. Equal remainders favor ascending child merchant UUID. The children,
+payout ledger legs, and parent cache deduction must agree with the frozen
+batch net payout. Zero-share children get split audit rows without zero-value
+ledger entries.
+
+Already-paid batches are skipped; retrying does not repair old allocations.
+For historical discrepancies, inspect `settlement_batch_splits` and the
+parent's payable ledger before proposing a correction. Three independently
+rounded shares totaling 100% could previously differ by at most one fil per
+batch; larger differences require further investigation.
+
+See [the split payout fix record](solved-problems/002-split-payout-allocation.md)
+for affected code, verification, and a read-only audit query.
+
 ## Month-end residue (finance)
 
 Until residue posting is automated (see ARCHITECTURE, "The scheme

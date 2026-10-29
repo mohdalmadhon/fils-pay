@@ -6,6 +6,7 @@ package splits
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,7 +18,8 @@ import (
 // ChildShare is one child's computed allocation from a parent's settlement
 // batch payout.
 //
-// AllocatedFils is never negative; a zero share is skipped when posting.
+// AllocatedFils is never negative; zero shares have split audit rows but no
+// ledger legs, since ledger amounts must be positive.
 type ChildShare struct {
 	ChildMerchantID uuid.UUID
 	WeightBps       int64
@@ -28,8 +30,8 @@ type ChildShare struct {
 // PayoutBatch's own result shape (settlement.PayoutResult) so the two are
 // interchangeable from RunDailyBatch's point of view.
 //
-// Shares always sum to the batch's net_payout_fils, so a caller can
-// reconcile a split payout against the batch without re-reading the legs.
+// For a newly paid batch, Shares sum to net_payout_fils. AlreadyPaid and
+// NotClosed results do not load shares.
 type SplitPayoutResult struct {
 	BatchID          uuid.UUID
 	ParentMerchantID uuid.UUID
@@ -50,7 +52,8 @@ func IsSplitParent(ctx context.Context, db *pgxpool.Pool, merchantID uuid.UUID) 
 }
 
 // PayoutSplitBatch posts a settlement batch's net payout as a weighted
-// split across the parent's configured sub-merchants.
+// split across the parent's configured sub-merchants. Invalid weights or a
+// negative net payout fail before posting; the batch remains closed.
 func PayoutSplitBatch(ctx context.Context, db *pgxpool.Pool, batchID uuid.UUID) (SplitPayoutResult, error) {
 	tx, err := db.Begin(ctx)
 	if err != nil {
@@ -82,12 +85,14 @@ func PayoutSplitBatch(ctx context.Context, db *pgxpool.Pool, batchID uuid.UUID) 
 		  FROM merchant_split_children
 		 WHERE parent_merchant_id = $1
 		 ORDER BY child_merchant_id
+		 FOR SHARE
 	`, parentMerchantID)
 	if err != nil {
 		return SplitPayoutResult{}, err
 	}
 
 	var shares []ChildShare
+	var weights []ChildWeight
 	for rows.Next() {
 		var childID uuid.UUID
 		var weightBps int64
@@ -95,8 +100,8 @@ func PayoutSplitBatch(ctx context.Context, db *pgxpool.Pool, batchID uuid.UUID) 
 			rows.Close()
 			return SplitPayoutResult{}, err
 		}
-		share := money.ApplyRateFils(money.Fils(netPayout), weightBps)
-		shares = append(shares, ChildShare{ChildMerchantID: childID, WeightBps: weightBps, AllocatedFils: share})
+		shares = append(shares, ChildShare{ChildMerchantID: childID, WeightBps: weightBps})
+		weights = append(weights, ChildWeight{WeightBps: weightBps})
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()
@@ -104,21 +109,30 @@ func PayoutSplitBatch(ctx context.Context, db *pgxpool.Pool, batchID uuid.UUID) 
 	}
 	rows.Close()
 
+	// The query's child UUID order also breaks equal-remainder ties, so
+	// every whole fil is assigned reproducibly to an actual child.
+	allocations, err := allocateChildShares(money.Fils(netPayout), weights)
+	if err != nil {
+		return SplitPayoutResult{}, fmt.Errorf("splits: batch %s: %w", batchID, err)
+	}
+	for i := range shares {
+		shares[i].AllocatedFils = allocations[i]
+	}
+
 	var totalAllocated money.Fils
 	for _, s := range shares {
-		if s.AllocatedFils <= 0 {
-			continue // ledger_entries.amount_fils has a CHECK (amount_fils > 0)
-		}
-		groupID := uuid.New()
-		_, err = tx.Exec(ctx, `
+		if s.AllocatedFils > 0 { // zero shares have audit rows but no ledger legs
+			groupID := uuid.New()
+			_, err = tx.Exec(ctx, `
 			INSERT INTO ledger_entries
 			  (entry_group_id, merchant_id, settlement_batch_id, account_id, direction, amount_fils, occurred_at, description)
 			VALUES
 			  ($1, $2, $3, 'merchant_payable', 'debit',  $4, now(), 'settlement payout: split to sub-merchant'),
 			  ($1, $2, $3, 'platform_cash',    'credit', $4, now(), 'settlement payout: split to sub-merchant')
-		`, groupID, parentMerchantID, batchID, int64(s.AllocatedFils))
-		if err != nil {
-			return SplitPayoutResult{}, err
+			`, groupID, parentMerchantID, batchID, int64(s.AllocatedFils))
+			if err != nil {
+				return SplitPayoutResult{}, err
+			}
 		}
 
 		_, err = tx.Exec(ctx, `
@@ -130,11 +144,13 @@ func PayoutSplitBatch(ctx context.Context, db *pgxpool.Pool, batchID uuid.UUID) 
 		}
 		totalAllocated += s.AllocatedFils
 	}
+	if totalAllocated != money.Fils(netPayout) {
+		return SplitPayoutResult{}, fmt.Errorf("splits: allocated %d fils, expected %d", totalAllocated, netPayout)
+	}
 
 	// Bring the parent's cached balance down by what the legs above actually
 	// debited from its merchant_payable account, same as PayoutBatch does
 	// for a non-split merchant.
-	// am: should pass netPayout here not totalAllocated, otherwise the cache drifts from the batch
 	if err := balances.ApplyPayout(ctx, tx, parentMerchantID, batchID, totalAllocated); err != nil {
 		return SplitPayoutResult{}, err
 	}
