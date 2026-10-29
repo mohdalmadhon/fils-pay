@@ -6,6 +6,13 @@ import { applyAcquirerCallback, withCallbackRetry, type AcquirerCallbackInput } 
 // header name confirmed with the acquirer's integration guide v3.2 — am
 const ACQUIRER_SIGNATURE_HEADER = "acquirer-callback-signature";
 
+declare module "fastify" {
+  interface FastifyRequest {
+    /** The request body exactly as received, kept for signature checks. */
+    acquirerRawBody?: string;
+  }
+}
+
 /**
  * Body of a fraud_review.completed callback. `outcome` is validated against
  * the AcquirerCallbackInput union ("approved" | "rejected") before it is
@@ -38,6 +45,25 @@ function getSignatureHeader(request: FastifyRequest): string | undefined {
  * endpoint has.
  */
 export async function acquirerCallbackRoutes(app: FastifyInstance): Promise<void> {
+  // Keep the raw body for signature verification. The signature covers the
+  // bytes the acquirer sent; re-serializing the parsed JSON can produce
+  // different bytes. This parser is scoped to this plugin only, so no other
+  // route's JSON handling changes.
+  app.removeContentTypeParser("application/json");
+  app.addContentTypeParser("application/json", { parseAs: "string" }, (request, rawBody, done) => {
+    const text = typeof rawBody === "string" ? rawBody : rawBody.toString("utf8");
+    request.acquirerRawBody = text;
+    if (text.trim() === "") {
+      done(null, {});
+      return;
+    }
+    try {
+      done(null, JSON.parse(text));
+    } catch {
+      done(new BadRequestError("invalid_json", "request body is not valid JSON"), undefined);
+    }
+  });
+
   app.post<{ Body: AcquirerCallbackBody }>("/callbacks", async (request, reply) => {
     const body = request.body ?? {};
     if (
@@ -55,7 +81,7 @@ export async function acquirerCallbackRoutes(app: FastifyInstance): Promise<void
     }
 
     const verification = verifyAcquirerCallbackSignature(
-      body,
+      request.acquirerRawBody ?? body,
       getSignatureHeader(request),
       app.config.acquirerCallbackSigningSecret,
       app.config.acquirerCallbackRequireSignature,
