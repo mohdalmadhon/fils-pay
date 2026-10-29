@@ -1,20 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../auth/AdminAuthContext.js";
 import { describeError, WEB_BASE_URL } from "../api/client.js";
 import { ImpersonationBanner } from "./ImpersonationBanner.js";
-import { Orbs, Wordmark } from "./art/Art.js";
+import { Wordmark } from "./art/Art.js";
 import { icons } from "./art/Icons.js";
 import { ErrorBanner, StatePanel } from "./ui.js";
-import { CommandPalette, useCommandPaletteShortcut, type Command } from "./fun/CommandPalette.js";
-import { CoinPhysics, type CoinPhysicsHandle } from "./fun/CoinPhysics.js";
-import { useTheme } from "./fun/theme.js";
-import { useKonami } from "./fun/useKonami.js";
+import { CommandPalette, useCommandPaletteShortcut, type Command } from "./kit/CommandPalette.js";
+import { useTheme } from "./kit/theme.js";
+import { useCostume } from "./kit/Halloween.js";
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 const shortcutLabel = isMac ? "\u2318K" : "Ctrl K";
 
-/** Nav shell for every admin-plane screen: a midnight-plum sidebar (drawer on
+/** Nav shell for every admin-plane screen: a quiet sidebar (drawer on
  *  phones) with who you are signed in as, the section links and log out,
  *  and above all of it the impersonation banner when a grant is live. */
 // YA: nav order per Huda's request (Credits first)
@@ -25,11 +24,10 @@ export function AdminLayout() {
   const [error, setError] = useState<string | null>(null);
   const [navOpen, setNavOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [rain, setRain] = useState(0);
-  const { theme, toggle: toggleTheme } = useTheme();
+  const { theme, setTheme, toggle: toggleTheme } = useTheme();
+  const { on: costume, toggle: toggleCostume } = useCostume();
   const openPalette = useCallback(() => setPaletteOpen(true), []);
   useCommandPaletteShortcut(openPalette);
-  useKonami(() => setRain((n) => n + 1));
 
   const commands = useMemo<Command[]>(() => {
     const go = (id: string, label: string, to: string, icon: React.ReactNode, keywords?: string): Command => ({
@@ -48,17 +46,24 @@ export function AdminLayout() {
       go("webhooks", "Webhook replay", "/webhooks", icons.replay, "events deliveries"),
       {
         id: "theme",
-        label: theme === "night" ? "Switch to dusk (light)" : "Switch to night (dark)",
+        label: theme === "night" ? "Switch to light theme" : "Switch to night theme",
         group: "Actions",
         icon: theme === "night" ? icons.sun : icons.moon,
         keywords: "theme dark light mode",
         run: toggleTheme,
       },
-      { id: "rain", label: "Make it rain fils", group: "Actions", icon: icons.sparkle, keywords: "coins fun party", run: () => setRain((n) => n + 1) },
+      {
+        id: "costume",
+        label: costume ? "Take off the Halloween costume" : "Put on the Halloween costume",
+        group: "Actions",
+        icon: icons.sparkle,
+        keywords: "halloween spooky pumpkin costume",
+        run: () => toggleCostume(),
+      },
       { id: "logout", label: "Log out", group: "Actions", icon: icons.logout, keywords: "sign out exit", run: () => void handleSignOut() },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme, toggleTheme, navigate]);
+  }, [theme, toggleTheme, costume, toggleCostume, navigate]);
 
   useEffect(() => {
     setNavOpen(false);
@@ -105,12 +110,12 @@ export function AdminLayout() {
 
       <header className="admin-topbar">
         <Wordmark />
-        <button type="button" className="admin-menu-button admin-topbar-search" aria-label="Search" onClick={openPalette}>
+        <button type="button" className="admin-icon-button admin-topbar-search" aria-label="Search" onClick={openPalette}>
           {icons.search}
         </button>
         <button
           type="button"
-          className="admin-menu-button"
+          className="admin-icon-button"
           aria-label={navOpen ? "Close menu" : "Open menu"}
           aria-expanded={navOpen}
           aria-controls="admin-sidebar"
@@ -121,21 +126,29 @@ export function AdminLayout() {
       </header>
 
       <aside id="admin-sidebar" className="admin-sidebar" aria-label="Operations console">
-        <Wordmark />
+        <div className="admin-sidebar-head">
+          <Wordmark />
+        </div>
         {admin ? (
           <div className="admin-identity">
-            <strong>{admin.email}</strong>
-            <span className="admin-role-chip">{admin.role.replace("_", " ")}</span>
+            <span className="admin-identity-avatar" aria-hidden>
+              {admin.email.trim().charAt(0).toUpperCase()}
+            </span>
+            <span className="admin-identity-text">
+              <strong>{admin.email}</strong>
+              <span className="admin-role-chip">{admin.role.replace("_", " ")}</span>
+            </span>
           </div>
         ) : null}
 
         <button type="button" className="fp-nav-search" onClick={openPalette}>
           {icons.search}
-          <span>Jump to…</span>
+          <span>Search or jump to…</span>
           <kbd className="fp-kbd">{shortcutLabel}</kbd>
         </button>
 
         <nav className="admin-nav" aria-label="Main">
+          <span className="admin-nav-label">Merchants</span>
           <NavLink to="/merchants">
             {icons.merchants}
             Merchants
@@ -144,6 +157,7 @@ export function AdminLayout() {
             {icons.credits}
             Credits
           </NavLink>
+          <span className="admin-nav-label">Money movement</span>
           <NavLink to="/settlement">
             {icons.settlement}
             Settlement ops
@@ -152,6 +166,7 @@ export function AdminLayout() {
             {icons.imports}
             Import adjustments
           </NavLink>
+          <span className="admin-nav-label">Developers</span>
           <NavLink to="/webhooks">
             {icons.replay}
             Webhook replay
@@ -159,23 +174,20 @@ export function AdminLayout() {
         </nav>
 
         <div className="admin-sidebar-foot">
-          <button
-            type="button"
-            className="fp-theme-switch"
-            aria-pressed={theme === "night"}
-            onClick={toggleTheme}
-            title="Switch between dusk and night"
-          >
-            <span className="fp-theme-switch-track" aria-hidden>
-              <span className="fp-theme-switch-knob">{theme === "night" ? icons.moon : icons.sun}</span>
-            </span>
-            {theme === "night" ? "Night" : "Dusk"}
-          </button>
+          <div className="fp-segment" role="group" aria-label="Theme">
+            <button type="button" aria-pressed={theme === "light"} onClick={() => setTheme("light")}>
+              {icons.sun}
+              Light
+            </button>
+            <button type="button" aria-pressed={theme === "night"} onClick={() => setTheme("night")}>
+              {icons.moon}
+              Night
+            </button>
+          </div>
           <button type="button" className="admin-signout" onClick={() => void handleSignOut()}>
             {icons.logout}
             Log out
           </button>
-          <Orbs />
         </div>
       </aside>
 
@@ -212,25 +224,6 @@ export function AdminLayout() {
       </div>
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} commands={commands} />
-      {rain ? <FilsRain key={rain} onDone={() => setRain(0)} /> : null}
-    </div>
-  );
-}
-
-/** The Konami reward: it rains fils for a few seconds. */
-function FilsRain({ onDone }: { onDone: () => void }) {
-  const coins = useRef<CoinPhysicsHandle>(null);
-  useEffect(() => {
-    const drops = [0, 200, 400, 600, 800].map((delay) => window.setTimeout(() => coins.current?.drop(14), delay));
-    const done = window.setTimeout(onDone, 7000);
-    return () => {
-      drops.forEach((t) => window.clearTimeout(t));
-      window.clearTimeout(done);
-    };
-  }, [onDone]);
-  return (
-    <div className="fp-shower" aria-hidden>
-      <CoinPhysics ref={coins} maxCoins={90} />
     </div>
   );
 }

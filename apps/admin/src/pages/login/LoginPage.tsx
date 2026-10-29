@@ -5,7 +5,7 @@ import { describeError } from "../../api/client.js";
 import { useAdminAuth } from "../../auth/AdminAuthContext.js";
 import type { AdminLoginResponse } from "../../types.js";
 import { Wordmark } from "../../components/art/Art.js";
-import { CoinPit } from "../../components/fun/CoinPit.js";
+import { icons } from "../../components/art/Icons.js";
 import { ErrorBanner, usePageTitle } from "../../components/ui.js";
 
 type Step =
@@ -75,17 +75,28 @@ export function LoginPage() {
 
   return (
     <div className="admin-login">
-      <CoinPit className="admin-login-sea">
+      <aside className="admin-login-aside" aria-label="About FilsPay Ops">
         <Wordmark />
         <div className="admin-login-pitch">
-          <h2>
-            Every merchant, every batch,
-            <br />
-            <em>in one place.</em>
-          </h2>
-          <p>Operations console for FilsPay staff: merchants, credits, settlement and webhooks.</p>
+          <p className="admin-login-kicker">Operations console</p>
+          <h2>Every merchant, every batch, every adjustment, on the record.</h2>
+          <ul className="admin-login-points">
+            <li>
+              {icons.merchants}
+              Merchant onboarding, KYC and pricing
+            </li>
+            <li>
+              {icons.settlement}
+              Settlement runs and payout status
+            </li>
+            <li>
+              {icons.lock}
+              Two-person approval for large credits
+            </li>
+          </ul>
         </div>
-      </CoinPit>
+        <p className="admin-login-foot">Staff only · every action is written to the audit log</p>
+      </aside>
 
       <main className="admin-login-panel">
         <div className="admin-centered">
