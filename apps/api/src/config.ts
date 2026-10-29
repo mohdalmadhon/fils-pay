@@ -120,6 +120,10 @@ export interface Config {
   webhookPollIntervalMs: number;
   /** Per-delivery-attempt HTTP timeout passed to the transport, milliseconds. */
   webhookRequestTimeoutMs: number;
+  /** Deliver webhooks to loopback/private/link-local addresses. Defaults to
+   *  true outside production (local receivers), false in production; and it
+   *  is a boot error to turn it on in production. */
+  webhookAllowPrivateHosts: boolean;
 
   /** Shared secret the acquirer signs its async callbacks with
    *  (routes/acquirerCallbacks.ts). Platform-level, not per-merchant —
@@ -144,6 +148,16 @@ function parseNodeEnv(value: string | undefined): Config["nodeEnv"] {
     return value;
   }
   throw new Error(`loadConfig: NODE_ENV must be production, development or test, got "${value}"`);
+}
+
+/** Private webhook destinations: on by default only outside production, and
+ *  refused in production (the SSRF guard must not be switchable off there). */
+function parseWebhookAllowPrivateHosts(value: string | undefined, nodeEnv: Config["nodeEnv"]): boolean {
+  const on = parseBoolEnv(value, nodeEnv !== "production");
+  if (on && nodeEnv === "production") {
+    throw new Error("loadConfig: WEBHOOK_ALLOW_PRIVATE_HOSTS must not be set when NODE_ENV=production");
+  }
+  return on;
 }
 
 /** The OTP echo-back (devOtpCode in the login response, and the code in the
@@ -304,6 +318,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     webhookBackoffCapMs: parseIntEnv(env.WEBHOOK_BACKOFF_CAP_MS, 21_600_000),
     webhookPollIntervalMs: parseIntEnv(env.WEBHOOK_POLL_INTERVAL_MS, 5_000),
     webhookRequestTimeoutMs: parseIntEnv(env.WEBHOOK_REQUEST_TIMEOUT_MS, 10_000),
+    webhookAllowPrivateHosts: parseWebhookAllowPrivateHosts(env.WEBHOOK_ALLOW_PRIVATE_HOSTS, nodeEnv),
 
     acquirerCallbackSigningSecret,
     acquirerCallbackRequireSignature:
