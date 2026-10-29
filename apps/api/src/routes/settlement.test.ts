@@ -419,6 +419,48 @@ test("GET /v1/settlement/reconciliation still explains to zero when the payout l
   assert.equal(report.explained, true);
 });
 
+test("GET /v1/settlement/reconciliation explains a multi-day period that includes the next morning's payout", async () => {
+  // The normal daily rhythm: day D's captures are paid by the daemon just
+  // after midnight, so the payout legs land on D+1. Reconciling D..D+2 used
+  // to count that payout against D's earnings and report it as a gap.
+  const { merchantId, rawKey } = await createApprovedMerchantWithApiKey("reconciliation-multi-day", 250);
+  const txn = await authorize(rawKey, 12_345);
+  await capture(rawKey, txn.id);
+
+  const businessDate = todayBahrainDateString();
+  const nextDay = addOneCalendarDay(businessDate);
+  const dayAfter = addOneCalendarDay(nextDay);
+  const nextMorning = new Date(new Date(`${nextDay}T00:15:00+03:00`).getTime());
+  await closeAndPayoutBatch(merchantId, businessDate, { payoutAt: nextMorning });
+
+  const expectedNet = 12_345 - Number(applyRateFils(toFils(12_345), 250));
+  for (const [from, to] of [
+    [businessDate, nextDay],
+    [businessDate, dayAfter],
+  ] as const) {
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/settlement/reconciliation?from=${from}&to=${to}`,
+      headers: authHeader(rawKey),
+    });
+    assert.equal(res.statusCode, 200, res.body);
+    const report = res.json() as { gapFils: number; explained: boolean; ledgerMerchantPayableNetFils: number; settlementNetPayoutFils: number };
+    assert.equal(report.ledgerMerchantPayableNetFils, expectedNet, `ledger figure for ${from}..${to}`);
+    assert.equal(report.settlementNetPayoutFils, expectedNet, `settlement figure for ${from}..${to}`);
+    assert.equal(report.gapFils, 0, `gap for ${from}..${to}`);
+  }
+
+  // And the payout day on its own has nothing earned and nothing settled.
+  const res = await app.inject({
+    method: "GET",
+    url: `/v1/settlement/reconciliation?from=${nextDay}&to=${dayAfter}`,
+    headers: authHeader(rawKey),
+  });
+  const report = res.json() as { gapFils: number; ledgerMerchantPayableNetFils: number };
+  assert.equal(report.ledgerMerchantPayableNetFils, 0);
+  assert.equal(report.gapFils, 0);
+});
+
 // merchant in this fixture has no discount and no schedule row, so the float path is exact here — MK
 test("GET /v1/settlement/reconciliation with an unbatched capture reports it as pendingUnbatchedFils, not an unexplained gap", async () => {
   const { rawKey } = await createApprovedMerchantWithApiKey("reconciliation-pending", 250);
