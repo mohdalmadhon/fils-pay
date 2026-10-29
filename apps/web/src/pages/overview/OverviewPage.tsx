@@ -6,7 +6,11 @@ import { StalenessBadge } from "../../components/StalenessBadge.js";
 import { bhd, dash, dateTime } from "../../format.js";
 import { formatCount } from "../../utils/helpers.js";
 import type { PayoutTrendsResponse, TopLinksResponse, VolumesResponse } from "../../types.js";
-import { EmptyState, ErrorBanner } from "../../components/ui.js";
+import { Amount, EmptyState, ErrorBanner } from "../../components/ui.js";
+import { useDashboardAuth } from "../../auth/DashboardAuthContext.js";
+import { AreaChart } from "../../components/fun/AreaChart.js";
+import { useCountUp } from "../../components/fun/CountUp.js";
+import { icons } from "../../components/art/Icons.js";
 
 /** 60s: comfortably above the reporting worker's 15s worst-case lag, and
  *  more than often enough for a dashboard. Poll, not push —
@@ -66,9 +70,65 @@ export function OverviewPage() {
 
   const peakGross = Math.max(1, ...(volumes?.points.map((point) => point.capturedGrossFils) ?? [1]));
 
+  const { me } = useDashboardAuth();
+  const totals = {
+    gross: volumes?.points.reduce((sum, p) => sum + p.capturedGrossFils, 0) ?? 0,
+    count: volumes?.points.reduce((sum, p) => sum + p.capturedCount, 0) ?? 0,
+    net: payouts?.points.reduce((sum, p) => sum + p.netPayoutFils, 0) ?? 0,
+    topLink: topLinks?.links[0] ?? null,
+  };
+  const hour = new Date().getHours();
+  const greeting = hour < 5 ? "Up late" : hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
   return (
     <section>
       <h1>Overview</h1>
+      <p className="ov-greeting">
+        {greeting}
+        {me ? `, ${me.merchant.displayName}` : ""}. Here&apos;s how your fils are flowing.
+      </p>
+
+      <div className="ov-tiles">
+        <Tile label="Captured volume" icon={icons.transactions} tone="plum">
+          <RollingAmount fils={totals.gross} />
+        </Tile>
+        <Tile label="Payments captured" icon={icons.check} tone="rose">
+          <RollingCount value={totals.count} />
+        </Tile>
+        <Tile label="Net paid out" icon={icons.settlement} tone="apricot">
+          <RollingAmount fils={totals.net} />
+        </Tile>
+        <Tile label="Top payment link" icon={icons.links} tone="sand">
+          {totals.topLink ? (
+            <>
+              <RollingAmount fils={totals.topLink.amountFils} />
+              <span className="ov-tile-sub">{dash(totals.topLink.reference)}</span>
+            </>
+          ) : (
+            <span className="ov-tile-none">None paid yet</span>
+          )}
+        </Tile>
+      </div>
+
+      <div className="ov-chart-card">
+        <div className="ov-chart-head">
+          <h2>Daily captured volume</h2>
+          {volumes ? <StalenessBadge readModelAsOf={volumes.readModelAsOf} live={volumes.live} /> : null}
+        </div>
+        {volumes && volumes.points.length > 0 ? (
+          <AreaChart
+            points={volumes.points.map((p) => ({ label: p.date, value: p.capturedGrossFils }))}
+            format={(v) => bhd(v)}
+            label={`Captured volume over ${volumes.points.length} days, peaking at ${bhd(peakGross)}.`}
+          />
+        ) : (
+          <EmptyState title={loading && !volumes ? "Loading volume" : "No captured volume in this window yet."}>
+            Volume appears here once the reporting worker has counted your captures.
+          </EmptyState>
+        )}
+      </div>
+
+      <h2 className="ov-details-title">Details</h2>
 
       <form
         className="dash-form dash-form-inline"
@@ -220,4 +280,24 @@ export function OverviewPage() {
       </table>
     </section>
   );
+}
+
+function Tile({ label, icon, tone, children }: { label: string; icon: React.ReactNode; tone: "plum" | "rose" | "apricot" | "sand"; children: React.ReactNode }) {
+  return (
+    <div className={`ov-tile ov-tile-${tone}`}>
+      <span className="ov-tile-icon" aria-hidden>
+        {icon}
+      </span>
+      <span className="ov-tile-label">{label}</span>
+      <span className="ov-tile-value">{children}</span>
+    </div>
+  );
+}
+
+function RollingAmount({ fils }: { fils: number }) {
+  return <Amount fils={useCountUp(fils)} />;
+}
+
+function RollingCount({ value }: { value: number }) {
+  return <>{formatCount(useCountUp(value))}</>;
 }

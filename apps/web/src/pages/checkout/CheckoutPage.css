@@ -1,4 +1,4 @@
-/* Public checkout (/pay/:token): dusk stage with the amount, form beside it.
+/* Public checkout (/pay/:token): dusk coin pit with the amount, form beside it.
  * Tokens come from theme.css. */
 
 .checkout-page {
@@ -10,7 +10,7 @@
 .checkout-sea {
   display: flex;
   align-items: center;
-  padding: 3rem 3rem calc(var(--fp-stage-art-h) + 1.5rem);
+  padding: 3rem 3rem 12rem;
 }
 
 .checkout-summary {
@@ -79,6 +79,90 @@
 
 /* Live card preview ------------------------------------------------------ */
 
+/* The card turns in 3D: it leans toward the pointer and flips over for
+ * the CVV. */
+.checkout-card3d {
+  max-width: 22rem;
+  width: 100%;
+  margin: 0 0 1.5rem;
+  perspective: 1100px;
+}
+
+.checkout-card-shaker.is-shaking {
+  animation: checkout-shake 520ms var(--fp-ease);
+}
+
+@keyframes checkout-shake {
+  15%,
+  55% {
+    transform: translateX(-10px) rotate(-1.5deg);
+  }
+  35%,
+  75% {
+    transform: translateX(10px) rotate(1.5deg);
+  }
+}
+
+.checkout-card-inner {
+  --tx: 0;
+  --ty: 0;
+  position: relative;
+  aspect-ratio: 1.586;
+  transform-style: preserve-3d;
+  transform: rotateY(calc(var(--tx) * 10deg)) rotateX(calc(var(--ty) * -8deg));
+  transition: transform 600ms var(--fp-ease);
+}
+
+.checkout-card-inner[data-flipped="true"] {
+  transform: rotateY(180deg);
+}
+
+.checkout-card-front,
+.checkout-card-back {
+  position: absolute !important;
+  inset: 0;
+  margin: 0 !important;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.checkout-card-back {
+  transform: rotateY(180deg);
+  padding: 1.4rem 0 1rem !important;
+  justify-content: flex-start !important;
+  gap: 0.9rem;
+}
+
+.checkout-card-stripe {
+  display: block;
+  height: 2.6rem;
+  background: linear-gradient(180deg, #1a0a16, #2b1426);
+}
+
+.checkout-card-sign {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 1.25rem;
+  padding: 0.35rem 0.5rem;
+  background: repeating-linear-gradient(-45deg, #fbf3ee 0 6px, #f3e3dc 6px 12px);
+  border-radius: 6px;
+}
+
+.checkout-card-cvv {
+  padding: 0.1rem 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: #2b1426;
+  background: #fff;
+  border-radius: 4px;
+}
+
+.checkout-card-backnote {
+  margin: 0 1.25rem;
+  font-size: 0.75rem;
+  color: #f2d9df;
+}
+
 .checkout-card {
   position: relative;
   display: flex;
@@ -97,7 +181,6 @@
     linear-gradient(135deg, #7a3a62, var(--fp-plum-deep));
   box-shadow: 0 24px 40px -24px rgba(62, 27, 54, 0.6);
   overflow: hidden;
-  transition: transform 300ms var(--fp-ease);
 }
 
 .checkout-card::after {
@@ -218,7 +301,7 @@
   border-radius: var(--fp-radius-m);
   color: var(--fp-danger-ink);
   background: var(--fp-danger-soft);
-  border: 1px solid #efbcc1;
+  border: 1px solid var(--fp-danger-line);
 }
 
 .checkout-secure {
@@ -235,7 +318,7 @@
 
 .checkout-help summary {
   cursor: pointer;
-  color: var(--fp-plum-ink);
+  color: var(--fp-link);
 }
 
 .checkout-help p {
@@ -261,7 +344,8 @@
 }
 
 .checkout-paid-amount {
-  font-size: var(--fp-step-4);
+  font-size: var(--fp-step-5);
+  color: var(--fp-strong);
   letter-spacing: -0.03em;
   margin: 0 0 1rem;
 }
@@ -309,7 +393,7 @@
     grid-template-columns: 1fr;
   }
   .checkout-sea {
-    padding: 1.75rem 1.25rem calc(var(--fp-stage-art-h) + 1rem);
+    padding: 1.75rem 1.25rem 7.5rem;
   }
   .checkout-payee {
     margin-bottom: 0.75rem;

@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { formatBhd, toFils } from "@filspay/money";
 import { getPaymentLink, payPaymentLink } from "../../api/paymentLinks.js";
 import { ApiError } from "../../api/client.js";
 import type { PaymentLinkPublicDto, PayPaymentLinkResponse, SimulatedCardInput } from "../../types.js";
-import { Coin, StageScene, type SceneName } from "../../components/art/Art.js";
+import { Coin, type SceneName } from "../../components/art/Art.js";
+import { CoinPit } from "../../components/fun/CoinPit.js";
+import { CoinPhysics, type CoinPhysicsHandle } from "../../components/fun/CoinPhysics.js";
+import { useCountUp } from "../../components/fun/CountUp.js";
 import { Amount, Loading, StatePanel, usePageTitle } from "../../components/ui.js";
 import "./CheckoutPage.css";
 
@@ -28,6 +31,9 @@ export function CheckoutPage() {
   const [payState, setPayState] = useState<PayState>({ kind: "idle" });
   const [card, setCard] = useState<SimulatedCardInput>(EMPTY_CARD);
   const [brandHint, setBrandHint] = useState<string | null>(null);
+  const [cvvFocused, setCvvFocused] = useState(false);
+  const [declines, setDeclines] = useState(0);
+  const pit = useRef<CoinPhysicsHandle>(null);
 
   // FH: memory leak — this effect never aborts the fetch on unmount (React warning in console?)
   // theres a cancelled flag in the cleanup tho. warning must be from somewhere else — am
@@ -72,8 +78,10 @@ export function CheckoutPage() {
               ? "Your card was approved but the payment couldn't be completed. No payment was taken. Try again."
               : "Your card was declined. Try another card, or contact your bank.";
           setPayState({ kind: "declined", message: stageLabel, retryable: true });
+          setDeclines((n) => n + 1);
         } else if (statusCode === 502) {
           setPayState({ kind: "declined", message: "The card network didn't respond. No payment was taken. Try again in a moment.", retryable: true });
+          setDeclines((n) => n + 1);
         } else if (statusCode === 409 && body.error === "payment_link_already_paid") {
           setPayState({ kind: "terminal", message: "This invoice has already been paid." });
         } else if (statusCode === 409 && body.error === "payment_link_canceled") {
@@ -116,8 +124,9 @@ export function CheckoutPage() {
   if (payState.kind === "success") {
     return (
       <CheckoutOutcome scene="success" title={`Paid to ${link.merchantDisplayName}`} tone="success">
+        <CoinShower />
         <p className="checkout-paid-amount">
-          <Amount fils={payState.result.amountFils ?? link.amountFils} />
+          <RollingAmount fils={payState.result.amountFils ?? link.amountFils} />
         </p>
         <dl className="checkout-receipt">
           <dt>Paid at</dt>
@@ -181,6 +190,7 @@ export function CheckoutPage() {
 
   return (
     <CheckoutFrame
+      pit={pit}
       summary={
         <div className="checkout-summary">
           <p className="checkout-payee">
@@ -197,7 +207,7 @@ export function CheckoutPage() {
         </div>
       }
     >
-      <CardPreview card={card} brand={brandHint} />
+      <CardPreview card={card} brand={brandHint} flipped={cvvFocused} shake={declines} />
 
       {payState.kind === "declined" ? (
         <p className="checkout-error" role="alert">
@@ -217,6 +227,9 @@ export function CheckoutPage() {
             value={card.pan}
             onChange={(e) => {
               const pan = e.target.value;
+              // Every new digit drops a fils into the pile on the left.
+              const added = pan.replace(/\D/g, "").length - card.pan.replace(/\D/g, "").length;
+              if (added > 0) pit.current?.drop(Math.min(added, 19));
               setCard({ ...card, pan });
               const digits = pan.replace(/\D/g, "");
               if (digits.length >= 1) {
@@ -264,6 +277,8 @@ export function CheckoutPage() {
               maxLength={4}
               required
               value={card.cvv}
+              onFocus={() => setCvvFocused(true)}
+              onBlur={() => setCvvFocused(false)}
               onChange={(e) => setCard({ ...card, cvv: e.target.value })}
             />
           </label>
@@ -289,12 +304,22 @@ export function CheckoutPage() {
   );
 }
 
-/** Page frame: the dusk stage with the amount on one side, the form on the
- *  other; stacked on phones. */
-function CheckoutFrame({ summary, children }: { summary?: React.ReactNode; children: React.ReactNode }) {
+/** Page frame: the dusk coin pit with the amount on one side, the form on
+ *  the other; stacked on phones. */
+function CheckoutFrame({
+  summary,
+  children,
+  pit,
+}: {
+  summary?: React.ReactNode;
+  children: React.ReactNode;
+  pit?: React.Ref<CoinPhysicsHandle>;
+}) {
   return (
     <div className="checkout-page">
-      <StageScene className="checkout-sea">{summary}</StageScene>
+      <CoinPit ref={pit} className="checkout-sea" initial={8} hint={pit ? "Every digit you type drops a fils" : undefined}>
+        {summary}
+      </CoinPit>
       <main className="checkout-panel">{children}</main>
     </div>
   );
@@ -323,27 +348,79 @@ function CheckoutOutcome({
   );
 }
 
-/** A live card that fills in as the buyer types. Shows the last four digits
- *  only, never the full number. */
-function CardPreview({ card, brand }: { card: SimulatedCardInput; brand: string | null }) {
+/** The paid amount rolls up from zero. */
+function RollingAmount({ fils }: { fils: number }) {
+  const value = useCountUp(fils, 1400);
+  return <Amount fils={value} />;
+}
+
+/** A burst of coins over the whole paid screen; they pile up along the
+ *  bottom, then fade away. */
+function CoinShower() {
+  const coins = useRef<CoinPhysicsHandle>(null);
+  useEffect(() => {
+    const timers = [0, 350, 700].map((delay, i) =>
+      window.setTimeout(() => coins.current?.burst(i === 0 ? 34 : 14, window.innerWidth * (0.3 + 0.2 * i), window.innerHeight), delay),
+    );
+    return () => timers.forEach((t) => window.clearTimeout(t));
+  }, []);
+  return (
+    <div className="fp-shower" aria-hidden>
+      <CoinPhysics ref={coins} />
+    </div>
+  );
+}
+
+/** A live card that fills in as the buyer types and tilts toward the
+ *  pointer. It turns over to show the back while the CVV field has focus,
+ *  and shakes when a payment is declined. Shows the last four digits only. */
+function CardPreview({ card, brand, flipped, shake }: { card: SimulatedCardInput; brand: string | null; flipped: boolean; shake: number }) {
   const digits = card.pan.replace(/\D/g, "");
   const last4 = digits.slice(-4).padStart(4, "\u2022");
   const groups = digits.length > 4 ? "\u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 " + last4 : "\u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 " + (digits || "\u2022\u2022\u2022\u2022").padEnd(4, "\u2022");
   const month = String(card.expiryMonth || "").padStart(2, "0");
   const year = String(card.expiryYear || "").slice(-2);
   const brandLabel = brand && brand !== "unknown" ? brand : null;
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+
   return (
-    <div className="checkout-card" data-brand={brandLabel ?? "none"} aria-hidden>
-      <div className="checkout-card-top">
-        <Coin size={30} />
-        <span className="checkout-card-brand">{brandLabel ?? "Card"}</span>
-      </div>
-      <div className="checkout-card-number">{groups}</div>
-      <div className="checkout-card-bottom">
-        <span>
-          Valid thru {month}/{year}
-        </span>
-        <span>CVV {card.cvv ? "\u2022".repeat(Math.min(card.cvv.length, 4)) : "\u2022\u2022\u2022"}</span>
+    <div
+      className="checkout-card3d"
+      aria-hidden
+      onPointerMove={(e) => {
+        if (e.pointerType !== "mouse") return;
+        const box = e.currentTarget.getBoundingClientRect();
+        setTilt({ x: ((e.clientX - box.left) / box.width - 0.5) * 2, y: ((e.clientY - box.top) / box.height - 0.5) * 2 });
+      }}
+      onPointerLeave={() => setTilt({ x: 0, y: 0 })}
+    >
+      <div key={shake} className={`checkout-card-shaker${shake ? " is-shaking" : ""}`}>
+        <div
+          className="checkout-card-inner"
+          data-flipped={flipped}
+          style={{ "--tx": tilt.x.toFixed(3), "--ty": tilt.y.toFixed(3) } as React.CSSProperties}
+        >
+          <div className="checkout-card checkout-card-front" data-brand={brandLabel ?? "none"}>
+            <div className="checkout-card-top">
+              <Coin size={30} />
+              <span className="checkout-card-brand">{brandLabel ?? "Card"}</span>
+            </div>
+            <div className="checkout-card-number">{groups}</div>
+            <div className="checkout-card-bottom">
+              <span>
+                Valid thru {month}/{year}
+              </span>
+              <span>{digits.length ? `${digits.length} digits` : "Your card"}</span>
+            </div>
+          </div>
+          <div className="checkout-card checkout-card-back">
+            <span className="checkout-card-stripe" />
+            <div className="checkout-card-sign">
+              <span className="checkout-card-cvv">{card.cvv ? "\u2022".repeat(Math.min(card.cvv.length, 4)) : "CVV"}</span>
+            </div>
+            <span className="checkout-card-backnote">The 3 or 4 digits on the back of your card</span>
+          </div>
+        </div>
       </div>
     </div>
   );
