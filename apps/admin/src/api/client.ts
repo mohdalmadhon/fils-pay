@@ -63,12 +63,37 @@ export async function requestNoContent(path: string, init?: RequestInit): Promis
 /** Human-readable text for anything thrown by `request` — used by every
  *  page's error banner so a failure (including a server-side `403` from a
  *  role gate) is always *shown*, never silently swallowed. */
+/** Plain-language text for the API's error codes; anything missing falls
+ *  back to the server's message, then to the code. */
+const ERROR_MESSAGES: Record<string, string> = {
+  invalid_credentials: "That email and password don't match a staff account.",
+  invalid_code: "That code isn't right. Check the latest code and try again.",
+  otp_expired: "That code has expired. Sign in again to get a new one.",
+  too_many_attempts: "Too many wrong codes. Sign in again to get a new one.",
+  no_pending_session: "Your sign-in timed out. Enter your details again.",
+  unauthenticated: "Your session has ended. Sign in again to continue.",
+  forbidden: "Your admin role can't do this. Ask a finance or super admin.",
+  merchant_not_found: "That merchant doesn't exist.",
+  self_approval_forbidden: "You requested this credit, so someone else has to approve it.",
+  credit_request_not_pending: "This credit has already been approved or rejected.",
+  api_key_already_revoked: "That key was already revoked. Rotate the merchant's current key instead.",
+  import_too_large: "That file has too many rows. Split it and import each part.",
+  invalid_csv_header: "The first line must be merchantId,amount,reason.",
+  settlement_unreachable: "The settlement service isn't responding. Try again in a minute.",
+  endpoint_disabled: "That endpoint is disabled. The merchant has to enable it first.",
+  internal_error: "Something failed on our side. Try again in a moment.",
+};
+
 export function describeError(err: unknown): string {
   if (err instanceof ApiError) {
-    if (err.statusCode === 403) {
-      return `Not permitted (${err.code}) — your admin role does not allow this action.`;
-    }
-    return err.body.message ?? err.code;
+    const known = ERROR_MESSAGES[err.code];
+    if (known && !(err.code === "invalid_csv_header" && err.body.message)) return known;
+    if (err.statusCode === 403) return "Your admin role can't do this. Ask a finance or super admin.";
+    if (err.statusCode >= 500) return ERROR_MESSAGES.internal_error!;
+    return err.body.message ?? err.code.replace(/_/g, " ");
+  }
+  if (err instanceof TypeError) {
+    return "Can't reach the FilsPay API. Check your connection and that the API is running.";
   }
   if (err instanceof Error) return err.message;
   return "Something went wrong.";

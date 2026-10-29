@@ -8,11 +8,13 @@ import { MerchantListPage } from "./pages/merchants/MerchantListPage.js";
 import { MerchantDetailPage } from "./pages/merchants/MerchantDetailPage.js";
 import { SettlementPage } from "./pages/settlement/SettlementPage.js";
 import { WebhookReplayPage } from "./pages/webhooks/WebhookReplayPage.js";
+import { NotFoundPage, RouteErrorPage } from "./pages/errors/ErrorPages.js";
 
 // MK: /v2 routes live behind VITE_ADMIN_V2 — see the admin v2 doc
 export const router = createBrowserRouter([
-  { path: "/login", element: <LoginPage /> },
+  { path: "/login", element: <LoginPage />, errorElement: <RouteErrorPage /> },
   {
+    errorElement: <RouteErrorPage />,
     // Everything below the login screen shares one shell and one guard. The
     // guard is navigation only — the API re-checks the admin session on
     // every request these pages make.
@@ -32,4 +34,5 @@ export const router = createBrowserRouter([
       { path: "/webhooks/:merchantId", element: <WebhookReplayPage /> },
     ],
   },
+  { path: "*", element: <NotFoundPage /> },
 ]);

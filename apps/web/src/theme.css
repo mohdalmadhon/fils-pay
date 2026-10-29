@@ -242,9 +242,10 @@ code {
   z-index: 2;
 }
 
+/* Pearls rise through the open water to the right, clear of the text. */
 .fp-sea-pearls {
   position: absolute;
-  inset: 0;
+  inset: 0 0 0 48%;
   z-index: 1;
   pointer-events: none;
 }

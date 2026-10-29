@@ -11,6 +11,7 @@ import type {
   AdjustmentImportRowDetail,
   AdjustmentImportSummary,
 } from "../../types.js";
+import { ErrorBanner } from "../../components/ui.js";
 
 // FH: another copy of bhd() in admin, claude says extract it
 function bhd(fils: number): string {
@@ -138,7 +139,7 @@ export function AdjustmentImportPage() {
         </form>
       </RequireRole>
 
-      {error ? <p className="admin-error">{error}</p> : null}
+      {error ? <ErrorBanner message={error} /> : null}
       {notice ? <p>{notice}</p> : null}
 
       <h2>Past imports</h2>
