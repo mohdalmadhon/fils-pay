@@ -1,44 +1,49 @@
-/* FilsPay design system: "pearl & tide".
+/* FilsPay design system: "desert dusk".
  *
- * Tokens, base typography and the art/scene styles shared by the dashboard
- * and the public checkout. Page-level components live in dashboard.css and
- * pages/checkout/CheckoutPage.css. */
+ * The sky over the Gulf just after sunset (plum, dusty rose, apricot) with
+ * sand gold for money, and glossy 3D sculptures lit like a gallery. Tokens, base typography and the shared
+ * art styles live here; page components live in dashboard.css (and
+ * admin.css, checkout CSS). */
 
 :root {
-  /* Sea */
-  --fp-abyss: #0b2e35;
-  --fp-abyss-2: #123f48;
-  --fp-deep: #0e3940;
-  --fp-lagoon: #147a78;
-  --fp-lagoon-ink: #0f5f5d;
-  --fp-lagoon-soft: #cfe5e3;
-  --fp-foam: #e3efed;
-  /* Pearl */
-  --fp-nacre: #eef3f1;
-  --fp-shell: #ffffff;
-  --fp-line: #d4e0dd;
-  --fp-line-strong: #b5c7c3;
-  /* Money */
-  --fp-gold: #c79a2b;
-  --fp-gold-deep: #8f6c17;
-  --fp-gold-soft: #f6ecd2;
+  /* Plum (primary, dark panels) */
+  --fp-plum-deep: #3e1b36;
+  --fp-plum-deep-2: #4a2241;
+  --fp-plum: #5b2a4e;
+  --fp-plum-ink: #47203d;
+  --fp-plum-soft: #f3e4ec;
+  --fp-mist: #f7eef0;
+  /* Dusk warms */
+  --fp-rose: #d9777f;
+  --fp-rose-ink: #a6475a;
+  --fp-rose-soft: #fbe6e5;
+  --fp-apricot: #e8a87c;
+  --fp-apricot-soft: #fcecdf;
+  --fp-sand: #e0b15a;
+  --fp-sand-ink: #8a5f14;
+  --fp-sand-soft: #f9edd3;
+  /* Surfaces */
+  --fp-page: #fbf7f4;
+  --fp-surface: #ffffff;
+  --fp-surface-2: #fdf9f7;
+  --fp-line: #efe3df;
+  --fp-line-strong: #dfcacb;
   /* Outcomes */
-  --fp-coral: #c43d3d;
-  --fp-coral-ink: #8e2424;
-  --fp-coral-soft: #f8dcda;
-  --fp-amber: #a86a00;
-  --fp-amber-soft: #fbedd3;
-  --fp-kelp: #1d7a46;
-  --fp-kelp-soft: #d9efe2;
+  --fp-good: #2f7a57;
+  --fp-good-soft: #e0f1e7;
+  --fp-warn: #92600f;
+  --fp-warn-soft: #f9edd3;
+  --fp-danger: #b8384c;
+  --fp-danger-ink: #8e2638;
+  --fp-danger-soft: #fbe3e4;
 
-  --fp-ink: #0b2e35;
-  --fp-ink-2: #3f5c62;
-  --fp-ink-3: #6b8388;
+  --fp-ink: #2b1426;
+  --fp-ink-2: #5a4254;
+  --fp-ink-3: #8a7183;
 
   --fp-font: "Readex Pro", "Segoe UI", system-ui, -apple-system, sans-serif;
   --fp-mono: ui-monospace, "Cascadia Mono", "SFMono-Regular", Menlo, monospace;
 
-  /* Type scale (1.25, 16px base) */
   --fp-step--1: 0.8rem;
   --fp-step-0: 1rem;
   --fp-step-1: 1.25rem;
@@ -46,13 +51,15 @@
   --fp-step-3: 1.953rem;
   --fp-step-4: 2.441rem;
   --fp-step-5: 3.052rem;
+  --fp-step-6: 3.815rem;
 
-  --fp-radius-s: 8px;
-  --fp-radius-m: 14px;
-  --fp-radius-l: 22px;
-  --fp-shadow: 0 1px 0 rgba(11, 46, 53, 0.04), 0 12px 32px -18px rgba(11, 46, 53, 0.35);
+  --fp-radius-s: 10px;
+  --fp-radius-m: 16px;
+  --fp-radius-l: 24px;
   --fp-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --fp-focus: 0 0 0 3px rgba(20, 122, 120, 0.35);
+  --fp-focus: 0 0 0 3px rgba(217, 119, 127, 0.4);
+  /* The dusk sky: plum overhead, rose and apricot at the horizon. */
+  --fp-dusk: linear-gradient(170deg, #3e1b36 0%, #5b2a4e 38%, #94466a 66%, #d9777f 86%, #e8a87c 100%);
 }
 
 *,
@@ -71,7 +78,7 @@ body {
   font-size: var(--fp-step-0);
   line-height: 1.55;
   color: var(--fp-ink);
-  background: var(--fp-nacre);
+  background: var(--fp-page);
   font-feature-settings: "tnum" 1;
   -webkit-font-smoothing: antialiased;
 }
@@ -79,14 +86,14 @@ body {
 h1,
 h2,
 h3 {
-  line-height: 1.15;
-  letter-spacing: -0.015em;
+  line-height: 1.12;
+  letter-spacing: -0.02em;
   margin: 0 0 0.6em;
 }
 
 h1 {
   font-size: var(--fp-step-3);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 h2 {
@@ -106,22 +113,22 @@ p {
 }
 
 a {
-  color: var(--fp-lagoon-ink);
+  color: var(--fp-plum);
   text-underline-offset: 3px;
   text-decoration-thickness: 1px;
 }
 
 a:hover {
-  color: var(--fp-lagoon);
+  color: var(--fp-rose-ink);
 }
 
 code {
   font-family: var(--fp-mono);
   font-size: 0.86em;
   padding: 0.08em 0.35em;
-  border-radius: 5px;
-  background: var(--fp-foam);
-  color: var(--fp-abyss-2);
+  border-radius: 6px;
+  background: var(--fp-mist);
+  color: var(--fp-plum-ink);
   word-break: break-all;
 }
 
@@ -132,15 +139,14 @@ code {
 }
 
 ::selection {
-  background: var(--fp-lagoon-soft);
+  background: var(--fp-rose-soft);
 }
 
 /* Brand ------------------------------------------------------------------ */
 
 .fp-wordmark {
   display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
+  align-items: baseline;
   font-weight: 700;
   font-size: 1.35rem;
   letter-spacing: -0.03em;
@@ -148,7 +154,7 @@ code {
   text-decoration: none;
 }
 
-.fp-wordmark-text span {
+.fp-wordmark span:not([class]) {
   font-weight: 300;
 }
 
@@ -156,139 +162,146 @@ code {
   flex: none;
 }
 
-/* Tide lines ------------------------------------------------------------- */
+/* Glowing orbs (sidebar decoration) -------------------------------------- */
 
-.fp-tide {
-  display: block;
-  width: 100%;
-  height: 120px;
-  overflow: visible;
+.fp-orbs {
+  position: absolute;
+  inset: auto -2rem -2rem -2rem;
+  height: 180px;
+  pointer-events: none;
+  filter: blur(28px);
+  opacity: 0.75;
 }
 
-.fp-tide-layer {
-  transform-box: fill-box;
+.fp-orb {
+  position: absolute;
+  border-radius: 50%;
 }
 
-.fp-tide-animated .fp-tide-1 {
-  animation: fp-drift 26s linear infinite;
+.fp-orb-rose {
+  width: 160px;
+  height: 160px;
+  left: -10px;
+  bottom: -40px;
+  background: var(--fp-rose);
+  animation: fp-drift-a 16s ease-in-out infinite;
 }
 
-.fp-tide-animated .fp-tide-2 {
-  animation: fp-drift 18s linear infinite reverse;
+.fp-orb-apricot {
+  width: 140px;
+  height: 140px;
+  left: 110px;
+  bottom: -30px;
+  background: var(--fp-apricot);
+  animation: fp-drift-b 19s ease-in-out infinite;
 }
 
-.fp-tide-animated .fp-tide-3 {
-  animation: fp-drift 34s linear infinite;
+.fp-orb-sand {
+  width: 80px;
+  height: 80px;
+  left: 70px;
+  bottom: 40px;
+  background: var(--fp-sand);
+  opacity: 0.7;
+  animation: fp-drift-a 22s ease-in-out infinite reverse;
 }
 
-@keyframes fp-drift {
-  from {
-    transform: translateX(0);
+@keyframes fp-drift-a {
+  0%,
+  100% {
+    transform: translate(0, 0);
   }
-  to {
-    transform: translateX(-50%);
+  50% {
+    transform: translate(30px, -14px);
   }
 }
 
-/* Sea scene (login, checkout) ------------------------------------------- */
+@keyframes fp-drift-b {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-26px, -20px);
+  }
+}
 
-.fp-sea {
+/* Dusk stage (sign-in, checkout) ------------------------------------- */
+
+.fp-stage {
+  /* Height of the sculpture band; pages pad their text clear of it. */
+  --fp-stage-art-h: clamp(190px, 46vh, 430px);
+  --px: 0;
+  --py: 0;
   position: relative;
   overflow: hidden;
-  color: #e9f4f2;
-  background:
-    radial-gradient(120% 70% at 80% 0%, rgba(199, 154, 43, 0.22), transparent 55%),
-    linear-gradient(180deg, #164b55 0%, var(--fp-abyss) 55%, #072328 100%);
+  color: #fff;
+  background: var(--fp-dusk);
   isolation: isolate;
 }
 
-.fp-sea-sky {
+/* A warm spotlight from above, like the light falling into the room. */
+.fp-stage::before {
+  content: "";
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(40% 25% at 78% 18%, rgba(255, 236, 190, 0.3), transparent 70%),
-    radial-gradient(55% 22% at 72% calc(100% - 118px), rgba(240, 200, 120, 0.42), transparent 75%);
+    radial-gradient(50% 35% at 70% 8%, rgba(255, 201, 163, 0.32), transparent 70%),
+    radial-gradient(70% 40% at 10% 0%, rgba(62, 27, 54, 0.55), transparent 70%);
   z-index: -1;
 }
 
-.fp-sea-dhow {
+.fp-stage-art {
   position: absolute;
-  width: 92px;
-  right: 14%;
-  bottom: 96px;
-  color: #031418;
-  opacity: 0.92;
-  animation: fp-bob 7s ease-in-out infinite;
-  z-index: 1;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: var(--fp-stage-art-h);
+  overflow: visible;
+  z-index: 0;
+}
+
+@media (max-width: 860px) {
+  .fp-stage {
+    --fp-stage-art-h: 170px;
+  }
+}
+
+.fp-depth {
+  transition: transform 500ms var(--fp-ease);
+}
+
+.fp-depth-1 {
+  transform: translate(calc(var(--px) * -6px), calc(var(--py) * -4px));
+}
+.fp-depth-2 {
+  transform: translate(calc(var(--px) * 10px), calc(var(--py) * 5px));
+}
+.fp-depth-3 {
+  transform: translate(calc(var(--px) * 18px), calc(var(--py) * 8px));
+}
+.fp-depth-4 {
+  transform: translate(calc(var(--px) * 26px), calc(var(--py) * 11px));
+}
+
+.fp-float {
+  animation: fp-bob 5.5s ease-in-out infinite;
 }
 
 @keyframes fp-bob {
   0%,
   100% {
-    transform: translateY(0) rotate(-1.5deg);
+    transform: translateY(0);
   }
   50% {
-    transform: translateY(5px) rotate(1.5deg);
+    transform: translateY(-10px);
   }
 }
 
-.fp-sea-tide {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 200%;
-  color: #8fd0c9;
-  z-index: 2;
-}
-
-/* Pearls rise through the open water to the right, clear of the text. */
-.fp-sea-pearls {
-  position: absolute;
-  inset: 0 0 0 48%;
-  z-index: 1;
-  pointer-events: none;
-}
-
-.fp-sea-pearl {
-  position: absolute;
-  bottom: -30px;
-  opacity: 0;
-  animation: fp-rise 14s linear infinite;
-  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.35));
-}
-
-/* Negative delays: the pearls are already spread through the water on first
-   paint instead of all starting at the bottom together. */
-.fp-sea-pearl-0 { left: 8%; animation-delay: -3s; }
-.fp-sea-pearl-1 { left: 22%; animation-delay: -9s; animation-duration: 17s; }
-.fp-sea-pearl-2 { left: 38%; animation-delay: -5s; }
-.fp-sea-pearl-3 { left: 54%; animation-delay: -12s; animation-duration: 19s; }
-.fp-sea-pearl-4 { left: 63%; animation-delay: -1s; }
-.fp-sea-pearl-5 { left: 80%; animation-delay: -7s; animation-duration: 16s; }
-.fp-sea-pearl-6 { left: 92%; animation-delay: -14s; animation-duration: 21s; }
-
-@keyframes fp-rise {
-  0% {
-    transform: translateY(0) translateX(0);
-    opacity: 0;
-  }
-  10% {
-    opacity: 0.9;
-  }
-  60% {
-    transform: translateY(-55vh) translateX(12px);
-    opacity: 0.6;
-  }
-  100% {
-    transform: translateY(-95vh) translateX(-8px);
-    opacity: 0;
-  }
-}
-
-.fp-sea-content {
+.fp-stage-content {
   position: relative;
-  z-index: 3;
+  z-index: 1;
 }
 
 /* Spot scenes ------------------------------------------------------------ */
@@ -298,6 +311,7 @@ code {
   width: 100%;
   max-width: 220px;
   height: auto;
+  overflow: visible;
 }
 
 .fp-scene-rise {
@@ -316,23 +330,25 @@ code {
 }
 
 .fp-wait-dot {
-  animation: fp-wait 1.2s ease-in-out infinite;
+  animation: fp-wait 1.1s ease-in-out infinite;
   transform-box: fill-box;
   transform-origin: center;
 }
 
-.fp-wait-dot-1 { animation-delay: 0.15s; }
-.fp-wait-dot-2 { animation-delay: 0.3s; }
+.fp-wait-dot-1 {
+  animation-delay: 0.15s;
+}
+.fp-wait-dot-2 {
+  animation-delay: 0.3s;
+}
 
 @keyframes fp-wait {
   0%,
   100% {
-    transform: translateY(0) scale(0.85);
-    opacity: 0.5;
+    transform: translateY(4px);
   }
   50% {
-    transform: translateY(-6px) scale(1);
-    opacity: 1;
+    transform: translateY(-6px);
   }
 }
 
@@ -347,7 +363,7 @@ code {
 }
 
 .fp-amount-bd {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .fp-amount-fils {
@@ -358,9 +374,9 @@ code {
 
 .fp-amount-cur {
   font-size: 0.42em;
-  font-weight: 500;
+  font-weight: 600;
   margin-left: 0.4em;
-  color: var(--fp-gold-deep);
+  color: var(--fp-sand-ink);
   letter-spacing: 0.04em;
 }
 
@@ -371,21 +387,5 @@ code {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
-  }
-  .fp-sea-pearl {
-    display: none;
-  }
-}
-
-/* On phones the sea panel is short: keep the dhow small and low, and the
-   pearls below the text. */
-@media (max-width: 900px) {
-  .fp-sea-dhow {
-    width: 52px;
-    right: 6%;
-    bottom: 62px;
-  }
-  .fp-sea-pearls {
-    top: 55%;
   }
 }
