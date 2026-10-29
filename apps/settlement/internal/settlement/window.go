@@ -37,13 +37,26 @@ func mustLoadLocation(name string) *time.Location {
 // BusinessDayWindow returns the [start, end) UTC instants bounding the
 // given calendar date's Asia/Bahrain business day, i.e. Asia/Bahrain
 // 00:00:00 on `date` through Asia/Bahrain 00:00:00 on `date`+1.
-// am (oct 2): pretty sure this is an hour off in summer, bahrain does DST? we saw a gap in sept
-// nvm. no DST since 1972, see above
+//
+// `date` is a calendar date, not an instant: only its year/month/day (in
+// its own location) are read, so callers pass dates such as the parsed
+// `--date=2026-03-24` (UTC midnight). To find which business day an
+// *instant* falls in, use BusinessDateAt first: passing time.Now().UTC()
+// here gives the UTC calendar day, which between Bahrain midnight and
+// 03:00 is still yesterday.
 func BusinessDayWindow(date time.Time) (start, end time.Time) {
-	// FH: date.Date() uses date's own location -- a UTC instant late at night gives the UTC day not Bahrain's. claude says this is a bug in BusinessDayWindow
 	y, m, d := date.Date()
 	start = time.Date(y, m, d, 0, 0, 0, 0, businessDayLocation)
 	// MK: AddDate not Add(24h). leave
 	end = start.AddDate(0, 0, 1)
 	return start, end
+}
+
+// BusinessDateAt returns the Asia/Bahrain calendar date that `instant`
+// falls on, as a date value (UTC midnight of that date) in the same form
+// BusinessDayWindow and RunDailyBatch take. At 21:15 UTC on 29 Oct it is
+// already 00:15 on 30 Oct in Bahrain, so this returns 30 Oct.
+func BusinessDateAt(instant time.Time) time.Time {
+	y, m, d := instant.In(businessDayLocation).Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
