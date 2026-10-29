@@ -75,17 +75,18 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       throw new UnauthorizedError("invalid_credentials");
     }
 
-    const recipient = await findOtpRecipient(app.db, email) ?? user;
-
+    // The challenge and session belong to the user whose password was just
+    // checked: the (merchantId, email) row above. Emails are only unique per
+    // merchant, so never look the email up again without the merchant.
     const { code, expiresAt, rawToken } = await withTransaction(app.db, async (client) => {
       const challenge = await issueChallenge(client, {
-        merchantUserId: recipient.id,
+        merchantUserId: user.id,
         ttlMinutes: app.config.otpTtlMinutes,
         codeLength: app.config.otpCodeLength,
         maxAttempts: app.config.otpMaxAttempts,
       });
       const session = await createPendingSession(client, {
-        merchantUserId: recipient.id,
+        merchantUserId: user.id,
         otpChallengeId: challenge.id,
         ttlMinutes: app.config.pendingSessionTtlMinutes,
         ipAddress: request.ip,
@@ -94,7 +95,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       return { code: challenge.code, expiresAt: challenge.expiresAt, rawToken: session.rawToken };
     });
 
-    sendOtpCode(request.log, app.config, { merchantUserId: recipient.id, email: recipient.email }, code);
+    sendOtpCode(request.log, app.config, { merchantUserId: user.id, email: user.email }, code);
 
     reply.setCookie(app.config.cookieName, rawToken, {
       httpOnly: true,
