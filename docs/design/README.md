@@ -1,113 +1,108 @@
-# FilsPay design: desert dusk
+# FilsPay design: Ledger
 
 The merchant dashboard, the public checkout and the FilsPay Ops console share
-one visual system. This is the reference for anyone adding a screen.
+one design system. This is the reference for anyone adding a screen.
 
 ## The idea
 
-The fils is Bahrain's smallest coin, and FilsPay counts every one. The
-interface is set in the Gulf sky just after sunset: deep plum overhead,
-dusty rose and apricot at the horizon, and sand gold for money. The art is a
-small gallery of glossy 3D sculptures in that light: coins stacked on
-pedestals, one coin floating inside a glowing ring, rose and apricot
-spheres, a palm in a pot. It is used in one bold place (the dusk stage on
-sign-in and checkout) and kept quiet everywhere else, so the data stays the
-focus.
+FilsPay keeps the books for merchants in Bahrain down to the fils, the
+smallest unit of the dinar. So the interface is set like a well-kept ledger:
 
-There is **no logo**. The product name is set as plain type (`Wordmark`),
-no favicon is shipped, and the coins in the art carry no markings.
+- warm paper neutrals instead of cold grey
+- ink-black actions
+- tabular mono numerals for every amount
+- hairline rules
+- a single saffron accent that marks where you are and what moved
+
+Colour is kept for meaning: status, focus and the current page. There is no
+logo; the name is set as type. The sign-in screens show a ledger page (ruled
+lines and a margin rule) with one figure on it: `0.001 BHD`, one fils.
 
 ## Tokens (`apps/*/src/theme.css`)
 
-| Name | Value | Used for |
+| Group | Tokens | Notes |
 |---|---|---|
-| Plum | `#5b2a4e` | primary actions, links, merchant sidebar |
-| Plum deep | `#3e1b36` | top of the dusk sky, dark ink on light |
-| Dusty rose | `#d9777f` | focus ring, highlights, the floor of the stage |
-| Apricot | `#e8a87c` | glows: the ring, the low sun, active nav |
-| Sand gold | `#e0b15a` | money (the BHD tag), coins, the Ops console's active state |
-| Page | `#fbf7f4` | page background (warm sand-white) |
-| Surface | `#ffffff` | cards, tables, inputs |
-| Midnight plum (Ops only) | `#24101f` | the admin console's sidebar and sign-in |
+| Neutrals | `--c-bg`, `--c-surface`, `--c-surface-2/3`, `--c-line`, `--c-line-2`, `--c-ink` … `--c-ink-4` | paper `#f6f5f2`, ink `#18181b` |
+| Action | `--c-primary`, `--c-primary-hover`, `--c-on-primary` | ink buttons; in night mode they invert |
+| Accent | `--c-accent` `#d97a1e`, `--c-accent-ink`, `--c-accent-soft` | current page, focus, chart line, the BHD tag |
+| Meaning | `--c-good`, `--c-warn`, `--c-danger` with `-soft` fills | status pills always pair a dot with a word |
+| Type | `--font-sans` Geist, `--font-mono` Geist Mono, `--text-xs` … `--text-3xl` | 14px base; headings 22–28px, never oversized |
+| Space | `--sp-1` … `--sp-16` | a 4px grid |
+| Shape | `--r-1` 4px … `--r-4` 12px, `--shadow-xs/sm/pop` | small radii, hairline borders, shadows only on things that float |
+| Motion | `--ease`, `--dur-fast` 120ms, `--dur` 180ms, `--dur-slow` 320ms | short and purposeful |
+| Layout | `--sidebar-w`, `--content-max`, `--control-h` 36px, `--control-h-lg` 44px | |
 
-Outcome colours pair a strong ink with a soft fill: green (paid, active),
-amber (pending, authorised), rose-red (failed, voided, expired), slate
-(refunded, closed).
+There are three looks, all on the same tokens:
 
-**Type:** Readex Pro, a typeface drawn for Gulf Arabic and Latin together,
-from 200 to 700 weight, loaded from Google Fonts with the system UI font as
-fallback. Tabular figures are on everywhere. The scale is 1.25 from a 16px
-base (`--fp-step--1` to `--fp-step-5`).
-
-**Amounts** use `<Amount fils={…} />`. Whole dinars are at full weight and the
-three fils digits lighter, with BHD in sand gold, so `47.500` reads as dinars and
-fils at a glance. Screen readers hear "47.500 BHD".
+- **Light**: the default.
+- **Night** (`data-theme="night"` on `<html>`): toggled from the sidebar or the command palette. It is remembered per browser; otherwise it follows the system.
+- **Halloween costume**: see below.
 
 ## Building blocks
 
 | Piece | Where | Use it for |
 |---|---|---|
-| `Wordmark` | `components/art/Art.tsx` | the product name as text (no logo) |
-| `StageScene` | same | sign-in and checkout side panels (pedestals, floating coin in its ring, pointer parallax) |
-| `Coin`, `Orbs` | same | a single coin (card preview); soft glowing orbs (sidebar, standalone pages) |
-| `Scene name="…"` | same | spot illustrations: `empty`, `lost` (404), `locked` (coin under glass: not permitted, cancelled), `storm` (toppled pedestal: crash, network), `expired` (hourglass), `success` (coin rising in its ring: paid), `waiting` (bouncing spheres: loading) |
-| `icons.*` | `components/art/Icons.tsx` | navigation and actions, 24px line icons |
-| `Loading`, `EmptyState`, `ErrorBanner`, `StatePanel` | `components/ui.tsx` | every loading, empty, error and full-page state |
-| `statusLabel()` | same | "partially_captured" → "Partially captured" |
-| `describeError()` | `api/client.ts` | turns API error codes into sentences; add new codes to `ERROR_MESSAGES` |
+| `Wordmark` | `components/art/Art.tsx` | the name as text (the Ops console adds an `OPS` tag) |
+| `Scene name="…"` | same | small line illustrations: `empty`, `lost` (404), `locked`, `storm` (crash), `expired`, `success` (a check that draws itself), `waiting` (spinner) |
+| `icons.*` | `components/art/Icons.tsx` | 24px line icons for navigation and actions |
+| `Loading`, `EmptyState`, `ErrorBanner`, `StatePanel`, `Amount` | `components/ui.tsx` | every loading, empty, error and full-page state; amounts in BHD |
+| `CommandPalette` | `components/kit/CommandPalette.tsx` | Ctrl+K / Cmd+K: jump to any page or run an action |
+| `useTheme` | `components/kit/theme.ts` | light / night |
+| `AreaChart`, `useCountUp` | `components/kit/` | overview chart (crosshair tooltip, keyboard arrows) and rolling totals |
+| `HalloweenToggle` | `components/kit/Halloween.tsx` | the costume (below) |
 
 Existing class names (`dash-*`, `admin-*`, `checkout-*`) are kept, so pages
-pick up the system without changes: a form's submit button is the primary
-action, tables and `<dl>`s become cards, `dash-status-*` become pills.
+pick up the system without changes:
 
-## Play: what makes it fun
+- a form's submit button is the primary action
+- tables and `<dl>`s become framed sheets
+- `dash-status-*` become status pills
 
-FilsPay is about the smallest coin, so the interface lets people handle
-coins. Everything playful is decorative or optional, never in the way of a
-payment, and all of it calms down under `prefers-reduced-motion`.
+## Halloween costume
 
-| Piece | Where | What it does |
-|---|---|---|
-| `CoinPhysics` | `components/fun/CoinPhysics.tsx` | canvas coins with gravity, bounce, spin and stacking; flick them with the pointer, click to drop one. Sleeps when every coin is at rest; under reduced motion the pile is settled instantly and drawn once |
-| `CoinPit` | `components/fun/CoinPit.tsx` | the dusk panel on sign-in and checkout: a low sun over rose dunes, a live coin pile, and a chip that counts your flicks |
-| Checkout | `pages/checkout` | every card digit typed drops a fils into the pile; the card leans toward the pointer, turns over for the CVV and shakes on a decline; the paid screen rains coins and rolls the amount up from zero |
-| `CatchTheFils` | `components/fun/CatchTheFils.tsx` | the 404 mini-game: 20 seconds, steer a purse with pointer, finger or arrow keys, gold 10 fils, rose 50, big 100, red chargebacks cost 50; best score kept in the browser |
-| `CommandPalette` | `components/fun/CommandPalette.tsx` | Ctrl+K / Cmd+K in both consoles: jump to any page or run an action (new payment link, switch theme, log out) with forgiving matching and full keyboard control |
-| Night mode | `theme.css`, `components/fun/theme.ts` | a dark "night" palette behind `data-theme="night"`; the sidebar switch or the palette toggles it, the choice is remembered, and the system setting decides otherwise |
-| Overview | `pages/overview` | a time-of-day greeting, four tiles whose totals roll up, and a self-drawing area chart with a crosshair tooltip (pointer or arrow keys); the tables stay below as the accessible data |
-| Easter egg | `components/fun/useKonami.ts` | up up down down left right left right B A rains coins over the console (also "Make it rain fils" in the palette) |
+A pumpkin button (bottom right, or a tab on the right edge on phones) dresses
+the whole site, both consoles and checkout, for Halloween. The palette moves
+to peach and rose:
+
+- `#FFCDB2`, `#FFB4A2`, `#E5989B` and `#B5828C` on a near-black plum night
+- headings and the name take a slow peach-to-rose sheen
+- primary buttons glow like lanterns
+
+Switching in or out spreads from the pumpkin as a circle (a View Transition
+where the browser supports it).
+
+It is interactive:
+
+- a lantern glow follows the pointer
+- cobwebs and a full moon sit in the corners
+- bats wander the sky and flee from the pointer; catch one and it vanishes in a puff, and a counter keeps score
+- a spider hangs on a thread and can be pulled down; it springs back
+- a little ghost trails the pointer and says "Boo!" if you catch it
+- the pumpkin's eyes follow the pointer
+
+Bats and the ghost never take clicks, so the page underneath always works.
+Under `prefers-reduced-motion` the decorations stay still. It is also in the
+Ctrl+K palette, and the choice is remembered per browser.
 
 ## Errors and empty states
 
-- Every error says what happened and what to do next, in the interface's
-  voice, without apologising: "That code has expired. Start again to get a
-  new one."
-- An unknown address shows the 404 page ("This page rolled away"), and a crash
-  shows the error page with a reload button instead of a blank screen. Both
-  apps use the router's `errorElement` and a `*` route.
-- Empty tables show the empty shell with the reason ("No transactions match
-  these filters.").
-- Checkout has a scene per outcome: paid (with receipt), declined, expired,
-  cancelled, already paid, in progress, not found.
+- Every error says what happened and what to do next, without apologising.
+- An unknown address shows the 404 page; a crash shows the error page with a reload button. Both apps use the router's `errorElement` and a `*` route.
+- Empty tables say why they are empty ("No transactions match these filters.").
+- Checkout has a state for every outcome: paid (receipt, with a print button), declined (the card shakes), expired, cancelled, already paid, in progress, not found.
 
 ## Responsive and accessible
 
-- Over 900px: fixed sidebar. Under 900px: top bar, and the sidebar becomes
-  a drawer that closes on navigation, Escape or a tap outside.
-- Tables scroll sideways inside their own card on narrow screens. Forms and
-  filters stack to full width under 640px.
-- Touch targets are at least 42–44px. Focus is a visible rose ring. There
-  is a skip-to-content link. Status is never shown by colour alone (every
-  pill has its label).
-- Every animation (coins, parallax, orbs, chart drawing, count-ups, loading) stops under
-  `prefers-reduced-motion`.
-- Tab titles follow the page heading: "Transactions | FilsPay", "Merchants
-  | FilsPay Ops".
+- Over 900px: a fixed sidebar. Under 900px: a top bar, and the sidebar becomes a drawer that closes on navigation, Escape or a tap outside.
+- Tables scroll sideways inside their own frame on narrow screens. Forms stack, and fields grow to 44px with 16px text so phones don't zoom.
+- Focus is a visible saffron outline. There is a skip link. Status is never shown by colour alone.
+- Every animation stops under `prefers-reduced-motion`.
+- Tab titles follow the page heading ("Transactions | FilsPay").
 
 ## Adding a screen
 
-1. Use the page's `<h1>` first; the shell styles it and the tab title follows it.
+1. Start the page with its `<h1>`; the shell rules it off and the tab title follows it.
 2. Wrap data in the existing classes (`dash-table`, `dash-dl`, `dash-filters`).
 3. Use `Loading` / `EmptyState` / `ErrorBanner` rather than plain text.
-4. Show money with `<Amount />` and statuses with `statusLabel()` in a
-   `dash-status dash-status-<status>` pill.
+4. Show money with `<Amount />`, and statuses with `statusLabel()` in a `dash-status dash-status-<status>` pill.
+5. Use tokens, never raw colours, so light, night and the costume all work.
