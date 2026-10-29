@@ -49,8 +49,8 @@ interface RunBatchBody {
 
 /**
  * from/to: business dates (YYYY-MM-DD), to exclusive. Only batches still in
- * 'closed' state inside the range are considered; paid batches are never
- * modified.
+ * 'open' state inside the range are considered. Closed and paid batches
+ * are never modified; open totals are provisional and post no ledger entries.
  */
 interface RecalcMdrBody {
   from?: string;
@@ -252,17 +252,14 @@ export async function adminRoutes(app: FastifyInstance, options: AdminRoutesOpti
   );
 
   /**
-   * "Recalculate MDR." Re-derives a merchant's settlement-batch fees at
-   * their current contracted rate and posts adjustments for any difference.
+   * "Recalculate MDR." Refreshes provisional totals of existing open
+   * batches using settlement fee rules. Closed and paid batches are skipped.
    * Same cross-process, two-phase audit pattern as settlement/run-batch and
    * balances/rebuild above: the attempt is logged and committed before the
    * call, and the outcome is recorded after, best-effort, per
    * insertAdminAuditLog's own doc comment on cross-process actions.
    */
   app.post<{ Params: MerchantIdParams; Body: RecalcMdrBody }>(
-    // am: safe — only touches open batches. ADMIN.md says so
-    // MK: recalculate_mdr.go selects paid batches too?? line ~70
-    // am: those are skipped further down. ignore
     "/merchants/:id/mdr-recalculation",
     { preHandler: [requireAdminSession, requireAdminRole("finance", "super_admin")] },
     async (request, reply) => {

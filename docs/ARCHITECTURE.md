@@ -31,6 +31,12 @@ rates are integer basis points. `applyRateFils` rounds half-to-even.
 The card scheme settles in two decimals. `apps/settlement` truncates each
 exported line to a multiple of 10 fils at batch close.
 
+The ordinary-payout lifetime monitoring counter also holds integer fils
+after `0073_lifetime_payout_estimate_integer_fils.sql`. Its historical name
+has no `_fils` suffix; it is not
+BD. It does not feed payout calculations and excludes split payouts.
+See [the precision fix and migration plan](solved-problems/009-lifetime-payout-estimate.md).
+
 ## The ledger
 
 `ledger_entries` is the record of money movements. Every movement is a group
@@ -45,8 +51,12 @@ The daemon also refreshes it at 02:00 Bahrain time, and the console's
 ## Settlement
 
 A settlement business day runs from midnight to midnight Asia/Bahrain
-(UTC+3, no DST). The daemon closes the previous business day shortly after
-local midnight. Batch lifecycle: **close** claims unbatched capture events
+(UTC+3, no DST). The daemon closes the previous business day after local
+midnight plus `SETTLEMENT_DAEMON_RUN_DELAY_MINUTES` (15 minutes by default;
+zero makes it due at midnight), on the first subsequent poll. Scheduling
+converts the current instant to Bahrain before extracting the date; see
+[the daily-close timing fix](solved-problems/008-daily-close-bahrain-time.md).
+Batch lifecycle: **close** claims unbatched capture events
 and computes gross/fee/net; **pay** posts payout legs and records
 disbursement; **notify** enqueues `settlement.paid`. Re-running a day is
 safe; closed and paid batches are left alone.
@@ -66,7 +76,15 @@ a `Webhook-Delivery-Id` and is signed with HMAC-SHA256.
 
 - Merchant login is password then OTP. The pending session grants nothing
   until the OTP is verified.
+  Protected session lookup requires `authenticated = true`, no revocation,
+  and a future expiry directly on `sessions`; membership in `live_sessions`
+  alone does not establish authentication. See the
+  [OTP bypass investigation](solved-problems/007-merchant-otp-session-gate.md).
 - Merchant-scoped queries take the merchant from the authenticated context.
+  Payment-link cancellation constrains both its update and its error lookup
+  by link ID and authenticated merchant ID. Checking the path merchant alone
+  does not establish ownership of the link. See the
+  [cancellation ownership fix](solved-problems/011-payment-link-cancel-ownership.md).
 - Outbound webhook signatures are HMAC-SHA256 over the exact body bytes sent,
   compared in constant time. Inbound acquirer callbacks must be signed over the
   raw body and carry a timestamp within 5 minutes of the server clock.

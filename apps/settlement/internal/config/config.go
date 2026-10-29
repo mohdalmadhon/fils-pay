@@ -83,7 +83,7 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
-	// MK: 15 min after Bahrain midnight is the intent. whether runIfDue really computes Bahrain midnight, ask FH
+	// Grace period after Bahrain midnight; zero makes the run due at midnight.
 	runDelay, err := parseIntEnv("SETTLEMENT_DAEMON_RUN_DELAY_MINUTES", 15)
 	if err != nil {
 		return Config{}, err

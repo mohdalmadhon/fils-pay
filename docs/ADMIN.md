@@ -25,6 +25,15 @@ money change is logged.
 
 **Search** by name or paste a merchant id.
 
+On the merchant profile, **Base MDR (fallback)** is `merchants.mdr_bps`.
+**Current negotiated rate** is the newest schedule whose effective date has
+arrived, not the row most recently entered. A late correction for an older
+period does not replace a newer effective rate, and future schedules are
+not shown as current. With no applicable schedule, the base MDR applies.
+These are MDR rates before other fee modifiers; see
+[the fee-display investigation](solved-problems/005-fee-schedule-display.md)
+for the 245/225-bps example and reference trail.
+
 **KYC review** — approve or reject after checking the uploaded documents.
 Approving moves the merchant to `approved` and marks KYC as passed.
 
@@ -47,6 +56,10 @@ manual refunds finance did over email in Q1). Safe to run more than once.
 It never changes whether a merchant is in test mode. (Before 2026-10-29 it
 switched test merchants to live; `db/reports/test-merchants-made-live-by-recompute.sql`
 lists every merchant it did that to.)
+It preserves the merchant's test/live mode. Having no open authorizations
+does not mean a sandbox merchant is approved for live settlement. See the
+[test-merchant investigation](solved-problems/010-test-merchants-in-settlement.md)
+for the former flag-clearing side effect and historical review steps.
 
 ## Money
 
@@ -64,14 +77,22 @@ shows the corrected balance straight away; no need to wait for the next
 settlement run.
 
 **Recalculate MDR** — after a merchant's rate changes, run this over the
-date range you want the new rate applied to. Their batches are recalculated
-at the current rate and the difference is posted, so their history and
-reconciliation match what finance agreed with them.
+date range of existing open batches whose provisional totals you want to
+refresh. Closed and paid batches are skipped. No ledger entries or cached
+balance adjustments are posted; closing the batch computes its final fees
+using the settlement fee rules. Historical fee corrections require a
+separately approved adjustment, not a rewrite of finalized batches. See
+[the MDR investigation](solved-problems/004-mdr-finalized-batches.md).
 
 **Import adjustments** — paste a CSV of corrections with a
 `merchantId,amount,reason` header. Amounts are in BD as finance's sheets
-already have them (`4.75`, `120.00`). Rows are applied as soon as you
-submit; each import's rows are kept with the original text for reference.
+already have them: `4.755` becomes 4,755 fils, and both `4.75` and `4.750`
+become 4,750 fils. Up to three decimal places are accepted; extra decimals
+or malformed values reject the entire import rather than being rounded or
+truncated. Signed amounts are supported. Rows are applied as soon as you
+submit; each import's rows retain the amount text and parsed fils for
+reference. See [the BD parsing fix](solved-problems/006-adjustment-import-bhd-parsing.md)
+for the previous tenfold error and historical investigation steps.
 Don't submit the same file twice; there's no duplicate detection yet.
 One file can hold up to 20 000 rows (`ADJUSTMENT_IMPORT_MAX_ROWS`) and 10 MB
 (`ADJUSTMENT_IMPORT_MAX_BYTES`); split anything bigger.
@@ -87,10 +108,13 @@ merchant). Days that are already closed or paid are skipped, so re-running
 is always safe.
 
 **Rebuild cached balances** — refreshes every merchant's cached balance.
-Run it whenever a balance looks off or after any manual correction.
-It only rewrites the balance cache, never the ledger, so it's safe to run
-as often as you like; it asks for confirmation because it covers every
-merchant at once. The nightly recompute does the same thing at 02:00.
+Uses the same payable-ledger calculation as the full `settlement
+rebuild-balances` CLI: credits minus debits in `merchant_payable`. It changes
+the cache, not ledger entries. Cache-only display adjustments are overwritten.
+The previous scheme-export calculation was replaced under
+[ADR 0007](adr/0007-ledger-backed-admin-balance-rebuild.md); see the
+[investigation](solved-problems/003-admin-balance-rebuild-source.md) for the
+reason and current performance limitations.
 
 **Rebuild analytics** — dashboards lag a little behind live activity by
 design. If they look stale, rebuild them from scratch here instead of

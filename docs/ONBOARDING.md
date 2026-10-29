@@ -90,6 +90,12 @@ working theory is that the acquirer's March statement arrived late and
 included lines from the 20–22 March holiday weekend twice. Parked until
 after the audit.
 
+**2026-10-29 correction:** the original sweep was not safe to repeat and
+had no dry-run flag. The replacement defaults to a read-only preview,
+skips verified new-format postings, and blocks legacy/ambiguous history.
+See [the investigation and fix](solved-problems/012-march-sweep-repeat-postings.md)
+before using it; the historical figures above are not execution evidence.
+
 > **Huda** (#fp-finance): march still doesn't tie out on my side. not
 > urgent but someone should look before Q3 close
 >
