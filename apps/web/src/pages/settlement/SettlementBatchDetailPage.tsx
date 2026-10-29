@@ -4,6 +4,7 @@ import { getSettlementBatch, getSettlementBatchTransactions } from "../../api/se
 import { ApiError, describeError } from "../../api/client.js";
 import { bhd, dash, dateTime } from "../../format.js";
 import type { SettlementBatchDetailDto, SettlementBatchTransactionDto } from "../../types.js";
+import { EmptyState, Loading, StatePanel } from "../../components/ui.js";
 
 type LoadState =
   | { kind: "loading" }
@@ -59,16 +60,21 @@ export function SettlementBatchDetailPage() {
     };
   }, [id]);
 
-  if (state.kind === "loading") return <p>Loading...</p>;
+  if (state.kind === "loading") return <Loading />;
   if (state.kind === "not_found") {
     return (
-      <section>
-        <h1>Settlement batch not found</h1>
-        <p>
-          No settlement batch with this id exists on your account.{" "}
-          <Link to="/dashboard/settlement">Back to settlement batches</Link>
-        </p>
-      </section>
+      <StatePanel
+        scene="lost"
+        code="Not found"
+        title="Settlement batch not found"
+        actions={
+          <Link className="dash-button dash-button-primary" to="/dashboard/settlement">
+            Back to settlement batches
+          </Link>
+        }
+      >
+        <p>No settlement batch with this id exists on your account.</p>
+      </StatePanel>
     );
   }
   if (state.kind === "error") {
@@ -157,7 +163,9 @@ export function SettlementBatchDetailPage() {
           ))}
           {lines.length === 0 ? (
             <tr>
-              <td colSpan={7}>No scheme export lines in this batch.</td>
+              <td colSpan={7} className="fp-empty-cell">
+                <EmptyState title="No scheme export lines in this batch." />
+              </td>
             </tr>
           ) : null}
         </tbody>

@@ -6,6 +6,7 @@ import { useDashboardAuth } from "../../auth/DashboardAuthContext.js";
 import { RequireRole } from "../../auth/RequireRole.js";
 import { bhd, dash, dateTime } from "../../format.js";
 import type { PaymentLinkDto } from "../../types.js";
+import { Loading, StatePanel } from "../../components/ui.js";
 
 /** The list endpoint's own maximum page size. */
 const LOOKUP_LIMIT = 100;
@@ -83,7 +84,7 @@ export function PaymentLinkDetailPage() {
     }
   }
 
-  if (state.kind === "loading") return <p>Loading...</p>;
+  if (state.kind === "loading") return <Loading />;
   if (state.kind === "error") {
     return (
       <section>
@@ -94,13 +95,18 @@ export function PaymentLinkDetailPage() {
   }
   if (state.kind === "not_found") {
     return (
-      <section>
-        <h1>Payment link not found</h1>
-        <p>
-          This link is not among your {LOOKUP_LIMIT} most recent payment links.{" "}
-          <Link to="/dashboard/payment-links">Back to payment links</Link>
-        </p>
-      </section>
+      <StatePanel
+        scene="lost"
+        code="Not found"
+        title="Payment link not found"
+        actions={
+          <Link className="dash-button dash-button-primary" to="/dashboard/payment-links">
+            Back to payment links
+          </Link>
+        }
+      >
+        <p>This link is not among your {LOOKUP_LIMIT} most recent payment links.</p>
+      </StatePanel>
     );
   }
 

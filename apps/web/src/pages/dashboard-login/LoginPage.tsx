@@ -8,7 +8,8 @@ import {
   writeLastMerchantId,
 } from "../../auth/DashboardAuthContext.js";
 import type { DashboardLoginResponse } from "../../types.js";
-import "../../dashboard.css";
+import { SeaScene, Wordmark } from "../../components/art/Art.js";
+import { ErrorBanner, usePageTitle } from "../../components/ui.js";
 
 type Step = { kind: "credentials" } | { kind: "otp"; challenge: DashboardLoginResponse };
 
@@ -44,6 +45,7 @@ export function LoginPage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const redirectTo = (location.state as { from?: string } | null)?.from ?? "/dashboard/transactions";
+  usePageTitle(step.kind === "otp" ? "Enter your code" : "Sign in");
 
   if (status === "authenticated") {
     return <Navigate to={redirectTo} replace />;
@@ -120,93 +122,132 @@ export function LoginPage() {
   }
 
   return (
-    <main className="dash-centered">
-      <h1>FilsPay dashboard</h1>
-      <p className="dash-muted">Merchant sign-in.</p>
+    <div className="dash-login">
+      <SeaScene className="dash-login-sea">
+        <Wordmark />
+        <div className="dash-login-pitch">
+          <h2>Every fils, accounted for.</h2>
+          <p>Card payments, payment links and daily settlement for merchants across Bahrain.</p>
+        </div>
+      </SeaScene>
 
-      {error ? <p className="dash-error">{error}</p> : null}
-      {notice ? <p className="dash-notice">{notice}</p> : null}
+      <main className="dash-login-panel">
+        <div className="dash-centered">
+          <ol className="dash-login-steps" aria-label={step.kind === "otp" ? "Step 2 of 2" : "Step 1 of 2"}>
+            <li data-done="true" />
+            <li data-done={step.kind === "otp"} />
+          </ol>
 
-      {step.kind === "credentials" ? (
-        <form onSubmit={(e) => void handleCredentials(e)} className="dash-form">
-          <label>
-            Merchant ID
-            <input
-              type="text"
-              required
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="00000000-0000-0000-0000-000000000000"
-              value={merchantId}
-              onChange={(e) => setMerchantId(e.target.value)}
-            />
-          </label>
-          <p className="dash-muted dash-hint">
-            The UUID issued when your account was created. Your API integration
-            already uses this value.
-          </p>
-          <label>
-            Email
-            <input
-              type="email"
-              autoComplete="username"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </label>
-          <label>
-            Password
-            <input
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </label>
-          <button type="submit" className="dash-button" disabled={submitting}>
-            {submitting ? "Signing in..." : "Continue"}
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={(e) => void handleOtp(e)} className="dash-form">
-          <p>
-            A one-time code was issued for <strong>{email}</strong>. It expires at{" "}
-            {new Date(step.challenge.otpExpiresAt).toLocaleTimeString()}.
-          </p>
-          {step.challenge.devOtpCode ? (
-            <p className="dash-muted">
-              Development code: <code>{step.challenge.devOtpCode}</code>
+          {step.kind === "credentials" ? (
+            <>
+              <h1>Sign in to your dashboard</h1>
+              <p className="dash-muted">Use the merchant ID from your welcome email or API settings.</p>
+            </>
+          ) : (
+            <>
+              <h1>Enter your code</h1>
+              <p className="dash-muted">
+                We sent a 6-digit code for <strong>{email}</strong>. It works until{" "}
+                {new Date(step.challenge.otpExpiresAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.
+              </p>
+            </>
+          )}
+
+          {error ? <ErrorBanner message={error} /> : null}
+          {notice ? (
+            <p className="dash-notice" role="status">
+              {notice}
             </p>
           ) : null}
-          <label>
-            One-time code
-            <input
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              required
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-            />
-          </label>
-          <button type="submit" className="dash-button" disabled={submitting}>
-            {submitting ? "Verifying..." : "Verify"}
-          </button>
-          <button
-            type="button"
-            className="dash-button"
-            disabled={submitting}
-            onClick={() => void handleResend()}
-          >
-            Resend code
-          </button>
-          <button type="button" className="dash-button" onClick={() => backToCredentials(null)}>
-            Start over
-          </button>
-        </form>
-      )}
-    </main>
+
+          {step.kind === "credentials" ? (
+            <form onSubmit={(e) => void handleCredentials(e)} className="dash-form">
+              <label>
+                Merchant ID
+                <input
+                  type="text"
+                  required
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="00000000-0000-0000-0000-000000000000"
+                  value={merchantId}
+                  onChange={(e) => setMerchantId(e.target.value)}
+                />
+              </label>
+              <label>
+                Email
+                <input
+                  type="email"
+                  autoComplete="username"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </label>
+              <label>
+                Password
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </label>
+              <button type="submit" className="dash-button" disabled={submitting}>
+                {submitting ? "Checking your details" : "Continue"}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={(e) => void handleOtp(e)} className="dash-form">
+              {step.challenge.devOtpCode ? (
+                <div className="dash-otp-dev">
+                  <span>Development code</span>
+                  <strong>{step.challenge.devOtpCode}</strong>
+                  <button
+                    type="button"
+                    className="dash-link-button"
+                    onClick={() => setCode(step.challenge.devOtpCode ?? "")}
+                  >
+                    Use it
+                  </button>
+                </div>
+              ) : null}
+              <label>
+                One-time code
+                <input
+                  className="dash-otp-input"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  pattern="[0-9]*"
+                  required
+                  autoFocus
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                />
+              </label>
+              <button type="submit" className="dash-button" disabled={submitting || code.length === 0}>
+                {submitting ? "Verifying" : "Verify and sign in"}
+              </button>
+              <div className="dash-login-secondary">
+                <button
+                  type="button"
+                  className="dash-link-button"
+                  disabled={submitting}
+                  onClick={() => void handleResend()}
+                >
+                  Send a new code
+                </button>
+                <button type="button" className="dash-link-button" onClick={() => backToCredentials(null)}>
+                  Use different details
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </main>
+    </div>
   );
 }

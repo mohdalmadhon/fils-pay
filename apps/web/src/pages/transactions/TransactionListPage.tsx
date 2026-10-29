@@ -6,6 +6,7 @@ import { Pagination } from "../../components/Pagination.js";
 import { bhd, dash, dateTime, dayStartIso } from "../../format.js";
 import { classNames, pluralize, truncateMiddle } from "../../utils/helpers.js";
 import type { TransactionDto, TransactionStatus } from "../../types.js";
+import { EmptyState, ErrorBanner, Loading } from "../../components/ui.js";
 
 const STATUSES: TransactionStatus[] = [
   "authorized",
@@ -124,7 +125,7 @@ export function TransactionListPage() {
         </label>
       </fieldset>
 
-      {error ? <p className="dash-error">{error}</p> : null}
+      {error ? <ErrorBanner message={error} /> : null}
 
       <p>{pluralize(transactions.length, "transaction")} loaded</p>
 
@@ -158,13 +159,15 @@ export function TransactionListPage() {
           ))}
           {transactions.length === 0 && !loading ? (
             <tr>
-              <td colSpan={6}>No transactions match these filters.</td>
+              <td colSpan={6} className="fp-empty-cell">
+                <EmptyState title="No transactions match these filters." />
+              </td>
             </tr>
           ) : null}
         </tbody>
       </table>
 
-      {loading ? <p>Loading...</p> : null}
+      {loading ? <Loading /> : null}
 
       <Pagination nextCursor={nextCursor} loading={loading} onLoadMore={() => void load(nextCursor)} />
     </section>

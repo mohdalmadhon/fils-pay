@@ -6,6 +6,7 @@ import { StalenessBadge } from "../../components/StalenessBadge.js";
 import { bhd, dash, dateTime } from "../../format.js";
 import { formatCount } from "../../utils/helpers.js";
 import type { PayoutTrendsResponse, TopLinksResponse, VolumesResponse } from "../../types.js";
+import { EmptyState, ErrorBanner } from "../../components/ui.js";
 
 /** 60s: comfortably above the reporting worker's 15s worst-case lag, and
  *  more than often enough for a dashboard. Poll, not push —
@@ -99,7 +100,7 @@ export function OverviewPage() {
         </button>
       </form>
 
-      {error ? <p className="dash-error">{error}</p> : null}
+      {error ? <ErrorBanner message={error} /> : null}
 
       <h2>
         Captured volume{" "}
@@ -134,7 +135,9 @@ export function OverviewPage() {
           ))}
           {volumes && volumes.points.length === 0 ? (
             <tr>
-              <td colSpan={5}>No captured volume in this window.</td>
+              <td colSpan={5} className="fp-empty-cell">
+                <EmptyState title="No captured volume in this window." />
+              </td>
             </tr>
           ) : null}
         </tbody>
@@ -170,7 +173,9 @@ export function OverviewPage() {
           ))}
           {payouts && payouts.points.length === 0 ? (
             <tr>
-              <td colSpan={6}>No settled batches in this window.</td>
+              <td colSpan={6} className="fp-empty-cell">
+                <EmptyState title="No settled batches in this window." />
+              </td>
             </tr>
           ) : null}
         </tbody>
@@ -206,7 +211,9 @@ export function OverviewPage() {
           ))}
           {topLinks && topLinks.links.length === 0 ? (
             <tr>
-              <td colSpan={5}>No paid payment links in this window.</td>
+              <td colSpan={5} className="fp-empty-cell">
+                <EmptyState title="No paid payment links in this window." />
+              </td>
             </tr>
           ) : null}
         </tbody>

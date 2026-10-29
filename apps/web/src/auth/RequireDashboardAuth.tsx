@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
 import { useDashboardAuth } from "./DashboardAuthContext.js";
+import { Loading } from "../components/ui.js";
 
 /**
  * Route guard: renders its children only once `GET /v1/auth/me` has
@@ -19,8 +20,8 @@ export function RequireDashboardAuth({ children }: { children: ReactNode }) {
 
   if (status === "loading") {
     return (
-      <main className="dash-centered">
-        <p>Checking your session...</p>
+      <main className="fp-boot">
+        <Loading label="Checking your session" />
       </main>
     );
   }

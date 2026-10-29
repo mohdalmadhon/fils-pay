@@ -954,3 +954,32 @@
     align-items: flex-start;
   }
 }
+
+/* Skip link and first paint ---------------------------------------------- */
+
+.fp-skip {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 100;
+  padding: 0.6rem 1rem;
+  color: #fff;
+  background: var(--fp-lagoon);
+  border-radius: var(--fp-radius-s);
+  transition: top 160ms var(--fp-ease);
+}
+
+.fp-skip:focus {
+  top: 1rem;
+}
+
+.dash-main:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.fp-boot {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+}

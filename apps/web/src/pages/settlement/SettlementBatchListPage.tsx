@@ -5,6 +5,7 @@ import { describeError } from "../../api/client.js";
 import { Pagination } from "../../components/Pagination.js";
 import { bhd, dateTime } from "../../format.js";
 import type { SettlementBatchDto, SettlementBatchStatus } from "../../types.js";
+import { EmptyState, ErrorBanner, Loading } from "../../components/ui.js";
 
 const STATUSES: SettlementBatchStatus[] = ["open", "closed", "paid"];
 const PAGE_SIZE = 25;
@@ -91,7 +92,7 @@ export function SettlementBatchListPage() {
         ))}
       </fieldset>
 
-      {error ? <p className="dash-error">{error}</p> : null}
+      {error ? <ErrorBanner message={error} /> : null}
 
       <table className="dash-table">
         <thead>
@@ -123,13 +124,15 @@ export function SettlementBatchListPage() {
           ))}
           {batches.length === 0 && !loading ? (
             <tr>
-              <td colSpan={7}>No settlement batches match these filters.</td>
+              <td colSpan={7} className="fp-empty-cell">
+                <EmptyState title="No settlement batches match these filters." />
+              </td>
             </tr>
           ) : null}
         </tbody>
       </table>
 
-      {loading ? <p>Loading...</p> : null}
+      {loading ? <Loading /> : null}
 
       <Pagination nextCursor={nextCursor} loading={loading} onLoadMore={() => void load(nextCursor)} />
     </section>
