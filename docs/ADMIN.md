@@ -25,6 +25,15 @@ money change is logged.
 
 **Search** by name or paste a merchant id.
 
+On the merchant profile, **Base MDR (fallback)** is `merchants.mdr_bps`.
+**Current negotiated rate** is the newest schedule whose effective date has
+arrived, not the row most recently entered. A late correction for an older
+period does not replace a newer effective rate, and future schedules are
+not shown as current. With no applicable schedule, the base MDR applies.
+These are MDR rates before other fee modifiers; see
+[the fee-display investigation](solved-problems/005-fee-schedule-display.md)
+for the 245/225-bps example and reference trail.
+
 **KYC review** — approve or reject after checking the uploaded documents.
 Approving moves the merchant to `approved` and marks KYC as passed.
 

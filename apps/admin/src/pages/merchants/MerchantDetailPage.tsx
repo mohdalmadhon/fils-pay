@@ -260,7 +260,7 @@ export function MerchantDetailPage() {
         <dd>{merchant.onboardingStatus}</dd>
         <dt>KYC</dt>
         <dd>{merchant.kycPassed ? "passed" : "not passed"}</dd>
-        <dt>MDR</dt>
+        <dt>Base MDR (fallback)</dt>
         <dd>
           {(merchant.mdrBps / 100).toFixed(2)}% ({merchant.mdrBps} bps)
         </dd>
@@ -268,7 +268,7 @@ export function MerchantDetailPage() {
         <dd>
           {detail.currentFeeSchedule
             ? `${(detail.currentFeeSchedule.mdrBps / 100).toFixed(2)}% (${detail.currentFeeSchedule.mdrBps} bps), effective ${new Date(detail.currentFeeSchedule.effectiveFrom).toLocaleDateString()}`
-            : "no negotiated schedule on file (uses MDR above)"}
+            : "no negotiated schedule in effect (uses base MDR above)"}
         </dd>
         <dt>Mode</dt>
         <dd>{merchant.testMode ? "test" : "live"}</dd>
