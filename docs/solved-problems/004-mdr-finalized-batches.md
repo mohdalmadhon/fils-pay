@@ -99,6 +99,8 @@ operator guide and live UI now describe the corrected behavior.
 | [Pre-fix Go recalculation](../../apps/settlement/internal/settlement/recalculate_mdr.go) at baseline `5bd6d95` | Contains the inverted status filter, historical row update, current-period comment, and inline question about FP-244; no fix was present despite that comment's suggestion. |
 | [Pre-fix admin route](../../apps/api/src/routes/admin.ts) at baseline `5bd6d95` | Its request comment says only closed batches; inline comments claim only open batches and that selected paid batches are skipped later. Those statements conflict with each other and with the Go path. |
 | [Pre-fix frontend API wrapper](../../apps/admin/src/api/mdrRecalculation.ts) and [page](../../apps/admin/src/pages/settlement/SettlementPage.tsx) at baseline `5bd6d95` | Wrapper questions the paid rewrite; page describes changing historical batches and posting ledger adjustments. |
+| [API settlement client](../../apps/api/src/admin/settlementClient.ts), `triggerMdrRecalculation`, and [Go HTTP handler](../../apps/settlement/internal/internalapi/server.go), `handleRecalculateMDR` | Forward the operator's request to the Go helper and return its summary. Neither supplied an independent finalized-state guard. |
+| [Batch lifecycle implementation](../../apps/settlement/internal/settlement/batch.go), `CloseBatch`, and [frontend response types](../../apps/admin/src/types.ts), `MdrRecalcSummary` | Closing freezes totals and claims capture events. The response's legacy `adjusted` field is retained for compatibility, but now describes provisional updates rather than historical ledger adjustments. |
 | [Pre-fix cache comment](../../apps/settlement/internal/balances/cache.go) at baseline `5bd6d95` | Explicitly questions changing a paid batch's cache; the reply treats it as intended. |
 | [Recalculation regression tests](../../apps/settlement/internal/settlement/recalculate_mdr_test.go) | Build closed batches and expect rewritten fees, net totals, or an adjustment group. They test the previous behavior and do not protect paid figures. |
 | [Split-payout investigation](002-split-payout-allocation.md#historical-investigation) | Notes that a parent's stored net may have been changed after payout, so current parent totals need not describe original child payouts. |
@@ -126,7 +128,26 @@ development database. It was removed from the working tree afterward.
   A subsequent rate change and recalculation selected zero finalized batches
   and left their stored rows unchanged.
 
-Full-suite and frontend-check results are recorded after the final checks.
+Final checks:
+
+- Admin frontend build and TypeScript type checking passed.
+- The full PostgreSQL-backed `go test ./...` run did not pass. Four locked
+  MDR tests assert the former finalized-batch behavior:
+  `TestRecalculateMDR_RecomputesAtCurrentRate`,
+  `TestRecalculateMDR_AdjustmentLedgerGroupBalances`,
+  `TestRecalculateMDR_UnchangedRateAdjustsNothing`, and
+  `TestRecalculateMDR_OutOfRangeBatchUntouched`. They create closed batches
+  and expect them to be considered or rewritten, or expect a posted
+  adjustment. The corrected function considers zero such batches and posts
+  no adjustment. These tests were not edited or bypassed.
+- The same Go run still has the two balance-refresh expectation failures
+  recorded in [the earlier investigation](003-admin-balance-rebuild-source.md#verification).
+  The internal API, config, money, scheduler, and split packages passed.
+- The full PostgreSQL-backed `npm test` run did not pass. Missing tables
+  include `live_sessions`, `credit_requests`, `adjustment_imports`, and
+  `reporting_saved_filters`, following the existing local migration failure.
+- `git diff --check` and documentation file-link checks passed. There is no
+  claim of a green full backend suite.
 
 ## Historical remediation and limits
 
