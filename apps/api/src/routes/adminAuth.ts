@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { verifyPassword } from "../adminAuth/passwords.js";
-import { issueAdminChallenge, verifyOtpCode } from "../adminAuth/otp.js";
+import { issueAdminChallenge } from "../adminAuth/otp.js";
+import { attemptOtp, consumeOtpChallenge } from "../auth/otp.js";
 import { sendAdminOtpCode } from "../adminAuth/notifier.js";
 import { requireAdminSession } from "../adminAuth/middleware.js";
 import {
@@ -123,46 +124,26 @@ export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
       throw new UnauthorizedError("no_pending_session");
     }
 
-    const challengeResult = await app.db.query<{
-      id: string;
-      code_salt: string;
-      code_hash: string;
-      attempt_count: number;
-      max_attempts: number;
-      expires_at: Date;
-      consumed_at: Date | null;
-    }>(
-      `SELECT id, code_salt, code_hash, attempt_count, max_attempts, expires_at, consumed_at
-         FROM admin_otp_challenges WHERE id = $1`,
-      [pending.otpChallengeId],
-    );
-    const challenge = challengeResult.rows[0];
-    if (!challenge || challenge.consumed_at !== null) {
+    // Same atomic attempt claim as merchant login (see attemptOtp). The old
+    // comment here said this path read the challenge FOR UPDATE; it didn't,
+    // so parallel guesses beat the attempt limit on admin logins too.
+    const attempt = await attemptOtp(app.db, "admin_otp_challenges", pending.otpChallengeId, code);
+    if (attempt.outcome === "expired") {
       throw new GoneError("otp_expired");
     }
-    if (challenge.expires_at.getTime() <= Date.now()) {
-      throw new GoneError("otp_expired");
-    }
-
-    // admin path doesn't have the merchant race, the challenge row is read FOR UPDATE — MK
-    if (challenge.attempt_count >= challenge.max_attempts) {
+    if (attempt.outcome === "too_many_attempts") {
       await revokeAdminSession(app.db, pending.adminSessionId);
       throw new TooManyRequestsError("too_many_attempts");
     }
-
-    const matches = verifyOtpCode(code, challenge.code_salt, challenge.code_hash);
-    if (!matches) {
-      await app.db.query(
-        `UPDATE admin_otp_challenges SET attempt_count = attempt_count + 1 WHERE id = $1`,
-        [challenge.id],
-      );
+    if (attempt.outcome === "invalid_code") {
       throw new UnauthorizedError("invalid_code");
     }
 
+    const challengeId = pending.otpChallengeId;
     const adminUser = await withTransaction(app.db, async (client) => {
-      await client.query(`UPDATE admin_otp_challenges SET consumed_at = now() WHERE id = $1`, [
-        challenge.id,
-      ]);
+      if (!(await consumeOtpChallenge(client, "admin_otp_challenges", challengeId))) {
+        throw new GoneError("otp_expired");
+      }
       await promoteAdminSession(client, pending.adminSessionId, app.config.adminSessionTtlHours);
       const result = await client.query<{ role: AdminRole }>(
         `SELECT role FROM admin_users WHERE id = $1`,
