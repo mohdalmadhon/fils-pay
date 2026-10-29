@@ -1,7 +1,8 @@
 # FilsPay read-only audit
 
 Reviewed 2026-10-30, Asia/Bahrain. Snapshot: main `7b69c0b`.
-Repository files and persistent database state were not changed.
+During the audit, repository files and persistent database state were not changed.
+This branch adds documentation only; none of the findings is fixed by this report.
 
 The review covered the API, settlement worker, reporting worker, merchant
 and admin clients, shared helpers, scripts, migrations and operational
@@ -14,6 +15,41 @@ for every interacting path. Initials in comments were not treated as authorship.
 P1 means prioritize for financial correctness, tenant isolation or destructive
 behavior. P2 means a follow-up correctness/availability defect. Evidence below
 distinguishes actual helper execution from source/interleaving analysis.
+
+## Problem checklist
+
+These are the 24 findings identified in this review, not a guarantee that all
+bugs have been found. Each numbered item has evidence, affected source lines
+and history in its matching detailed section below. Runtime and concurrency
+coverage limitations are recorded under Boundaries.
+
+- **01.** [P1] Empty expired-hold cleanup deletes every hold
+- **02.** [P1] Transaction reports disclose another merchant's transactions
+- **03.** [P1] Login can bind the session to the wrong merchant
+- **04.** [P1] Actual payout calculation loses fils through float32
+- **05.** [P1] Platform volume wraps negative and changes pricing
+- **06.** [P1] Capture discount can be credited twice on replay
+- **07.** [P1] Rebuild followed by close double-counts an unbatched capture
+- **08.** [P1] Webhook URLs can reach private-network services
+- **09.** [P1] Capture and settlement discount different rounded values
+- **10.** [P2] Reporting can permanently skip late-committing events
+- **11.** [P2] Concurrent reporting processes double-count events
+- **12.** [P2] Admin analytics rebuild double-counts an unconsumed backlog
+- **13.** [P2] Default dashboard browser login fails preflight
+- **14.** [P2] Merchant cookie expires after ten minutes
+- **15.** [P2] Manual credits reverse the wrong fee rate
+- **16.** [P2] Future-dated credits affect today's balance
+- **17.** [P2] Go fee-schedule ties disagree with API ordering
+- **18.** [P2] PDF-only KYC types accept renamed images
+- **19.** [P2] Negative reconciliation values crash rendering
+- **20.** [P2] Expired stale reservations are shown as active
+- **21.** [P2] Used webhook endpoints cannot be deleted
+- **22.** [P2] Disabling endpoints does not stop queued deliveries
+- **23.** [P2] Built-in development encryption key fails validation
+- **24.** [P2] Bulk KYC approval overwrites states outside the review queue
+
+The additional conditional concerns and previously known setup blockers are
+listed separately near the end; they are not included in the 24-finding count.
 
 ## 01. [P1] Empty expired-hold cleanup deletes every hold
 
