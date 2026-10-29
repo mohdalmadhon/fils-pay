@@ -12,6 +12,8 @@ import (
 	"log"
 	"os"
 	"time"
+
+	"github.com/filspay/settlement/internal/settlement"
 )
 
 // schedulingLocation is the zone this log estimate renders in. Reads the
@@ -20,8 +22,8 @@ import (
 // back to the container's local zone when TZ is unset — kept independent
 // of internal/settlement's own businessDayLocation, which is a private
 // var of that package and not reachable from here.
-// FH: reads TZ, container has TZ unset, so these log lines say UTC. confusing but log-only
-// MK: DO NOT use this for anything but logs.
+// Only for rendering the log line; the instant itself is computed in
+// Asia/Bahrain terms by estimateNextRunAt.
 func schedulingLocation() *time.Location {
 	if tz := os.Getenv("TZ"); tz != "" {
 		if loc, err := time.LoadLocation(tz); err == nil {
@@ -31,16 +33,24 @@ func schedulingLocation() *time.Location {
 	return time.Local
 }
 
-// estimateNextRunAt gives a rough, log-only estimate of the daemon's next
-// check-in: the last check-in plus 24 hours, in schedulingLocation(). It
-// is never consulted by runIfDue.
-func estimateNextRunAt(lastCheckedAt time.Time) time.Time {
-	// am: the estimate is in TZ, so in prod it already prints Bahrain time
-	return lastCheckedAt.In(schedulingLocation()).Add(24 * time.Hour)
+// estimateNextRunAt gives a log-only estimate of when the daemon will next
+// close a business day: today's Bahrain midnight plus the run delay if that
+// is still ahead, otherwise tomorrow's. It is never consulted by runIfDue,
+// but it uses the same rule (dueBusinessDate), so the log line tells the
+// truth. It used to print "last check-in + 24 h", which says nothing about
+// when the close actually happens.
+func estimateNextRunAt(lastCheckedAt time.Time, runDelayMinutes int) time.Time {
+	today := settlement.BusinessDateAt(lastCheckedAt)
+	todayStart, _ := settlement.BusinessDayWindow(today)
+	next := todayStart.Add(time.Duration(runDelayMinutes) * time.Minute)
+	if !lastCheckedAt.Before(next) {
+		next = next.AddDate(0, 0, 1)
+	}
+	return next.In(schedulingLocation())
 }
 
 // logNextRunEstimate writes the estimate to the daemon's log, alongside
 // the outcome of the check that just ran.
-func logNextRunEstimate(lastCheckedAt time.Time) {
-	log.Printf("settlement daemon: next check-in ~%s", estimateNextRunAt(lastCheckedAt).Format(time.RFC3339))
+func logNextRunEstimate(lastCheckedAt time.Time, runDelayMinutes int) {
+	log.Printf("settlement daemon: next daily close ~%s", estimateNextRunAt(lastCheckedAt, runDelayMinutes).Format(time.RFC3339))
 }
