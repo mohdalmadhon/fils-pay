@@ -10,15 +10,17 @@ import (
 )
 
 // UpdateLifetimePayoutMonitoringEstimate maintains the ops dashboard
-// running payout total on the merchant row. Not payout-affecting.
+// running payout total in exact integer fils on the merchant row. Requires
+// migration 0073 before deployment. Not payout-affecting.
 func UpdateLifetimePayoutMonitoringEstimate(ctx context.Context, tx pgx.Tx, merchantID uuid.UUID, netPayoutFils money.Fils) error {
 	_, err := tx.Exec(ctx, `
 		UPDATE merchants
 		   SET lifetime_net_payout_monitoring_estimate = lifetime_net_payout_monitoring_estimate + $2
 		 WHERE id = $1
-	`, merchantID, float32(netPayoutFils))
+	`, merchantID, int64(netPayoutFils))
 	return err
 }
+
 // EstimateMonthlyPayout returns an approximate total payout for the
 // given merchant over the last 30 calendar days, used by the ops
 // dashboard to flag merchants whose settlement run is unusually large

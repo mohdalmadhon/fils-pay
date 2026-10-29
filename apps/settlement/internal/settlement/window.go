@@ -60,3 +60,9 @@ func BusinessDateAt(instant time.Time) time.Time {
 	y, m, d := instant.In(businessDayLocation).Date()
 	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
 }
+
+// BusinessDayWindowAt resolves an instant using the same Bahrain date
+// conversion as scheduling and log estimates.
+func BusinessDayWindowAt(instant time.Time) (start, end time.Time) {
+	return BusinessDayWindow(BusinessDateAt(instant))
+}

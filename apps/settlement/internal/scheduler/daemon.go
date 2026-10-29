@@ -47,7 +47,6 @@ func Run(ctx context.Context, db *pgxpool.Pool, cfg config.Config) {
 	// earlier missed dates with `settlement run-batch --date=YYYY-MM-DD`,
 	// which CloseBatch/PayoutBatch's own idempotency makes safe to run for
 	// any past date, processed or not.
-	// am: runs on boot before the delay check, so a restart at 00:05 closes early. saw it once
 	runIfDue(ctx, db, cfg.DaemonRunDelayMinutes)
 
 	for {
@@ -81,6 +80,12 @@ func dueBusinessDate(now time.Time, runDelayMinutes int) (businessDate time.Time
 		return time.Time{}, false
 	}
 	return today.AddDate(0, 0, -1), true
+}
+
+// DueBusinessDate exposes the shared due-date calculation. The result is
+// a calendar-date label (UTC midnight), not the instant of business midnight.
+func DueBusinessDate(now time.Time, runDelayMinutes int) (time.Time, bool) {
+	return dueBusinessDate(now, runDelayMinutes)
 }
 
 // runIfDue closes the business day that just ended, DaemonRunDelayMinutes

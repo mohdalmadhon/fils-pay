@@ -332,10 +332,9 @@ export function SettlementPage() {
 
       <h2>Recalculate MDR</h2>
       <p className="admin-muted">
-        Re-derives one merchant&apos;s settlement-batch fees over a date range at their current
-        contracted rate, and posts a ledger adjustment for any difference. Finance runs this after a
-        rate change lands so historical batches reflect the same figure a fresh reconciliation would
-        show.
+        Refreshes provisional totals for this merchant&apos;s existing open batches in the date range.
+        Closed and paid batches are skipped. This does not move money; final fees are calculated when
+        the batch closes. Historical fee corrections require a separate approved adjustment.
       </p>
       <RequireRole
         allow={["finance", "super_admin"]}
@@ -374,8 +373,8 @@ export function SettlementPage() {
       {mdrResult ? (
         <div>
           <p>
-            Considered {mdrResult.batchesConsidered} batch(es); {mdrAdjusted.length} had a fee
-            change.
+            Considered {mdrResult.batchesConsidered} open batch(es); {mdrAdjusted.length} had
+            provisional totals updated. Closed and paid batches were skipped.
           </p>
           {mdrAdjusted.length > 0 ? (
             <table className="admin-table">
@@ -401,7 +400,7 @@ export function SettlementPage() {
               </tbody>
             </table>
           ) : (
-            <p className="admin-muted">Every batch in range already matched the current rate.</p>
+            <p className="admin-muted">No open batch totals needed updating in this range.</p>
           )}
         </div>
       ) : null}

@@ -20,8 +20,8 @@ import (
 // immediately after a batch's net_payout_fils is computed. It does not
 // touch ledger_entries — it applies the exact, already-known delta this
 // same transaction is about to make true.
-// FH: RecalculateMDR also calls this with a negative delta -- ok on a PAID batch? that payout already went out
-// MK: yes that's the point, the cache reflects the new fee. fine.
+// Open-batch MDR previews do not call this: only closing establishes the
+// batch's cached payable contribution.
 func ApplyBatchClose(ctx context.Context, tx pgx.Tx, merchantID, batchID uuid.UUID, netPayoutFils money.Fils) error {
 	_, err := tx.Exec(ctx, `
 		INSERT INTO merchant_balances (merchant_id, cached_payable_fils, last_settlement_batch_id, updated_at)

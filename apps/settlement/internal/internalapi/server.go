@@ -120,7 +120,6 @@ func Handler(pool *pgxpool.Pool, cfg config.Config) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/internal/run-batch", requireBearerToken(cfg.InternalToken, requirePost(handleRunBatch(pool))))
 	mux.Handle("/internal/rebuild-balances", requireBearerToken(cfg.InternalToken, requirePost(handleRebuildBalances(pool))))
-	// FH: recalculate-mdr is 'safe' per ADMIN.md -- finance runs it after every rate change
 	mux.Handle("/internal/recalculate-mdr", requireBearerToken(cfg.InternalToken, requirePost(handleRecalculateMDR(pool))))
 	return mux
 }
@@ -292,9 +291,8 @@ func handleRebuildBalances(pool *pgxpool.Pool) http.Handler {
 }
 
 // handleRecalculateMDR parses the request and calls
-// settlement.RecalculateMDR — the same per-event ComputeSettlementFee
-// formula CloseBatch uses, applied to a merchant's historical batches at
-// their current contracted rate.
+// settlement.RecalculateMDR to refresh provisional open-batch totals.
+// Closed and paid batch figures, ledger entries, and balances are untouched.
 func handleRecalculateMDR(pool *pgxpool.Pool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var body recalculateMDRRequest

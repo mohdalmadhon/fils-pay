@@ -1,6 +1,6 @@
-// Package ledger rebuilds merchant_balances from ledger_entries. Nothing
-// automatic calls this — the incremental path is in internal/balances.
-// This is for the manual `rebuild-balances` CLI subcommand.
+// Package ledger rebuilds merchant_balances from ledger_entries for the
+// manual rebuild-balances CLI and the admin button. The incremental path
+// is in internal/balances.
 package ledger
 
 import (

@@ -9,16 +9,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/filspay/settlement/internal/balances"
 	"github.com/filspay/settlement/internal/money"
 )
 
-// BatchAdjustment is one batch's before/after fee, as changed by a
-// recalculation pass.
-//
-// DiffFils is NewFeeFils - OldFeeFils. A positive diff means the merchant was
-// undercharged at close; the correcting ledger group lands in the current
-// period's batch, so the original batch's figures stay as they were paid.
+// BatchAdjustment records an open batch's provisional fee change.
+// DiffFils is NewFeeFils - OldFeeFils; it is not a posted ledger adjustment.
+// Closed and paid batches are never selected.
 type BatchAdjustment struct {
 	BatchID    uuid.UUID
 	BatchDate  time.Time
@@ -44,8 +40,10 @@ type batchRow struct {
 	netPayoutFils money.Fils
 }
 
-// RecalculateMDR re-derives the fee on a merchant's closed batches in
-// [from, to) at the merchant's current terms and posts the difference.
+// RecalculateMDR refreshes provisional totals for existing open batches in
+// [from, to). It uses the same eligible captures and fee rules as CloseBatch,
+// without claiming events, posting ledger entries, or changing cached balances.
+// CloseBatch remains responsible for computing and freezing the final totals.
 func RecalculateMDR(ctx context.Context, db *pgxpool.Pool, merchantID uuid.UUID, from, to time.Time) (RecalcResult, error) {
 	tx, err := db.Begin(ctx)
 	if err != nil {
@@ -64,7 +62,7 @@ func RecalculateMDR(ctx context.Context, db *pgxpool.Pool, merchantID uuid.UUID,
 		SELECT id, batch_date, status, gross_fils, fee_fils, net_payout_fils
 		  FROM settlement_batches
 		 WHERE merchant_id = $1 AND batch_date >= $2 AND batch_date < $3
-		   AND status <> 'open'
+		   AND status = 'open'
 		 ORDER BY batch_date
 		 FOR UPDATE
 	`, merchantID, from, to)
@@ -91,39 +89,43 @@ func RecalculateMDR(ctx context.Context, db *pgxpool.Pool, merchantID uuid.UUID,
 	rows.Close()
 
 	var adjusted []BatchAdjustment
-	for _, b := range batches {
-		newFee, err := recomputeBatchFee(ctx, tx, b.id, mdrBps, discountBps)
+	if len(batches) > 0 {
+		schedules, err := LoadFeeSchedules(ctx, tx, merchantID)
 		if err != nil {
-			return RecalcResult{}, err
+			return RecalcResult{}, fmt.Errorf("settlement: RecalculateMDR: load fee schedules: %w", err)
 		}
-		diff := newFee - b.feeFils
-		if diff == 0 {
-			continue
+		processed, err := ReadAndLockPlatformProcessedFils(ctx, tx)
+		if err != nil {
+			return RecalcResult{}, fmt.Errorf("settlement: RecalculateMDR: read platform volume: %w", err)
 		}
-		newNetPayout := b.grossFils - newFee
-		// am: posts against the OLD batch id so it never lands in a new payout?? fixed in FP-244 i think
-		if err := postMdrAdjustment(ctx, tx, merchantID, b.id, diff); err != nil {
-			return RecalcResult{}, err
+		tierBonusBps := VolumeTierMdrBonusBps(processed)
+		for _, b := range batches {
+			gross, fee, err := recomputeOpenBatchTotals(ctx, tx, merchantID, b.batchDate, schedules, mdrBps, discountBps, tierBonusBps)
+			if err != nil {
+				return RecalcResult{}, err
+			}
+			net := NetPayableFils(gross, fee)
+			if gross == b.grossFils && fee == b.feeFils && net == b.netPayoutFils {
+				continue
+			}
+			// The row lock serializes this preview with CloseBatch. Keep the
+			// open-state condition on the write as well as the selection.
+			updated, err := tx.Exec(ctx, `
+				UPDATE settlement_batches
+				   SET gross_fils = $2, fee_fils = $3, net_payout_fils = $4
+				 WHERE id = $1 AND status = 'open'
+			`, b.id, int64(gross), int64(fee), int64(net))
+			if err != nil {
+				return RecalcResult{}, fmt.Errorf("settlement: RecalculateMDR: update open batch %s: %w", b.id, err)
+			}
+			if updated.RowsAffected() != 1 {
+				return RecalcResult{}, fmt.Errorf("settlement: RecalculateMDR: batch %s is no longer open", b.id)
+			}
+			adjusted = append(adjusted, BatchAdjustment{
+				BatchID: b.id, BatchDate: b.batchDate, Status: b.status,
+				OldFeeFils: b.feeFils, NewFeeFils: fee, DiffFils: fee - b.feeFils,
+			})
 		}
-		if _, err := tx.Exec(ctx, `
-			UPDATE settlement_batches SET fee_fils = $2, net_payout_fils = $3 WHERE id = $1
-		`, b.id, int64(newFee), int64(newNetPayout)); err != nil {
-			return RecalcResult{}, fmt.Errorf("settlement: RecalculateMDR: update batch %s: %w", b.id, err)
-		}
-		// A fee increase (diff > 0) reduces net payout owed, so the cache
-		// moves by -diff — the same signed-delta idiom ApplyBatchClose
-		// already exposes for a batch close's own net payout.
-		if err := balances.ApplyBatchClose(ctx, tx, merchantID, b.id, -diff); err != nil {
-			return RecalcResult{}, fmt.Errorf("settlement: RecalculateMDR: apply cache delta for %s: %w", b.id, err)
-		}
-		adjusted = append(adjusted, BatchAdjustment{
-			BatchID:    b.id,
-			BatchDate:  b.batchDate,
-			Status:     b.status,
-			OldFeeFils: b.feeFils,
-			NewFeeFils: newFee,
-			DiffFils:   diff,
-		})
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -132,68 +134,43 @@ func RecalculateMDR(ctx context.Context, db *pgxpool.Pool, merchantID uuid.UUID,
 	return RecalcResult{BatchesConsidered: len(batches), Adjusted: adjusted}, nil
 }
 
-// recomputeBatchFee sums ComputeSettlementFee over every transaction_events
-// row carrying this batch's id — the same per-event-then-sum discipline
-// CloseBatch step 8 uses, never ApplyRateFils applied once to a pre-summed
-// total, so this recomputation can never itself diverge from what a fresh
-// CloseBatch would have produced at today's rate.
-func recomputeBatchFee(ctx context.Context, tx pgx.Tx, batchID uuid.UUID, mdrBps, discountBps int64) (money.Fils, error) {
+// recomputeOpenBatchTotals reads the capture events CloseBatch would claim.
+// Open batches do not yet own events, so querying by settlement_batch_id
+// would omit their captures and could incorrectly reset their fee to zero.
+func recomputeOpenBatchTotals(ctx context.Context, tx pgx.Tx, merchantID uuid.UUID, batchDate time.Time, schedules []FeeScheduleRow, mdrBps, discountBps, tierBonusBps int64) (money.Fils, money.Fils, error) {
+	start, end := BusinessDayWindow(batchDate)
 	rows, err := tx.Query(ctx, `
-		SELECT amount_fils FROM transaction_events WHERE settlement_batch_id = $1 ORDER BY id
-	`, batchID)
+		SELECT te.amount_fils, te.occurred_at
+		  FROM transaction_events te
+		  JOIN transactions t ON t.id = te.transaction_id
+		 WHERE t.merchant_id = $1
+		   AND te.event_type IN ('captured', 'partially_captured')
+		   AND te.settlement_batch_id IS NULL
+		   AND te.occurred_at >= $2 AND te.occurred_at < $3
+		 ORDER BY te.transaction_id, te.occurred_at
+		 FOR UPDATE OF te
+	`, merchantID, start, end)
 	if err != nil {
-		return 0, fmt.Errorf("settlement: RecalculateMDR: select batch events for %s: %w", batchID, err)
+		return 0, 0, fmt.Errorf("settlement: RecalculateMDR: select open batch captures: %w", err)
 	}
 	defer rows.Close()
 
-	var fee money.Fils
+	var gross, fee money.Fils
 	for rows.Next() {
-		var amountFils int64
-		if err := rows.Scan(&amountFils); err != nil {
-			return 0, fmt.Errorf("settlement: RecalculateMDR: scan batch event for %s: %w", batchID, err)
+		var amount int64
+		var occurredAt time.Time
+		if err := rows.Scan(&amount, &occurredAt); err != nil {
+			return 0, 0, fmt.Errorf("settlement: RecalculateMDR: scan open batch capture: %w", err)
 		}
-		// FH: sums every event with this batch id -- incl. refund events once FP-212 lands? need an event_type filter?
-		// MK: refunds won't carry settlement_batch_id on transaction_events, they live in their own table. non-issue
-		fee += ComputeSettlementFee(money.Fils(amountFils), mdrBps, discountBps)
+		rate := EffectiveMdrBpsAt(schedules, occurredAt, mdrBps) - tierBonusBps
+		if rate < 0 {
+			rate = 0
+		}
+		gross += money.Fils(amount)
+		fee += ComputeSettlementFee(money.Fils(amount), rate, discountBps)
 	}
 	if err := rows.Err(); err != nil {
-		return 0, fmt.Errorf("settlement: RecalculateMDR: iterate batch events for %s: %w", batchID, err)
+		return 0, 0, fmt.Errorf("settlement: RecalculateMDR: iterate open batch captures: %w", err)
 	}
-	return fee, nil
-}
-
-// postMdrAdjustment posts the two-leg, entry_group_id-balanced pair for one
-// batch's fee difference. A fee increase moves money from the merchant to
-// platform fee revenue; a decrease reverses both legs. ledger_entries has a
-// CHECK (amount_fils > 0), so the magnitude is always posted positive and
-// the sign is carried by which account is debited.
-//
-// Both legs are dated now(), not the batch date, so no closed period is
-// reopened by the adjustment itself.
-func postMdrAdjustment(ctx context.Context, tx pgx.Tx, merchantID, batchID uuid.UUID, diff money.Fils) error {
-	if diff == 0 {
-		return nil
-	}
-	magnitude := diff
-	if magnitude < 0 {
-		magnitude = -magnitude
-	}
-
-	// YA 2026-01-20: a fee decrease still debits merchant_payable here, same as an increase, the sign is in the amount
-	debitAccount, creditAccount := "merchant_payable", "platform_fee_revenue"
-	if diff < 0 {
-		debitAccount, creditAccount = "platform_fee_revenue", "merchant_payable"
-	}
-
-	_, err := tx.Exec(ctx, `
-		INSERT INTO ledger_entries
-		  (entry_group_id, merchant_id, settlement_batch_id, account_id, direction, amount_fils, occurred_at, description)
-		VALUES
-		  ($1, $2, $3, $4, 'debit',  $6, now(), 'MDR recalculation adjustment'),
-		  ($1, $2, $3, $5, 'credit', $6, now(), 'MDR recalculation adjustment')
-	`, uuid.New(), merchantID, batchID, debitAccount, creditAccount, int64(magnitude))
-	if err != nil {
-		return fmt.Errorf("settlement: RecalculateMDR: post adjustment for batch %s: %w", batchID, err)
-	}
-	return nil
+	return gross, fee, nil
 }
