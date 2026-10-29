@@ -258,6 +258,26 @@ func CloseBatch(ctx context.Context, db *pgxpool.Pool, merchantID uuid.UUID, bus
 		if err != nil {
 			return BatchResult{}, fmt.Errorf("settlement: CloseBatch: insert scheme export line: %w", err)
 		}
+
+		// ADR 0002: journal the fils the scheme line cannot carry. Capture
+		// debited card_scheme_clearing with the full gross, but the scheme
+		// only ever pays the truncated amount, so the residue moves out of
+		// clearing into suspense. With this, card_scheme_clearing for the
+		// batch equals the scheme file total exactly. Merchant payable is not
+		// touched: the merchant is still owed (and paid) the full net.
+		// Skipped for a zero residue (ledger_entries requires amount > 0).
+		if residue := SchemeRoundingResidue(line.grossFils); residue > 0 {
+			_, err = tx.Exec(ctx, `
+				INSERT INTO ledger_entries
+				  (entry_group_id, merchant_id, transaction_id, settlement_batch_id, account_id, direction, amount_fils, occurred_at, description)
+				VALUES
+				  ($1, $2, $3, $4, 'scheme_rounding_residue', 'debit',  $5, now(), 'scheme export: rounding residue'),
+				  ($1, $2, $3, $4, 'card_scheme_clearing',    'credit', $5, now(), 'scheme export: rounding residue')
+			`, uuid.New(), merchantID, line.transactionID, batchID, int64(residue))
+			if err != nil {
+				return BatchResult{}, fmt.Errorf("settlement: CloseBatch: post scheme rounding residue: %w", err)
+			}
+		}
 	}
 
 	// Step 13: enqueue settlement.batch_closed onto the shared outbox, in
