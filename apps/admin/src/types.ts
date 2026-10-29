@@ -177,14 +177,16 @@ export interface BulkApproveKycResult {
 }
 
 /** `POST /v1/admin/merchants/:id/api-keys/:keyId/rotate` →
- *  `201 { id, prefix, rawKey, createdAt, previousKeyId }`. `rawKey` is
- *  show-once: it exists in this response and nowhere else, ever. */
+ *  `201 { id, prefix, rawKey, createdAt, previousKeyId, previousKeyRevokedAt }`.
+ *  `rawKey` is show-once: it exists in this response and nowhere else, ever.
+ *  The previous key is revoked by the rotation itself. */
 export interface RotatedApiKey {
   id: string;
   prefix: string;
   rawKey: string;
   createdAt: string;
   previousKeyId: string;
+  previousKeyRevokedAt: string;
 }
 
 // ---------------------------------------------------------------------------

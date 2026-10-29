@@ -198,6 +198,7 @@ export async function adminMerchantRoutes(app: FastifyInstance): Promise<void> {
         rawKey: rotated.rawKey,
         createdAt: rotated.createdAt.toISOString(),
         previousKeyId: rotated.previousKeyId,
+        previousKeyRevokedAt: rotated.previousKeyRevokedAt.toISOString(),
       });
     },
   );

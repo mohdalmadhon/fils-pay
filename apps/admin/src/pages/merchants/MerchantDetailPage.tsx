@@ -483,7 +483,8 @@ export function MerchantDetailPage() {
           </p>
           <p className="admin-muted">
             New key id <code>{rotatedKey.id}</code>, replacing previous key{" "}
-            <code>{rotatedKey.previousKeyId}</code>.
+            <code>{rotatedKey.previousKeyId}</code>. The previous key has been revoked and no
+            longer works, so send the new one to the merchant now.
           </p>
           <button type="button" onClick={() => setRotatedKey(null)}>
             Dismiss
