@@ -60,6 +60,75 @@
   --fp-focus: 0 0 0 3px rgba(217, 119, 127, 0.4);
   /* The dusk sky: plum overhead, rose and apricot at the horizon. */
   --fp-dusk: linear-gradient(170deg, #3e1b36 0%, #5b2a4e 38%, #94466a 66%, #d9777f 86%, #e8a87c 100%);
+
+  /* Roles that change between dusk and night */
+  --fp-strong: #3e1b36;
+  --fp-link: #5b2a4e;
+  --fp-link-hover: #a6475a;
+  --fp-code: #47203d;
+  --fp-head: #fcf6f3;
+  --fp-hover: #fdf8f6;
+  --fp-row-line: #f2e8e4;
+  --fp-chip: #faf3f0;
+  --fp-chip-2: #f3e9e6;
+  --fp-chip-3: #efe4ea;
+  --fp-good-ink: #1f5a3e;
+  --fp-good-line: #bfdfcb;
+  --fp-warn-ink: #6b4508;
+  --fp-warn-line: #ecd29b;
+  --fp-danger-line: #efbcc1;
+  --fp-shadow: 0 18px 40px -24px rgba(62, 27, 54, 0.35);
+  color-scheme: light;
+}
+
+/* Night: the same sky an hour after sunset. Toggled from the dashboard
+ * (or the command palette) and remembered; follows the system otherwise. */
+:root[data-theme="night"] {
+  color-scheme: dark;
+  --fp-plum: #b5577a;
+  --fp-plum-ink: #9c4468;
+  --fp-plum-soft: #3a1f33;
+  --fp-mist: #2c1828;
+  --fp-rose-soft: #3d2030;
+  --fp-apricot-soft: #3d2a20;
+  --fp-sand-ink: #f0c56a;
+  --fp-sand-soft: #3a2c14;
+  --fp-page: #170b14;
+  --fp-surface: #221220;
+  --fp-surface-2: #2a1626;
+  --fp-line: #3a2234;
+  --fp-line-strong: #553248;
+  --fp-good: #74d6a4;
+  --fp-good-soft: #15301f;
+  --fp-warn: #f0c56a;
+  --fp-warn-soft: #3a2c14;
+  --fp-danger: #ff8a96;
+  --fp-danger-ink: #ffb3bb;
+  --fp-danger-soft: #3d1a22;
+  --fp-ink: #f7e9ef;
+  --fp-ink-2: #d6bccb;
+  --fp-ink-3: #a58a9b;
+  --fp-strong: #fbeaf1;
+  --fp-link: #f0a3b4;
+  --fp-link-hover: #ffd0b0;
+  --fp-code: #ffd9c0;
+  --fp-head: #2a1626;
+  --fp-hover: #2a1726;
+  --fp-row-line: #33202e;
+  --fp-chip: #2c1828;
+  --fp-chip-2: #3a2234;
+  --fp-chip-3: #3a2234;
+  --fp-good-ink: #b9f0d2;
+  --fp-good-line: #2d5a40;
+  --fp-warn-ink: #ffe2a8;
+  --fp-warn-line: #6b5420;
+  --fp-danger-line: #6b2a36;
+  --fp-shadow: 0 18px 40px -20px rgba(0, 0, 0, 0.7);
+}
+
+.fp-theme-fade,
+.fp-theme-fade * {
+  transition: background-color 400ms ease, color 400ms ease, border-color 400ms ease !important;
 }
 
 *,
@@ -113,13 +182,13 @@ p {
 }
 
 a {
-  color: var(--fp-plum);
+  color: var(--fp-link);
   text-underline-offset: 3px;
   text-decoration-thickness: 1px;
 }
 
 a:hover {
-  color: var(--fp-rose-ink);
+  color: var(--fp-link-hover);
 }
 
 code {
@@ -128,7 +197,7 @@ code {
   padding: 0.08em 0.35em;
   border-radius: 6px;
   background: var(--fp-mist);
-  color: var(--fp-plum-ink);
+  color: var(--fp-code);
   word-break: break-all;
 }
 
@@ -378,6 +447,465 @@ code {
   margin-left: 0.4em;
   color: var(--fp-sand-ink);
   letter-spacing: 0.04em;
+}
+
+/* Coins (canvas physics) ------------------------------------------------- */
+
+.fp-coins {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Coin pit: a dusk panel with a live pile of coins at the bottom. */
+.fp-pit {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  background: var(--fp-dusk);
+  isolation: isolate;
+}
+
+.fp-pit::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(60% 40% at 80% 85%, rgba(255, 201, 163, 0.35), transparent 70%),
+    radial-gradient(1px 1px at 12% 14%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 32% 8%, #fff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 56% 20%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 88% 6%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 70% 30%, rgba(255, 255, 255, 0.7) 50%, transparent 51%);
+}
+
+/* The low sun sinking behind the dunes. */
+.fp-pit-sun {
+  position: absolute;
+  right: 14%;
+  bottom: 21%;
+  width: clamp(90px, 12vw, 170px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #ffe2c8, #e8a87c 55%, rgba(232, 168, 124, 0) 72%);
+  z-index: -1;
+  animation: fp-sun 9s ease-in-out infinite;
+}
+
+@media (max-width: 860px) {
+  .fp-pit-sun {
+    right: 6%;
+    bottom: 14%;
+    width: 64px;
+  }
+}
+
+@keyframes fp-sun {
+  50% {
+    transform: translateY(8px) scale(1.03);
+  }
+}
+
+.fp-pit-dunes {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 34%;
+  z-index: -1;
+}
+
+.fp-pit .fp-coins {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.fp-pit-content {
+  position: relative;
+  z-index: 1;
+}
+
+.fp-pit-hint {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  bottom: 1rem;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.82rem;
+  color: #fff;
+  white-space: nowrap;
+  background: rgba(43, 20, 38, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
+.fp-pit-hint strong {
+  color: #ffd9a0;
+  font-weight: 600;
+}
+
+.fp-pit-hint[data-bump="true"] {
+  animation: fp-bump 300ms var(--fp-ease);
+}
+
+@keyframes fp-bump {
+  40% {
+    transform: translateX(-50%) scale(1.08);
+  }
+}
+
+@media (max-width: 860px) {
+  .fp-pit-hint {
+    bottom: 3.4rem;
+    font-size: 0.78rem;
+  }
+}
+
+/* Full-screen coin shower (paid screen, Konami code). */
+.fp-shower {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+  animation: fp-shower-out 900ms ease 6s forwards;
+}
+
+@keyframes fp-shower-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Catch the fils (404 mini-game) ----------------------------------------- */
+
+.fp-game {
+  position: relative;
+  width: min(100%, 34rem);
+  margin: 0 auto;
+  border-radius: var(--fp-radius-l);
+  overflow: hidden;
+  background: var(--fp-dusk);
+  box-shadow: var(--fp-shadow);
+  color: #fff;
+}
+
+.fp-game-canvas {
+  display: block;
+  width: 100%;
+  height: 260px;
+  touch-action: none;
+  cursor: none;
+}
+
+.fp-game[data-phase="ready"] .fp-game-canvas,
+.fp-game[data-phase="done"] .fp-game-canvas {
+  cursor: default;
+}
+
+.fp-game-hud {
+  position: absolute;
+  inset: 0.75rem 1rem auto;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.fp-game[data-phase="ready"] .fp-game-hud {
+  visibility: hidden;
+}
+
+.fp-game-time[data-low="true"] {
+  color: #ffb3bb;
+  font-weight: 700;
+}
+
+.fp-game-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 1rem 1.5rem 3.5rem;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(43, 20, 38, 0.15), rgba(43, 20, 38, 0.55));
+}
+
+.fp-game-title {
+  margin: 0;
+  font-size: var(--fp-step-1);
+  font-weight: 600;
+}
+
+.fp-game-rules {
+  margin: 0 0 0.75rem;
+  font-size: 0.88rem;
+  color: #f3dfe6;
+}
+
+.fp-game-play {
+  min-height: 44px;
+  padding: 0.5rem 1.25rem;
+  font: inherit;
+  font-weight: 600;
+  color: #2b1426;
+  background: linear-gradient(180deg, #ffe2a8, var(--fp-sand));
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 8px 20px -8px rgba(224, 177, 90, 0.8);
+  transition: transform 140ms var(--fp-ease);
+}
+
+.fp-game-play:hover {
+  transform: translateY(-2px) scale(1.03);
+}
+
+/* Command palette -------------------------------------------------------- */
+
+.fp-palette-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 12vh 1rem 1rem;
+  background: rgba(23, 11, 20, 0.45);
+  backdrop-filter: blur(4px);
+  animation: fp-fade 160ms ease both;
+}
+
+.fp-palette {
+  width: min(100%, 36rem);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  color: var(--fp-ink);
+  background: var(--fp-surface);
+  border: 1px solid var(--fp-line);
+  border-radius: var(--fp-radius-l);
+  box-shadow: 0 40px 80px -30px rgba(23, 11, 20, 0.6);
+  overflow: hidden;
+  animation: fp-pop 220ms var(--fp-ease) both;
+}
+
+.fp-palette-search {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.9rem 1.1rem;
+  color: var(--fp-ink-3);
+  border-bottom: 1px solid var(--fp-line);
+}
+
+.fp-palette-search input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 1.05rem;
+  color: var(--fp-ink);
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+
+.fp-palette-search input:focus-visible {
+  box-shadow: none;
+}
+
+.fp-palette kbd,
+.fp-kbd {
+  padding: 0.05rem 0.4rem;
+  font: 600 0.72rem var(--fp-font);
+  color: var(--fp-ink-3);
+  background: var(--fp-chip);
+  border: 1px solid var(--fp-line);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+}
+
+.fp-palette-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.4rem;
+  overflow-y: auto;
+}
+
+.fp-palette-group {
+  display: block;
+  padding: 0.6rem 0.75rem 0.3rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fp-ink-3);
+}
+
+.fp-palette-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--fp-radius-s);
+  cursor: pointer;
+}
+
+.fp-palette-item[aria-selected="true"] {
+  background: var(--fp-plum-soft);
+  color: var(--fp-strong);
+}
+
+.fp-palette-item kbd {
+  margin-left: auto;
+}
+
+.fp-palette-icon {
+  display: inline-flex;
+  color: var(--fp-rose);
+}
+
+.fp-palette-empty {
+  padding: 1.25rem;
+  color: var(--fp-ink-3);
+  text-align: center;
+}
+
+@keyframes fp-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fp-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+}
+
+/* Sidebar search (opens the palette) and the dusk/night switch --------- */
+.fp-nav-search {
+  justify-content: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: -0.5rem 0.25rem 0;
+  min-height: 42px;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  font-size: 0.92rem;
+  color: #e2c6d3;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--fp-radius-s);
+  cursor: pointer;
+  transition: background 160ms var(--fp-ease), border-color 160ms var(--fp-ease);
+}
+
+.fp-nav-search:hover,
+button.fp-nav-search:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(232, 168, 124, 0.5);
+}
+
+.fp-nav-search kbd {
+  margin-left: auto;
+  color: #e2c6d3;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.fp-theme-switch {
+  justify-content: flex-start;
+  min-height: 0;
+  border-radius: var(--fp-radius-s);
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  margin-bottom: 0.6rem;
+  padding: 0.45rem 0.75rem;
+  font: inherit;
+  color: #e2c6d3;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+button.fp-theme-switch:hover {
+  color: #fff;
+}
+
+.fp-theme-switch-track {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e8a87c, #d9777f);
+  transition: background 300ms var(--fp-ease);
+}
+
+.fp-theme-switch[aria-pressed="true"] button.fp-theme-switch:hover {
+  color: #fff;
+}
+
+.fp-theme-switch-track {
+  background: linear-gradient(90deg, #2b1426, #553248);
+}
+
+.fp-theme-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #8a5f14;
+  background: #fff4d9;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: transform 300ms var(--fp-ease), color 300ms;
+}
+
+.fp-theme-switch-knob svg {
+  width: 14px;
+  height: 14px;
+}
+
+.fp-theme-switch[aria-pressed="true"] .fp-theme-switch-knob {
+  transform: translateX(20px);
+  color: #5b2a4e;
+}
+
+/* Page enter --------------------------------------------------------------- */
+
+.fp-page-enter {
+  animation: fp-rise 420ms var(--fp-ease) both;
+}
+
+@keyframes fp-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -103,4 +103,32 @@ export const icons = {
       <path d="M8 11V8a4 4 0 0 1 8 0v3" />
     </Icon>
   ),
+  search: (
+    <Icon>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </Icon>
+  ),
+  moon: (
+    <Icon>
+      <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" />
+    </Icon>
+  ),
+  sun: (
+    <Icon>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </Icon>
+  ),
+  plus: (
+    <Icon>
+      <path d="M12 5v14M5 12h14" />
+    </Icon>
+  ),
+  sparkle: (
+    <Icon>
+      <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z" />
+      <path d="M19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7Z" />
+    </Icon>
+  ),
 };
