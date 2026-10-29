@@ -137,6 +137,21 @@ Re-exporting gives an identical file; it's written from rows frozen at
 close. The `amount` column is in the scheme's two-decimal format and is
 what the scheme was paid; finance reconciles against it.
 
+## Test merchants and settlement
+
+The daily settlement scan requires `status = 'active' AND test_mode = false`.
+**Recompute transaction statuses** preserves test/live mode; it is not a
+go-live action. Its `flagsUpdated` response/audit field remains present and
+is empty. The previous implementation silently cleared the sandbox flag
+after scanning transactions, making those merchants eligible for real runs.
+
+For merchants previously affected, inspect `transaction_status_recompute`
+audit records and verify their approved operating mode. Restore an
+incorrectly cleared flag only after identifying the merchant and checking
+for a legitimate later go-live. Review existing batches, payout ledger legs,
+and exports separately; changing a flag does not reverse prior settlement.
+See [the fix, evidence, and audit query](solved-problems/010-test-merchants-in-settlement.md).
+
 ## Split payouts
 
 For a split parent, the children's configured weights must be positive and

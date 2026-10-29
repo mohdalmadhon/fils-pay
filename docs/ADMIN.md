@@ -50,6 +50,10 @@ merchant through the usual secure channel.
 **Recompute transaction statuses** — tidies up transaction statuses for
 merchants whose refunds were processed before the refunds release (the
 manual refunds finance did over email in Q1). Safe to run more than once.
+It preserves the merchant's test/live mode. Having no open authorizations
+does not mean a sandbox merchant is approved for live settlement. See the
+[test-merchant investigation](solved-problems/010-test-merchants-in-settlement.md)
+for the former flag-clearing side effect and historical review steps.
 
 ## Money
 

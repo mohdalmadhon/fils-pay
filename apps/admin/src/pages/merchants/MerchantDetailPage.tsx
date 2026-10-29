@@ -627,6 +627,7 @@ export function MerchantDetailPage() {
         Re-derives this merchant&apos;s transaction statuses from their own captured/refunded
         amounts. Rows written before the refunds release can carry a status that predates the
         derivation rule; this backfills them. Rows that already agree are left alone.
+        The merchant&apos;s test/live mode stays unchanged.
       </p>
       <RequireRole
         allow={["finance", "super_admin"]}
