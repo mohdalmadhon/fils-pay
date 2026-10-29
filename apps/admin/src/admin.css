@@ -84,8 +84,9 @@
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 500;
-  color: var(--ops-night);
-  background: var(--fp-sand-soft);
+  /* The sidebar is dark in both themes, so the chip keeps fixed colours. */
+  color: #3e1b36;
+  background: #f9edd3;
 }
 
 .admin-nav {
@@ -132,6 +133,10 @@
   inset: auto -3rem -3rem -3rem;
 }
 
+.admin-topbar-search {
+  margin-left: auto;
+}
+
 .admin-signout {
   position: relative;
   z-index: 1;
@@ -169,7 +174,10 @@
 
 .admin-main > h1:first-child,
 .admin-main > section > h1:first-child,
-.admin-main > div > h1:first-child {
+.admin-main > div > h1:first-child,
+.admin-main .fp-page-enter > h1:first-child,
+.admin-main .fp-page-enter > section > h1:first-child,
+.admin-main .fp-page-enter > div > h1:first-child {
   font-size: var(--fp-step-4);
   font-weight: 500;
   letter-spacing: -0.03em;
@@ -242,7 +250,10 @@
 
   .admin-main > h1:first-child,
   .admin-main > section > h1:first-child,
-  .admin-main > div > h1:first-child {
+  .admin-main > div > h1:first-child,
+.admin-main .fp-page-enter > h1:first-child,
+.admin-main .fp-page-enter > section > h1:first-child,
+.admin-main .fp-page-enter > div > h1:first-child {
     font-size: var(--fp-step-3);
   }
 }
@@ -258,7 +269,7 @@ button {
   padding: 0.5rem 1.05rem;
   font: inherit;
   font-weight: 500;
-  color: var(--fp-plum-deep);
+  color: var(--fp-strong);
   background: var(--fp-surface);
   border: 1px solid var(--fp-line-strong);
   border-radius: 999px;
@@ -268,7 +279,7 @@ button {
 
 button:hover {
   border-color: var(--fp-plum);
-  color: var(--fp-plum-ink);
+  color: var(--fp-link);
 }
 
 button:active {
@@ -311,7 +322,7 @@ a.admin-button {
 }
 
 a.admin-button {
-  color: var(--fp-plum-deep);
+  color: var(--fp-strong);
   background: var(--fp-surface);
   border: 1px solid var(--fp-line-strong);
 }
@@ -430,14 +441,14 @@ input[type="radio"] {
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--fp-ink-3);
-  background: #fcf6f3;
+  background: var(--fp-head);
   border-bottom: 1px solid var(--fp-line);
   white-space: nowrap;
 }
 
 .admin-table td {
   padding: 0.75rem 0.9rem;
-  border-bottom: 1px solid #f2e8e4;
+  border-bottom: 1px solid var(--fp-row-line);
   vertical-align: top;
 }
 
@@ -446,7 +457,7 @@ input[type="radio"] {
 }
 
 .admin-table tbody tr:hover {
-  background: #fdf8f6;
+  background: var(--fp-hover);
 }
 
 .admin-table td.fp-empty-cell {
@@ -475,13 +486,13 @@ input[type="radio"] {
 .admin-dl dd {
   margin: 0;
   padding: 0.7rem 1rem;
-  border-bottom: 1px solid #f2e8e4;
+  border-bottom: 1px solid var(--fp-row-line);
 }
 
 .admin-dl dt {
   font-size: 0.88rem;
   color: var(--fp-ink-3);
-  background: #fcf6f3;
+  background: var(--fp-head);
 }
 
 .admin-dl dd {
@@ -539,22 +550,22 @@ input[type="radio"] {
 .admin-error {
   color: var(--fp-danger-ink);
   background-color: var(--fp-danger-soft);
-  border: 1px solid #efbcc1;
+  border: 1px solid var(--fp-danger-line);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238e2424' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v6M12 16.5v.5'/%3E%3C/svg%3E");
 }
 
 .admin-notice {
-  color: #1f5a3e;
+  color: var(--fp-good-ink);
   background-color: var(--fp-good-soft);
-  border: 1px solid #bfdfcb;
+  border: 1px solid var(--fp-good-line);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231d7a46' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E");
 }
 
 .admin-confirm {
   display: block;
-  color: #6b4508;
+  color: var(--fp-warn-ink);
   background-color: var(--fp-warn-soft);
-  border: 1px solid #ecd29b;
+  border: 1px solid var(--fp-warn-line);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a86a00' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l10 18H2Z'/%3E%3Cpath d='M12 10v4M12 17.5v.5'/%3E%3C/svg%3E");
 }
 
@@ -711,7 +722,7 @@ input[type="radio"] {
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
 }
 
-.admin-login .fp-stage {
+.admin-login .fp-pit {
   background:
     radial-gradient(120% 70% at 80% 0%, rgba(232, 168, 124, 0.18), transparent 55%),
     linear-gradient(170deg, #1a0a16 0%, var(--ops-night) 35%, #4a2241 70%, #8c4566 100%);
@@ -720,13 +731,13 @@ input[type="radio"] {
 .admin-login-sea {
   display: flex;
   flex-direction: column;
-  padding: 2.5rem 3rem calc(var(--fp-stage-art-h) + 1.5rem);
+  padding: 2.5rem 3rem 13rem;
 }
 
-.admin-login-sea > .fp-stage-content {
-  flex: 1;
+.admin-login-sea > .fp-pit-content {
   display: flex;
   flex-direction: column;
+  gap: clamp(1.5rem, 12vh, 7rem);
 }
 
 .admin-login-sea .fp-wordmark {
@@ -734,9 +745,16 @@ input[type="radio"] {
 }
 
 .admin-login-pitch {
-  margin-top: auto;
-  margin-bottom: auto;
   max-width: 28rem;
+}
+
+.admin-login-pitch em {
+  font-style: normal;
+  font-weight: 500;
+  background: linear-gradient(90deg, #ffe2a8, var(--fp-apricot) 60%, #ffc9c9);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .admin-login-pitch h2 {
@@ -789,7 +807,7 @@ input[type="radio"] {
   padding: 0.7rem 0.9rem;
   border-radius: var(--fp-radius-s);
   background: var(--fp-sand-soft);
-  color: #6b4a10;
+  color: var(--fp-warn-ink);
   font-size: 0.92rem;
 }
 
@@ -807,7 +825,7 @@ input[type="radio"] {
 .admin-link-button {
   min-height: 0 !important;
   padding: 0 !important;
-  color: var(--fp-plum-ink) !important;
+  color: var(--fp-link) !important;
   background: none !important;
   border: 0 !important;
   text-decoration: underline;
@@ -820,7 +838,8 @@ input[type="radio"] {
     grid-template-columns: 1fr;
   }
   .admin-login-sea {
-    padding: 1.5rem 1.25rem calc(var(--fp-stage-art-h) + 1rem);
+    min-height: 340px;
+    padding: 1.5rem 1.25rem 8rem;
   }
   .admin-login-pitch h2 {
     font-size: var(--fp-step-3);
@@ -846,15 +865,27 @@ input[type="radio"] {
 
 .fp-standalone-head {
   padding: 1.5rem 2rem;
-  color: var(--fp-plum-deep);
+  color: var(--fp-strong);
 }
 
 .fp-standalone main {
   flex: 1;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  padding-bottom: 6rem;
+  gap: 2rem 4rem;
+  padding: 0 1rem 4rem;
+}
+
+.fp-standalone main > .fp-state {
+  flex: 0 1 30rem;
+  margin: 0;
+}
+
+.fp-404-game {
+  flex: 0 1 32rem;
+  margin: 0;
 }
 
 .fp-standalone-orbs {

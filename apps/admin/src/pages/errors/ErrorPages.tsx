@@ -1,6 +1,7 @@
 import { isRouteErrorResponse, Link, useLocation, useRouteError } from "react-router-dom";
 import { Orbs, Wordmark } from "../../components/art/Art.js";
 import { StatePanel, usePageTitle } from "../../components/ui.js";
+import { CatchTheFils } from "../../components/fun/CatchTheFils.js";
 
 /** Frame for pages shown outside the dashboard shell: brand at the top,
  *  dusk glow along the bottom. */
@@ -44,6 +45,7 @@ export function NotFoundPage() {
           the console.
         </p>
       </StatePanel>
+      <CatchTheFils className="fp-404-game" />
     </StandaloneFrame>
   );
 }

@@ -4,7 +4,8 @@ import { login, verifyOtp } from "../../api/auth.js";
 import { describeError } from "../../api/client.js";
 import { useAdminAuth } from "../../auth/AdminAuthContext.js";
 import type { AdminLoginResponse } from "../../types.js";
-import { StageScene, Wordmark } from "../../components/art/Art.js";
+import { Wordmark } from "../../components/art/Art.js";
+import { CoinPit } from "../../components/fun/CoinPit.js";
 import { ErrorBanner, usePageTitle } from "../../components/ui.js";
 
 type Step =
@@ -74,13 +75,17 @@ export function LoginPage() {
 
   return (
     <div className="admin-login">
-      <StageScene className="admin-login-sea">
+      <CoinPit className="admin-login-sea">
         <Wordmark />
         <div className="admin-login-pitch">
-          <h2>Every merchant, every batch, in one place.</h2>
+          <h2>
+            Every merchant, every batch,
+            <br />
+            <em>in one place.</em>
+          </h2>
           <p>Operations console for FilsPay staff: merchants, credits, settlement and webhooks.</p>
         </div>
-      </StageScene>
+      </CoinPit>
 
       <main className="admin-login-panel">
         <div className="admin-centered">
