@@ -71,13 +71,22 @@ first.
 |---|---|---|
 | api | `DATABASE_URL`, `SETTLEMENT_INTERNAL_URL` | `environment:` |
 | api | `CORS_ALLOWED_ORIGINS` | `environment:`; defaults to `http://localhost:5173,http://localhost:5174` outside production, **required** in production (the dashboard's and admin console's real origins) |
-| api | `WEBHOOK_SECRET_ENCRYPTION_KEY` | only outside dev; a dev key is used otherwise |
-| api | `ACQUIRER_CALLBACK_SIGNING_SECRET`, `NODE_ENV` | `.env.docker` |
+| api | `WEBHOOK_SECRET_ENCRYPTION_KEY` | **required everywhere**; from your shell or `ops/.env` via `${...}`. There is no built-in key. |
+| api, settlement | `SETTLEMENT_INTERNAL_TOKEN` | **required**, same value on both; from your shell or `ops/.env`. There is no `dev-token` fallback. |
+| api | `ACQUIRER_CALLBACK_SIGNING_SECRET`, `NODE_ENV` | `.env.docker`, loaded with `env_file:` |
+| api | `OTP_DEV_EXPOSE` | off unless set to `true`; refused when `NODE_ENV=production` |
 | settlement | `DATABASE_URL` | `environment:` |
-| settlement | `SETTLEMENT_INTERNAL_TOKEN` | defaults to `dev-token` |
 | reporting | `DATABASE_URL` | `environment:`; runs `worker` by default |
 
-> **MK:** the api won't boot without WEBHOOK_SECRET_ENCRYPTION_KEY in any environment. set it on the hosted box.
+Generate the two secrets once, for example:
+
+```bash
+echo "WEBHOOK_SECRET_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> ops/.env
+echo "SETTLEMENT_INTERNAL_TOKEN=$(openssl rand -hex 32)" >> ops/.env
+```
+
+`ops/.env` is gitignored. Compose reads it for the `${...}` values in the
+compose file; it does not inject it into containers.
 
 ## Resource sizing
 

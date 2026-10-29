@@ -5,8 +5,8 @@
  * docs/verification/end-to-end-2026-10-30.md.
  *
  * What it does, all through the HTTP API unless noted:
- *   1. merchant signs in (password + OTP; needs the dev OTP exposed, i.e. not
- *      production) and registers a webhook endpoint
+ *   1. merchant signs in (password + OTP; needs the API started with
+ *      OTP_DEV_EXPOSE=true, local only) and registers a webhook endpoint
  *   2. creates a payment link for 47.333 BHD and pays it as a customer, then
  *      checks a second payment is refused
  *   3. reads the transaction and its timeline
@@ -121,7 +121,7 @@ try {
   const login = await call("POST", "/v1/auth/login", { merchantId: MERCHANT_ID, email: EMAIL, password: PASSWORD });
   check("merchant login", login.status === 200, `HTTP ${login.status}`);
   const otp = await call("POST", "/v1/auth/otp/verify", { code: login.json.devOtpCode });
-  check("OTP verify", otp.status === 200, login.json.devOtpCode ? "" : "no devOtpCode: the API must expose the dev OTP");
+  check("OTP verify", otp.status === 200, login.json.devOtpCode ? "" : "no devOtpCode: start the API with OTP_DEV_EXPOSE=true (local only)");
 
   const hookUrl = PUBLIC_WEBHOOK_URL ?? `http://127.0.0.1:${RECEIVER_PORT}${RUN_PATH}`;
   const endpoint = await call("POST", `/v1/merchants/${MERCHANT_ID}/webhook-endpoints`, { url: hookUrl });
