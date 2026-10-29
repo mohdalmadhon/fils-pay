@@ -1,12 +1,12 @@
-/* FilsPay Ops: the admin console on the "pearl & tide" system (theme.css).
+/* FilsPay Ops: the admin console on the "desert dusk" system (theme.css).
  *
- * Same tokens as the merchant dashboard, a deeper night-sea sidebar and gold
- * as the active colour, so staff always know which console they're in.
+ * Same tokens as the merchant dashboard, a deeper midnight-plum sidebar and
+ * sand gold as the active colour, so staff always know which console they're in.
  * This is its own app, so styling bare elements (button, table) is safe. */
 
 :root {
-  --ops-night: #081c26;
-  --ops-night-2: #0f2c38;
+  --ops-night: #24101f;
+  --ops-night-2: #33172c;
 }
 
 /* Shell ------------------------------------------------------------------ */
@@ -30,9 +30,9 @@
   flex-direction: column;
   gap: 1.5rem;
   padding: 1.5rem 1rem 0;
-  color: #d9e6ea;
+  color: #f3dfe6;
   background:
-    radial-gradient(90% 30% at 0% 100%, rgba(199, 154, 43, 0.14), transparent 70%),
+    radial-gradient(90% 30% at 0% 100%, rgba(232, 168, 124, 0.16), transparent 70%),
     var(--ops-night);
   overflow: hidden;
 }
@@ -56,7 +56,7 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--ops-night);
-  background: var(--fp-gold);
+  background: var(--fp-sand);
 }
 
 .admin-identity {
@@ -66,7 +66,7 @@
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
   font-size: var(--fp-step--1);
-  color: #a9bec5;
+  color: #d6b3c5;
   overflow-wrap: anywhere;
 }
 
@@ -85,7 +85,7 @@
   font-size: 0.72rem;
   font-weight: 500;
   color: var(--ops-night);
-  background: var(--fp-gold-soft);
+  background: var(--fp-sand-soft);
 }
 
 .admin-nav {
@@ -101,7 +101,7 @@
   gap: 0.75rem;
   padding: 0.6rem 0.75rem;
   border-radius: var(--fp-radius-s);
-  color: #a9bec5;
+  color: #d6b3c5;
   text-decoration: none;
   transition: background 160ms var(--fp-ease), color 160ms var(--fp-ease);
 }
@@ -114,11 +114,11 @@
 .admin-nav a.active {
   color: #fff;
   font-weight: 500;
-  background: rgba(199, 154, 43, 0.16);
+  background: rgba(232, 168, 124, 0.18);
 }
 
 .admin-nav a.active .fp-icon {
-  color: var(--fp-gold);
+  color: var(--fp-sand);
 }
 
 .admin-sidebar-foot {
@@ -127,15 +127,9 @@
   padding: 0 0.25rem 1rem;
 }
 
-.admin-sidebar-foot .fp-tide {
-  position: absolute;
-  left: -1rem;
-  bottom: 0;
-  width: 220%;
-  height: 90px;
-  color: #c79a2b;
-  opacity: 0.5;
-  pointer-events: none;
+/* Soft dusk glows behind the sign-out button. */
+.admin-sidebar-foot .fp-orbs {
+  inset: auto -3rem -3rem -3rem;
 }
 
 .admin-signout {
@@ -146,7 +140,7 @@
   gap: 0.6rem;
   width: 100%;
   margin-bottom: 4.5rem;
-  color: #a9bec5 !important;
+  color: #d6b3c5 !important;
   background: transparent !important;
   border: 1px solid rgba(255, 255, 255, 0.14) !important;
   border-radius: var(--fp-radius-s) !important;
@@ -239,7 +233,7 @@
     position: fixed;
     inset: 0;
     z-index: 30;
-    background: rgba(4, 16, 22, 0.5);
+    background: rgba(43, 20, 38, 0.5);
   }
 
   .admin-main {
@@ -264,8 +258,8 @@ button {
   padding: 0.5rem 1.05rem;
   font: inherit;
   font-weight: 500;
-  color: var(--fp-abyss);
-  background: var(--fp-shell);
+  color: var(--fp-plum-deep);
+  background: var(--fp-surface);
   border: 1px solid var(--fp-line-strong);
   border-radius: 999px;
   cursor: pointer;
@@ -273,8 +267,8 @@ button {
 }
 
 button:hover {
-  border-color: var(--fp-lagoon);
-  color: var(--fp-lagoon-ink);
+  border-color: var(--fp-plum);
+  color: var(--fp-plum-ink);
 }
 
 button:active {
@@ -289,15 +283,15 @@ button:disabled {
 .admin-form button[type="submit"],
 .admin-button-primary {
   color: #fff;
-  background: var(--fp-lagoon);
-  border-color: var(--fp-lagoon);
+  background: var(--fp-plum);
+  border-color: var(--fp-plum);
 }
 
 .admin-form button[type="submit"]:hover,
 .admin-button-primary:hover {
   color: #fff;
-  background: var(--fp-lagoon-ink);
-  border-color: var(--fp-lagoon-ink);
+  background: var(--fp-plum-ink);
+  border-color: var(--fp-plum-ink);
 }
 
 .admin-button-quiet {
@@ -317,8 +311,8 @@ a.admin-button {
 }
 
 a.admin-button {
-  color: var(--fp-abyss);
-  background: var(--fp-shell);
+  color: var(--fp-plum-deep);
+  background: var(--fp-surface);
   border: 1px solid var(--fp-line-strong);
 }
 
@@ -367,7 +361,7 @@ a.admin-button {
   font-size: 1rem;
   font-weight: 400;
   color: var(--fp-ink);
-  background: var(--fp-shell);
+  background: var(--fp-surface);
   border: 1px solid var(--fp-line-strong);
   border-radius: var(--fp-radius-s);
 }
@@ -384,13 +378,13 @@ a.admin-button {
 .admin-filters input:focus,
 .admin-filters select:focus {
   outline: none;
-  border-color: var(--fp-lagoon);
+  border-color: var(--fp-plum);
   box-shadow: var(--fp-focus);
 }
 
 input[type="checkbox"],
 input[type="radio"] {
-  accent-color: var(--fp-lagoon);
+  accent-color: var(--fp-plum);
 }
 
 .admin-filters {
@@ -400,7 +394,7 @@ input[type="radio"] {
   gap: 0.75rem 1rem;
   margin: 0 0 1rem;
   padding: 1rem 1.1rem 1.1rem;
-  background: var(--fp-shell);
+  background: var(--fp-surface);
   border: 1px solid var(--fp-line);
   border-radius: var(--fp-radius-m);
 }
@@ -424,7 +418,7 @@ input[type="radio"] {
   border-spacing: 0;
   margin: 1rem 0;
   font-size: 0.94rem;
-  background: var(--fp-shell);
+  background: var(--fp-surface);
   border: 1px solid var(--fp-line);
   border-radius: var(--fp-radius-m);
   overflow: hidden;
@@ -436,14 +430,14 @@ input[type="radio"] {
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--fp-ink-3);
-  background: #f6faf9;
+  background: #fcf6f3;
   border-bottom: 1px solid var(--fp-line);
   white-space: nowrap;
 }
 
 .admin-table td {
   padding: 0.75rem 0.9rem;
-  border-bottom: 1px solid #e8efed;
+  border-bottom: 1px solid #f2e8e4;
   vertical-align: top;
 }
 
@@ -452,7 +446,7 @@ input[type="radio"] {
 }
 
 .admin-table tbody tr:hover {
-  background: #f7fbfa;
+  background: #fdf8f6;
 }
 
 .admin-table td.fp-empty-cell {
@@ -471,7 +465,7 @@ input[type="radio"] {
   display: grid;
   grid-template-columns: minmax(10rem, 14rem) 1fr;
   margin: 1rem 0;
-  background: var(--fp-shell);
+  background: var(--fp-surface);
   border: 1px solid var(--fp-line);
   border-radius: var(--fp-radius-m);
   overflow: hidden;
@@ -481,13 +475,13 @@ input[type="radio"] {
 .admin-dl dd {
   margin: 0;
   padding: 0.7rem 1rem;
-  border-bottom: 1px solid #e8efed;
+  border-bottom: 1px solid #f2e8e4;
 }
 
 .admin-dl dt {
   font-size: 0.88rem;
   color: var(--fp-ink-3);
-  background: #f6faf9;
+  background: #fcf6f3;
 }
 
 .admin-dl dd {
@@ -514,7 +508,7 @@ input[type="radio"] {
   max-height: 14rem;
   overflow-y: auto;
   padding: 0.5rem 0.75rem;
-  background: var(--fp-shell);
+  background: var(--fp-surface);
   border: 1px solid var(--fp-line);
   border-radius: var(--fp-radius-s);
 }
@@ -543,24 +537,24 @@ input[type="radio"] {
 }
 
 .admin-error {
-  color: var(--fp-coral-ink);
-  background-color: var(--fp-coral-soft);
-  border: 1px solid #efb9b5;
+  color: var(--fp-danger-ink);
+  background-color: var(--fp-danger-soft);
+  border: 1px solid #efbcc1;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238e2424' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v6M12 16.5v.5'/%3E%3C/svg%3E");
 }
 
 .admin-notice {
-  color: #134d2e;
-  background-color: var(--fp-kelp-soft);
-  border: 1px solid #b5dcc4;
+  color: #1f5a3e;
+  background-color: var(--fp-good-soft);
+  border: 1px solid #bfdfcb;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231d7a46' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E");
 }
 
 .admin-confirm {
   display: block;
-  color: #5c3b00;
-  background-color: var(--fp-amber-soft);
-  border: 1px solid #ecc98a;
+  color: #6b4508;
+  background-color: var(--fp-warn-soft);
+  border: 1px solid #ecd29b;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a86a00' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3l10 18H2Z'/%3E%3Cpath d='M12 10v4M12 17.5v.5'/%3E%3C/svg%3E");
 }
 
@@ -578,8 +572,8 @@ input[type="radio"] {
   color: #fff;
   background:
     repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.06) 0 12px, transparent 12px 24px),
-    #8e2424;
-  border-bottom: 4px solid var(--fp-gold);
+    #8e2638;
+  border-bottom: 4px solid var(--fp-sand);
 }
 
 .impersonation-banner > div {
@@ -597,7 +591,7 @@ input[type="radio"] {
 }
 
 .impersonation-banner button {
-  color: #8e2424;
+  color: #8e2638;
   background: #fff;
   border-color: #fff;
   font-weight: 600;
@@ -662,7 +656,7 @@ input[type="radio"] {
   margin: 0 0 0.25rem;
   font-size: 0.9rem;
   font-weight: 500;
-  color: var(--fp-gold-deep);
+  color: var(--fp-sand-ink);
 }
 
 .fp-state h1 {
@@ -701,7 +695,7 @@ input[type="radio"] {
   z-index: 100;
   padding: 0.6rem 1rem;
   color: #fff;
-  background: var(--fp-lagoon);
+  background: var(--fp-plum);
   border-radius: var(--fp-radius-s);
 }
 
@@ -709,7 +703,7 @@ input[type="radio"] {
   top: 1rem;
 }
 
-/* Sign-in: the same sea, at night ---------------------------------------- */
+/* Sign-in: the same dusk, an hour later ---------------------------------------- */
 
 .admin-login {
   min-height: 100vh;
@@ -717,19 +711,19 @@ input[type="radio"] {
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
 }
 
-.admin-login .fp-sea {
+.admin-login .fp-stage {
   background:
-    radial-gradient(120% 70% at 80% 0%, rgba(199, 154, 43, 0.16), transparent 55%),
-    linear-gradient(180deg, #0f2c38 0%, var(--ops-night) 60%, #04121a 100%);
+    radial-gradient(120% 70% at 80% 0%, rgba(232, 168, 124, 0.18), transparent 55%),
+    linear-gradient(170deg, #1a0a16 0%, var(--ops-night) 35%, #4a2241 70%, #8c4566 100%);
 }
 
 .admin-login-sea {
   display: flex;
   flex-direction: column;
-  padding: 2.5rem 3rem 9rem;
+  padding: 2.5rem 3rem calc(var(--fp-stage-art-h) + 1.5rem);
 }
 
-.admin-login-sea > .fp-sea-content {
+.admin-login-sea > .fp-stage-content {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -741,6 +735,7 @@ input[type="radio"] {
 
 .admin-login-pitch {
   margin-top: auto;
+  margin-bottom: auto;
   max-width: 28rem;
 }
 
@@ -754,7 +749,7 @@ input[type="radio"] {
 }
 
 .admin-login-pitch p {
-  color: #a9bec5;
+  color: #d6b3c5;
   font-size: var(--fp-step-1);
   font-weight: 300;
 }
@@ -793,8 +788,8 @@ input[type="radio"] {
   gap: 0.75rem;
   padding: 0.7rem 0.9rem;
   border-radius: var(--fp-radius-s);
-  background: var(--fp-gold-soft);
-  color: #5c4310;
+  background: var(--fp-sand-soft);
+  color: #6b4a10;
   font-size: 0.92rem;
 }
 
@@ -812,7 +807,7 @@ input[type="radio"] {
 .admin-link-button {
   min-height: 0 !important;
   padding: 0 !important;
-  color: var(--fp-lagoon-ink) !important;
+  color: var(--fp-plum-ink) !important;
   background: none !important;
   border: 0 !important;
   text-decoration: underline;
@@ -825,8 +820,7 @@ input[type="radio"] {
     grid-template-columns: 1fr;
   }
   .admin-login-sea {
-    min-height: 240px;
-    padding: 1.5rem 1.25rem 6.5rem;
+    padding: 1.5rem 1.25rem calc(var(--fp-stage-art-h) + 1rem);
   }
   .admin-login-pitch h2 {
     font-size: var(--fp-step-3);
@@ -852,7 +846,7 @@ input[type="radio"] {
 
 .fp-standalone-head {
   padding: 1.5rem 2rem;
-  color: var(--fp-abyss);
+  color: var(--fp-plum-deep);
 }
 
 .fp-standalone main {
@@ -863,14 +857,10 @@ input[type="radio"] {
   padding-bottom: 6rem;
 }
 
-.fp-standalone-tide {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 200%;
-  color: var(--fp-gold);
-  opacity: 0.45;
-  pointer-events: none;
+.fp-standalone-orbs {
+  inset: auto -4rem -6rem -4rem;
+  height: 240px;
+  opacity: 0.4;
 }
 
 .fp-error-detail {
