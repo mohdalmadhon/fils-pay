@@ -135,11 +135,27 @@ export interface Config {
   acquirerCallbackToleranceSeconds: number;
 }
 
+/** Unset means development (local runs). Any other value must be one of the
+ *  three exact names: a typo like "prod" or a name like "staging" must not
+ *  silently boot with development defaults on a hosted box. */
 function parseNodeEnv(value: string | undefined): Config["nodeEnv"] {
+  if (value === undefined || value === "") return "development";
   if (value === "production" || value === "test" || value === "development") {
     return value;
   }
-  return "development";
+  throw new Error(`loadConfig: NODE_ENV must be production, development or test, got "${value}"`);
+}
+
+/** The OTP echo-back (devOtpCode in the login response, and the code in the
+ *  log) is off unless OTP_DEV_EXPOSE=true is set explicitly, and is refused
+ *  in production. It used to default to on whenever NODE_ENV was not
+ *  exactly "production", which included the hosted box. */
+function parseOtpDevExpose(value: string | undefined, nodeEnv: Config["nodeEnv"]): boolean {
+  const on = parseBoolEnv(value, false);
+  if (on && nodeEnv === "production") {
+    throw new Error("loadConfig: OTP_DEV_EXPOSE must not be set when NODE_ENV=production");
+  }
+  return on;
 }
 
 function parseIntEnv(value: string | undefined, fallback: number): number {
@@ -180,8 +196,6 @@ function parseBoolEnv(value: string | undefined, fallback: boolean): boolean {
   if (value === undefined || value === "") return fallback;
   return value === "true" || value === "1";
 }
-
-const DEV_FALLBACK_WEBHOOK_KEY_B64 = "dGVzdC1rZXktZm9yLWRldi1vbmx5LW5vdC1mb3ItcHJvZA==";
 
 const BASE64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
 
@@ -240,7 +254,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     otpTtlMinutes: parseIntEnv(env.OTP_TTL_MINUTES, 5),
     otpCodeLength: parseIntEnv(env.OTP_CODE_LENGTH, 6),
     otpMaxAttempts: parseIntEnv(env.OTP_MAX_ATTEMPTS, 5),
-    otpDevExpose: parseBoolEnv(env.OTP_DEV_EXPOSE, nodeEnv !== "production"),
+    otpDevExpose: parseOtpDevExpose(env.OTP_DEV_EXPOSE, nodeEnv),
 
     argon2MemoryKib: parseIntEnv(env.ARGON2_MEMORY_KIB, 19_456),
     argon2TimeCost: parseIntEnv(env.ARGON2_TIME_COST, 2),
@@ -283,9 +297,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     checkoutBaseUrl: env.CHECKOUT_BASE_URL ?? "http://localhost:5173",
     paymentLinkReservationTimeoutSeconds: parseIntEnv(env.PAYMENT_LINK_RESERVATION_TIMEOUT_SECONDS, 60),
 
-    webhookSecretEncryptionKey: parseWebhookSecretEncryptionKey(
-      env.WEBHOOK_SECRET_ENCRYPTION_KEY || (nodeEnv !== "production" ? DEV_FALLBACK_WEBHOOK_KEY_B64 : undefined),
-    ),
+    // No built-in fallback: a key that ships in the repo protects nothing.
+    webhookSecretEncryptionKey: parseWebhookSecretEncryptionKey(env.WEBHOOK_SECRET_ENCRYPTION_KEY),
     webhookMaxAttempts: parseIntEnv(env.WEBHOOK_MAX_ATTEMPTS, 8),
     webhookBackoffBaseMs: parseIntEnv(env.WEBHOOK_BACKOFF_BASE_MS, 30_000),
     webhookBackoffCapMs: parseIntEnv(env.WEBHOOK_BACKOFF_CAP_MS, 21_600_000),
