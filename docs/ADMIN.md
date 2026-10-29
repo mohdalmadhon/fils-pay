@@ -113,6 +113,21 @@ deliveries, so any range is fine.
 >
 > **MK:** retry artefact
 
+> **Correction (2026-10-29).** The root cause above is wrong; AM's question
+> was the right one. Two different outbox event ids means two outbox rows,
+> not one row woken twice. A NOTIFY replay can't do that, because
+> deliveries are unique per (outbox event, endpoint). What actually
+> happened: the settlement daemon's tick and a manual `run-batch` both ran
+> `EnqueuePayoutNotifications` at the same moment. Each one checked "no
+> `settlement.paid` for this batch yet" (a plain `NOT EXISTS` read) and each
+> inserted one. No unique index existed to stop the second, despite a code
+> comment saying there was one. Each event then got its own delivery and its
+> own disbursement record. The advisory lock listed as "Done" in the May
+> postmortem (FP-208, `SETTLEMENT_SINGLETON_LOCK`) does not exist in the
+> code. Fixed by migration 0075, which allows one live `settlement.paid` per
+> batch and one disbursement record per batch, plus `ON CONFLICT DO NOTHING`
+> on both inserts. Full write-up: `docs/fixes/duplicate-payout-notifications.md`.
+
 ## If something looks wrong
 
 Check the audit log for who did what, then ask in #fp-ops before reaching
