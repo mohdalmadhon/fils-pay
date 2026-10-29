@@ -158,3 +158,21 @@ callback ids.
 >
 > **MK:** the retry window is also ~60 s. Same evidence fits both. Callback
 > dedupe is the fix we can verify; we've had no doubles since.
+
+
+## Addendum (2026-10-29): the root cause above was wrong
+
+The double captures were not caused by duplicate acquirer callbacks. Callbacks
+only write `acquirer_callback_notes`; they never capture. The cause was the
+payment-link reservation itself (`apps/api/src/paymentLinks/pay.ts`): a
+reservation older than the 60-second timeout could be taken over by the next
+buyer while the first buyer's slow capture was still running. Both captured,
+and the loser's finalize answered 200 anyway. That matches AM's notes above:
+every double had a first attempt over 60 s, and 16 of 17 transactions had one
+callback note. Action item 2 (a constraint allowing one successful capture
+per link) was never actually added.
+
+Fixed by giving each reservation an owner token and capturing and finalizing
+in one transaction under the link's row lock. See
+`docs/fixes/payment-link-double-charge.md`. Callback deduplication was also
+missing despite action item 1; see `docs/fixes/acquirer-callback-duplicate-notes.md`.
