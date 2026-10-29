@@ -84,6 +84,9 @@ interface DueEventRow {
  * delivers events going forward from registration, not a backfill — a
  * freshly-created endpoint must never receive events that
  * were already sitting in the outbox before it existed.
+ *
+ * Events marked `superseded_by` (duplicates that should never have been
+ * enqueued, see migration 0075 and incident 2026-08-21) get no deliveries.
  */
 async function createMissingDeliveries(pool: Pool): Promise<number> {
   return withTransaction(pool, async (client) => {
@@ -96,6 +99,7 @@ async function createMissingDeliveries(pool: Pool): Promise<number> {
           AND we.status = 'active'
           AND oe.created_at >= we.created_at
         WHERE oe.event_type = ANY($1::text[])
+          AND oe.superseded_by IS NULL
           AND NOT EXISTS (
             SELECT 1 FROM webhook_deliveries wd
              WHERE wd.outbox_event_id = oe.id AND wd.endpoint_id = we.id
