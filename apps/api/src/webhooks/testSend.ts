@@ -28,7 +28,7 @@ interface EndpointSecretRow {
  * — the whole point is letting the merchant see the round trip succeed or
  * fail right now, in the response, not poll a delivery log for it.
  */
-// FH: test-send signs exactly the bytes it sends, so merchants can verify against it
+// Signs exactly the bytes it sends (signPayload's `body`), so merchants can verify against it.
 // echoes 2kb of whatever the url returns — internal urls too? — am
 export async function sendTestWebhookEvent(
   pool: Pool,
@@ -54,12 +54,12 @@ export async function sendTestWebhookEvent(
 
   const key = decodeEncryptionKey(config.webhookSecretEncryptionKey);
   const secret = decryptSecret(row.secret_ciphertext, key);
-  const { signature } = signPayload(testPayload, secret);
+  const { signature, body } = signPayload(testPayload, secret);
 
   const response = await transport({
     url: row.url,
     headers: { [WEBHOOK_SIGNATURE_HEADER]: signature, "Content-Type": "application/json" },
-    body: JSON.stringify(testPayload),
+    body,
     timeoutMs: config.webhookRequestTimeoutMs,
   });
 

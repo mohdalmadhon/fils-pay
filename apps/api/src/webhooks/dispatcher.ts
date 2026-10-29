@@ -155,7 +155,10 @@ async function attemptOneDelivery(
 ): Promise<void> {
   const key = decodeEncryptionKey(config.webhookSecretEncryptionKey);
   const secret = decryptSecret(row.secret_ciphertext, key);
-  const { signature } = signPayload(row.payload, secret);
+  // Sign once and send exactly the signed string. Re-serializing the payload
+  // here (it comes back from jsonb in Postgres's own key order) would send
+  // different bytes from the ones signed, and no receiver could verify it.
+  const { signature, body } = signPayload(row.payload, secret);
 
   if (row.attempt_count === 0) {
     const effect = PRE_DELIVERY_EFFECTS[row.event_type];
@@ -169,7 +172,7 @@ async function attemptOneDelivery(
       [WEBHOOK_DELIVERY_ID_HEADER]: row.delivery_event_id,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(row.payload),
+    body,
     timeoutMs: config.webhookRequestTimeoutMs,
   });
 
