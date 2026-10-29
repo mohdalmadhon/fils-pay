@@ -155,7 +155,11 @@ function addOneCalendarDay(dateStr: string): string {
  * freezes the batch, marks events batched, writes truncated
  * scheme_export_lines, and posts the payout ledger legs.
  */
-async function closeAndPayoutBatch(merchantId: string, businessDate: string): Promise<string> {
+async function closeAndPayoutBatch(
+  merchantId: string,
+  businessDate: string,
+  options: { payoutAt?: Date } = {},
+): Promise<string> {
   const start = bahrainLocalMidnightUtc(businessDate);
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
   // In real operation the daemon runs CloseBatch+PayoutBatch for a
@@ -169,7 +173,10 @@ async function closeAndPayoutBatch(merchantId: string, businessDate: string): Pr
   // scoped to exactly one business day sees only that day's capture
   // activity, not a same-day payout reversal it would never see in
   // production.
-  const payoutOccurredAt = new Date(end.getTime() + 12 * 60 * 60 * 1000);
+  // `options.payoutAt` lets a test put the payout exactly where it wants it
+  // (inside the window, or the next morning) to check reconciliation is not
+  // thrown by where the payout legs land.
+  const payoutOccurredAt = options.payoutAt ?? new Date(end.getTime() + 12 * 60 * 60 * 1000);
 
   await pool.query(
     `INSERT INTO settlement_batches (merchant_id, batch_date, status)
@@ -383,6 +390,33 @@ test("GET /v1/settlement/reconciliation reports gapFils === 0 for a fully-batche
   const expectedNet = Number(subtractFils(toFils(expectedGross), toFils(expectedFee)));
   assert.equal(report.settlementNetPayoutFils, expectedNet);
   assert.equal(report.ledgerMerchantPayableNetFils, expectedNet);
+});
+
+test("GET /v1/settlement/reconciliation still explains to zero when the payout lands inside the period", async () => {
+  // A batch closed and paid on the same day (a manual run-batch, or the
+  // admin console's re-run) posts its payout legs inside the very window
+  // being reconciled. The payout is the settlement side of the comparison,
+  // not something the merchant earned, so it must not show up as a gap.
+  const { merchantId, rawKey } = await createApprovedMerchantWithApiKey("reconciliation-same-day-payout", 250);
+  const txn = await authorize(rawKey, 47_333);
+  await capture(rawKey, txn.id);
+
+  const businessDate = todayBahrainDateString();
+  await closeAndPayoutBatch(merchantId, businessDate, { payoutAt: new Date() });
+
+  const res = await app.inject({
+    method: "GET",
+    url: `/v1/settlement/reconciliation?from=${businessDate}&to=${addOneCalendarDay(businessDate)}`,
+    headers: authHeader(rawKey),
+  });
+  assert.equal(res.statusCode, 200, res.body);
+  const report = res.json() as { gapFils: number; explained: boolean; ledgerMerchantPayableNetFils: number; settlementNetPayoutFils: number };
+
+  const expectedNet = 47_333 - Number(applyRateFils(toFils(47_333), 250));
+  assert.equal(report.settlementNetPayoutFils, expectedNet);
+  assert.equal(report.ledgerMerchantPayableNetFils, expectedNet, "the payout debit is not part of what the merchant earned");
+  assert.equal(report.gapFils, 0);
+  assert.equal(report.explained, true);
 });
 
 // merchant in this fixture has no discount and no schedule row, so the float path is exact here — MK
