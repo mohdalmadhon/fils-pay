@@ -4,6 +4,65 @@ All notable changes to FilsPay. Dates are deploy dates (Asia/Bahrain).
 Versions are the API image tag; settlement and reporting are versioned with
 it. Format loosely follows Keep a Changelog.
 
+## [Unreleased]
+
+Hackathon work, 2026-10-29 to 2026-10-30. Not yet deployed. Every fix has a
+write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
+
+### Added
+- New interface for the merchant dashboard, checkout and Ops console ("Ledger"
+  design system): Ctrl+K command palette, light and night themes, and a
+  Halloween costume toggle (`docs/design/README.md`).
+- `scripts/e2e/payment-check.mjs`: one-command end-to-end payment check, from
+  link to payout, with PASS/FAIL per step
+  (`docs/verification/end-to-end-2026-10-30.md`).
+- `db/migrate.integration.test.ts`: every migration must apply to an empty
+  database.
+
+### Fixed
+- **Database:** a fresh `npm run migrate` stopped at 0054, so 0055–0077 never
+  applied (`fresh-migrations`). Existing databases catch up with a plain
+  migrate.
+- **Ledger:** the scheme rounding residue (0-9 fils per exported line) is
+  now journalled at batch close, as ADR 0002 required
+  (`scheme-rounding-residue`). Batches closed earlier need a finance-reviewed
+  back-fill.
+- **Reconciliation:**
+  - no longer reports payouts as a gap (`reconciliation-payout-legs`)
+  - prices pending captures at the fee schedule actually in effect (`reconciliation-pending-rate`)
+- **Browser apps:** the dashboards can reach the API. Adds `CORS_ALLOWED_ORIGINS` (`browser-cors`).
+- **Payments and refunds:**
+  - payment links: expiry is judged on the server clock (`payment-link-expiry`) and a link can't be charged twice (`payment-link-double-charge`)
+  - concurrent refunds can't pay out twice (`concurrent-refunds`)
+  - refunds don't give back more fee than was charged (`refund-fee-over-reversal`)
+- **Settlement:**
+  - the daily close runs at Bahrain midnight (`daily-close-timing`)
+  - split payouts conserve every fil (`split-payout-rounding`)
+  - payout notifications are sent once (`duplicate-payout-notifications`)
+  - the balance rebuild reads the ledger (`balance-cache-rebuild-source`)
+- **Webhooks and the acquirer:** signatures verify over the exact bytes sent
+  (`webhook-signatures`), and acquirer callback notes are deduplicated
+  (`acquirer-callback-duplicate-notes`).
+- **Admin:**
+  - role checks on every admin action (`admin-role-checks`)
+  - API key rotation retires the old key (`api-key-rotation`)
+  - status recompute leaves test merchants in test mode (`recompute-made-test-merchants-live`)
+  - adjustment imports read amounts as BD with three decimals (`adjustment-import-amounts`)
+- **Security:** OTP codes are no longer guessable (`otp-safety`).
+- **Performance:** large exports and uploads (`large-exports`), and slow reporting queries (`slow-dashboard-queries`).
+- **Finance problems 001-013:** fixed and documented in `docs/solved-problems/`.
+
+### Known issues
+- Recorded in `docs/fixes/reconciliation-pending-rate.md`:
+  - payment-link captures don't get the negotiated discount posted
+  - capture and settlement apply the discount with different formulas
+  - fee-schedule tie-breaks differ between the API and settlement
+- Test failures that predate this work, listed in the verification report:
+  - 2 API tests
+  - 4 `RecalculateMDR` Go tests
+  - 4 reporting tests
+- The Dilmun Cloud deployment is not yet verified.
+
 ## [1.9.2] - 2026-09-12
 
 ### Changed
