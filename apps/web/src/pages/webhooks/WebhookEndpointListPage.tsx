@@ -9,7 +9,7 @@ import { describeError } from "../../api/client.js";
 import { useDashboardAuth } from "../../auth/DashboardAuthContext.js";
 import { dateTime } from "../../format.js";
 import type { WebhookEndpointDto } from "../../types.js";
-import { EmptyState, ErrorBanner, Loading } from "../../components/ui.js";
+import { EmptyState, ErrorBanner, Loading, statusLabel } from "../../components/ui.js";
 
 /**
  * `GET /v1/merchants/:merchantId/webhook-endpoints`. Unlike most
@@ -118,7 +118,7 @@ export function WebhookEndpointListPage() {
                 <code>{endpoint.secretPrefix}</code>
               </td>
               <td>
-                <span className={`dash-status dash-status-${endpoint.status}`}>{endpoint.status}</span>
+                <span className={`dash-status dash-status-${endpoint.status}`}>{statusLabel(endpoint.status)}</span>
               </td>
               <td>{dateTime(endpoint.createdAt)}</td>
               <td>

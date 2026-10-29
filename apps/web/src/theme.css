@@ -205,7 +205,9 @@ code {
 .fp-sea-sky {
   position: absolute;
   inset: 0;
-  background: radial-gradient(40% 25% at 78% 18%, rgba(255, 236, 190, 0.35), transparent 70%);
+  background:
+    radial-gradient(40% 25% at 78% 18%, rgba(255, 236, 190, 0.3), transparent 70%),
+    radial-gradient(55% 22% at 72% calc(100% - 118px), rgba(240, 200, 120, 0.42), transparent 75%);
   z-index: -1;
 }
 
@@ -214,8 +216,8 @@ code {
   width: 92px;
   right: 14%;
   bottom: 96px;
-  color: #06222a;
-  opacity: 0.85;
+  color: #031418;
+  opacity: 0.92;
   animation: fp-bob 7s ease-in-out infinite;
   z-index: 1;
 }
@@ -255,13 +257,15 @@ code {
   filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.35));
 }
 
-.fp-sea-pearl-0 { left: 8%; animation-delay: 0s; }
-.fp-sea-pearl-1 { left: 22%; animation-delay: 4s; animation-duration: 17s; }
-.fp-sea-pearl-2 { left: 38%; animation-delay: 9s; }
-.fp-sea-pearl-3 { left: 54%; animation-delay: 2s; animation-duration: 19s; }
-.fp-sea-pearl-4 { left: 66%; animation-delay: 6s; }
-.fp-sea-pearl-5 { left: 80%; animation-delay: 11s; animation-duration: 16s; }
-.fp-sea-pearl-6 { left: 92%; animation-delay: 7s; animation-duration: 21s; }
+/* Negative delays: the pearls are already spread through the water on first
+   paint instead of all starting at the bottom together. */
+.fp-sea-pearl-0 { left: 8%; animation-delay: -3s; }
+.fp-sea-pearl-1 { left: 22%; animation-delay: -9s; animation-duration: 17s; }
+.fp-sea-pearl-2 { left: 38%; animation-delay: -5s; }
+.fp-sea-pearl-3 { left: 54%; animation-delay: -12s; animation-duration: 19s; }
+.fp-sea-pearl-4 { left: 63%; animation-delay: -1s; }
+.fp-sea-pearl-5 { left: 80%; animation-delay: -7s; animation-duration: 16s; }
+.fp-sea-pearl-6 { left: 92%; animation-delay: -14s; animation-duration: 21s; }
 
 @keyframes fp-rise {
   0% {
@@ -369,5 +373,18 @@ code {
   }
   .fp-sea-pearl {
     display: none;
+  }
+}
+
+/* On phones the sea panel is short: keep the dhow small and low, and the
+   pearls below the text. */
+@media (max-width: 900px) {
+  .fp-sea-dhow {
+    width: 52px;
+    right: 6%;
+    bottom: 62px;
+  }
+  .fp-sea-pearls {
+    top: 55%;
   }
 }

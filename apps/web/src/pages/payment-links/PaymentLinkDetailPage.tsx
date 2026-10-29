@@ -6,7 +6,7 @@ import { useDashboardAuth } from "../../auth/DashboardAuthContext.js";
 import { RequireRole } from "../../auth/RequireRole.js";
 import { bhd, dash, dateTime } from "../../format.js";
 import type { PaymentLinkDto } from "../../types.js";
-import { Loading, StatePanel } from "../../components/ui.js";
+import { Loading, StatePanel, statusLabel } from "../../components/ui.js";
 
 /** The list endpoint's own maximum page size. */
 const LOOKUP_LIMIT = 100;
@@ -126,7 +126,7 @@ export function PaymentLinkDetailPage() {
         <dd>{link.currency}</dd>
         <dt>Status</dt>
         <dd>
-          <span className={`dash-status dash-status-${link.status}`}>{link.status}</span>
+          <span className={`dash-status dash-status-${link.status}`}>{statusLabel(link.status)}</span>
         </dd>
         <dt>Reference</dt>
         <dd>{dash(link.reference)}</dd>

@@ -47,12 +47,17 @@
 }
 
 .dash-merchant-user {
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
   font-size: var(--fp-step--1);
   color: #a9c6c2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+}
+
+.dash-merchant-user .dash-role-chip {
+  margin-left: 0;
 }
 
 .dash-nav {
@@ -417,6 +422,24 @@
 
 .dash-filters input[type="search"] {
   min-width: min(22rem, 100%);
+}
+
+@media (max-width: 640px) {
+  .dash-filters label:not(:has(input[type="checkbox"])) {
+    flex: 1 1 100%;
+  }
+  .dash-filters input:not([type="checkbox"]),
+  .dash-filters select {
+    width: 100%;
+    min-width: 0;
+  }
+  .dash-form-inline > * {
+    flex: 1 1 100%;
+  }
+  .dash-form-inline input,
+  .dash-form-inline select {
+    width: 100%;
+  }
 }
 
 /* Tables ----------------------------------------------------------------- */
@@ -819,7 +842,8 @@
 }
 
 .dash-login-pitch {
-  max-width: 28rem;
+  max-width: 30rem;
+  margin-top: auto;
 }
 
 .dash-login-pitch h2 {
@@ -982,4 +1006,63 @@
   min-height: 100vh;
   display: grid;
   place-items: center;
+}
+
+/* Standalone pages (404, crash) ------------------------------------------ */
+
+.fp-standalone {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 40% at 50% 0%, rgba(20, 122, 120, 0.1), transparent 70%),
+    var(--fp-nacre);
+}
+
+.fp-standalone-head {
+  padding: 1.5rem 2rem;
+}
+
+.fp-wordmark-link {
+  color: var(--fp-abyss);
+  text-decoration: none;
+}
+
+.fp-standalone main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 6rem;
+}
+
+.fp-standalone-tide {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 200%;
+  color: var(--fp-lagoon);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.fp-error-detail {
+  margin-top: 0.5rem;
+  font-size: 0.88rem;
+  color: var(--fp-ink-3);
+  text-align: left;
+}
+
+.fp-error-detail summary {
+  cursor: pointer;
+  text-align: center;
+}
+
+.dash-login-sea > .fp-sea-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
 }

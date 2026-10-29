@@ -5,7 +5,7 @@ import { describeError } from "../../api/client.js";
 import { Pagination } from "../../components/Pagination.js";
 import { bhd, dateTime } from "../../format.js";
 import type { SettlementBatchDto, SettlementBatchStatus } from "../../types.js";
-import { EmptyState, ErrorBanner, Loading } from "../../components/ui.js";
+import { EmptyState, ErrorBanner, Loading, statusLabel } from "../../components/ui.js";
 
 const STATUSES: SettlementBatchStatus[] = ["open", "closed", "paid"];
 const PAGE_SIZE = 25;
@@ -87,7 +87,7 @@ export function SettlementBatchListPage() {
               checked={statuses.includes(status)}
               onChange={() => toggleStatus(status)}
             />
-            {status}
+            {statusLabel(status)}
           </label>
         ))}
       </fieldset>
@@ -113,7 +113,7 @@ export function SettlementBatchListPage() {
                 <Link to={`/dashboard/settlement/${batch.id}`}>{batch.batchDate}</Link>
               </td>
               <td>
-                <span className={`dash-status dash-status-${batch.status}`}>{batch.status}</span>
+                <span className={`dash-status dash-status-${batch.status}`}>{statusLabel(batch.status)}</span>
               </td>
               <td>{bhd(batch.grossFils)}</td>
               <td>{bhd(batch.feeFils)}</td>

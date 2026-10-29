@@ -4,7 +4,7 @@ import { getSettlementBatch, getSettlementBatchTransactions } from "../../api/se
 import { ApiError, describeError } from "../../api/client.js";
 import { bhd, dash, dateTime } from "../../format.js";
 import type { SettlementBatchDetailDto, SettlementBatchTransactionDto } from "../../types.js";
-import { EmptyState, Loading, StatePanel } from "../../components/ui.js";
+import { EmptyState, Loading, StatePanel, statusLabel } from "../../components/ui.js";
 
 type LoadState =
   | { kind: "loading" }
@@ -104,7 +104,7 @@ export function SettlementBatchDetailPage() {
       <dl className="dash-dl">
         <dt>Status</dt>
         <dd>
-          <span className={`dash-status dash-status-${batch.status}`}>{batch.status}</span>
+          <span className={`dash-status dash-status-${batch.status}`}>{statusLabel(batch.status)}</span>
         </dd>
         <dt>Gross</dt>
         <dd>{bhd(batch.grossFils)}</dd>

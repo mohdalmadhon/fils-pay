@@ -170,13 +170,22 @@ export function Scene({ name, className }: { name: SceneName; className?: string
       // A dhow adrift with no land in sight: page not found.
       return (
         <svg className={cls} viewBox="0 0 200 140" aria-hidden focusable={false}>
-          <circle cx="160" cy="30" r="12" fill="var(--fp-gold, #c79a2b)" opacity="0.35" />
-          {water}
-          <g transform="translate(55 30) rotate(-8 45 50)" color="var(--fp-abyss, #0b2e35)">
-            <Dhow />
+          <circle cx="160" cy="32" r="13" fill="var(--fp-gold, #c79a2b)" opacity="0.35" />
+          <g color="var(--fp-abyss, #0b2e35)">
+            <svg x="58" y="20" width="96" height="72" viewBox="0 0 120 90" overflow="visible">
+              <g transform="rotate(-9 60 70)">
+                <Dhow />
+              </g>
+            </svg>
           </g>
-          <path d="M30 124 q10-6 20 0 M150 128 q10-6 20 0" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" />
-          <text x="24" y="40" fontSize="20" fill="var(--fp-abyss, #0b2e35)" opacity="0.35" fontWeight="700">?</text>
+          <path
+            d="M0 100 Q 25 92 50 100 T 100 100 T 150 100 T 200 100 V140 H0Z"
+            fill="var(--fp-lagoon-soft, #cfe5e3)"
+          />
+          <path d="M0 116 Q 25 108 50 116 T 100 116 T 150 116 T 200 116 V140 H0Z" fill="#b9d9d5" />
+          <path d="M28 126 q10-6 20 0 M146 130 q10-6 20 0" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" />
+          <circle cx="36" cy="40" r="3" fill="var(--fp-abyss, #0b2e35)" opacity="0.2" />
+          <circle cx="48" cy="30" r="2" fill="var(--fp-abyss, #0b2e35)" opacity="0.15" />
         </svg>
       );
     case "locked":

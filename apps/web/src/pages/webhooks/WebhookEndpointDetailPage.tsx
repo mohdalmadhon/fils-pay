@@ -6,7 +6,7 @@ import { useDashboardAuth } from "../../auth/DashboardAuthContext.js";
 import { Pagination } from "../../components/Pagination.js";
 import { dash, dateTime } from "../../format.js";
 import type { WebhookDeliveryDto, WebhookDeliveryStatus, WebhookEndpointDto } from "../../types.js";
-import { EmptyState, ErrorBanner, Loading, StatePanel } from "../../components/ui.js";
+import { EmptyState, ErrorBanner, Loading, StatePanel, statusLabel } from "../../components/ui.js";
 
 /** `webhook_deliveries.status`' four CHECK values. Note the dispatcher only
  *  ever writes `succeeded`/`exhausted` — a row awaiting its next attempt
@@ -138,7 +138,7 @@ export function WebhookEndpointDetailPage() {
           </dd>
           <dt>Status</dt>
           <dd>
-            <span className={`dash-status dash-status-${endpoint.status}`}>{endpoint.status}</span>
+            <span className={`dash-status dash-status-${endpoint.status}`}>{statusLabel(endpoint.status)}</span>
           </dd>
           <dt>Created at</dt>
           <dd>{dateTime(endpoint.createdAt)}</dd>
@@ -158,7 +158,7 @@ export function WebhookEndpointDetailPage() {
               checked={statuses.includes(status)}
               onChange={() => toggleStatus(status)}
             />
-            {status}
+            {statusLabel(status)}
           </label>
         ))}
       </fieldset>

@@ -6,7 +6,7 @@ import { Pagination } from "../../components/Pagination.js";
 import { bhd, dash, dateTime, dayStartIso } from "../../format.js";
 import { classNames, pluralize, truncateMiddle } from "../../utils/helpers.js";
 import type { TransactionDto, TransactionStatus } from "../../types.js";
-import { EmptyState, ErrorBanner, Loading } from "../../components/ui.js";
+import { EmptyState, ErrorBanner, Loading, statusLabel } from "../../components/ui.js";
 
 const STATUSES: TransactionStatus[] = [
   "authorized",
@@ -95,7 +95,7 @@ export function TransactionListPage() {
               checked={statuses.includes(status)}
               onChange={() => toggleStatus(status)}
             />
-            {status}
+            {statusLabel(status)}
           </label>
         ))}
       </fieldset>
@@ -148,7 +148,7 @@ export function TransactionListPage() {
               </td>
               <td>{dash(txn.reference)}</td>
               <td>
-                <span className={classNames("dash-status", `dash-status-${txn.status}`)}>{txn.status}</span>
+                <span className={classNames("dash-status", `dash-status-${txn.status}`)}>{statusLabel(txn.status)}</span>
               </td>
               <td>{bhd(txn.amountFils)}</td>
               <td>{bhd(txn.capturedFils)}</td>

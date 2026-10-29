@@ -10,7 +10,7 @@ import { ApiError, describeError } from "../../api/client.js";
 import { RequireRole } from "../../auth/RequireRole.js";
 import { bhd, dash, dateTime } from "../../format.js";
 import type { TransactionDto, TransactionEventDto } from "../../types.js";
-import { EmptyState, Loading, StatePanel } from "../../components/ui.js";
+import { EmptyState, Loading, StatePanel, statusLabel } from "../../components/ui.js";
 
 type LoadState =
   | { kind: "loading" }
@@ -151,7 +151,7 @@ export function TransactionDetailPage() {
       <dl className="dash-dl">
         <dt>Status</dt>
         <dd>
-          <span className={`dash-status dash-status-${txn.status}`}>{txn.status}</span>
+          <span className={`dash-status dash-status-${txn.status}`}>{statusLabel(txn.status)}</span>
         </dd>
         <dt>Authorized amount</dt>
         <dd>{bhd(txn.amountFils)}</dd>

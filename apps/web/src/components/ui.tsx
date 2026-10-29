@@ -5,6 +5,12 @@ import { useEffect, type ReactNode } from "react";
 import { formatBhd, toFils } from "@filspay/money";
 import { Scene, type SceneName } from "./art/Art.js";
 
+/** "partially_captured" -> "Partially captured". */
+export function statusLabel(status: string): string {
+  const words = status.replace(/_/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 /** Sets the browser tab title: "Transactions · FilsPay". */
 export function usePageTitle(title: string | null | undefined, app = "FilsPay"): void {
   useEffect(() => {

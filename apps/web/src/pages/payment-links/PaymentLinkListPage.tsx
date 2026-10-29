@@ -7,7 +7,7 @@ import { RequireRole } from "../../auth/RequireRole.js";
 import { Pagination } from "../../components/Pagination.js";
 import { bhd, dash, dateTime } from "../../format.js";
 import type { PaymentLinkDto, PaymentLinkStatus } from "../../types.js";
-import { EmptyState, ErrorBanner, Loading } from "../../components/ui.js";
+import { EmptyState, ErrorBanner, Loading, statusLabel } from "../../components/ui.js";
 
 /** The four *stored* statuses, including `reserved` — the merchant-facing
  *  list deliberately exposes it distinctly rather than collapsing it into the
@@ -84,7 +84,7 @@ export function PaymentLinkListPage() {
               checked={statuses.includes(status)}
               onChange={() => toggleStatus(status)}
             />
-            {status}
+            {statusLabel(status)}
           </label>
         ))}
       </fieldset>
@@ -112,7 +112,7 @@ export function PaymentLinkListPage() {
               <td>{dash(link.description)}</td>
               <td>{bhd(link.amountFils)}</td>
               <td>
-                <span className={`dash-status dash-status-${link.status}`}>{link.status}</span>
+                <span className={`dash-status dash-status-${link.status}`}>{statusLabel(link.status)}</span>
               </td>
               <td>{dateTime(link.expiresAt)}</td>
               <td>{dateTime(link.paidAt)}</td>
