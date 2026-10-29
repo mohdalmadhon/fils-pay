@@ -488,6 +488,33 @@ test("GET /v1/settlement/reconciliation with an unbatched capture reports it as 
   assert.equal(report.explained, true);
 });
 
+test("GET /v1/settlement/reconciliation prices a pending capture at the merchant's negotiated schedule", async () => {
+  // merchants.mdr_bps = 250 is only the fallback; the schedule says 225 bps
+  // since yesterday, and capture charges 225. Pending must use 225 too.
+  const { merchantId, rawKey } = await createApprovedMerchantWithApiKey("reconciliation-schedule", 250);
+  await pool.query(
+    `INSERT INTO fee_schedules (merchant_id, mdr_bps, effective_from) VALUES ($1, 225, now() - interval '1 day')`,
+    [merchantId],
+  );
+  const txn = await authorize(rawKey, 12_345);
+  await capture(rawKey, txn.id);
+
+  const businessDate = todayBahrainDateString();
+  const res = await app.inject({
+    method: "GET",
+    url: `/v1/settlement/reconciliation?from=${businessDate}&to=${addOneCalendarDay(businessDate)}`,
+    headers: authHeader(rawKey),
+  });
+  assert.equal(res.statusCode, 200, res.body);
+  const report = res.json() as { gapFils: number; explained: boolean; pendingUnbatchedFils: number; ledgerMerchantPayableNetFils: number };
+
+  const feeAt225 = Number(applyRateFils(toFils(12_345), 225)); // 278
+  assert.equal(report.ledgerMerchantPayableNetFils, 12_345 - feeAt225, "capture charged the schedule rate");
+  assert.equal(report.pendingUnbatchedFils, 12_345 - feeAt225, "pending uses the schedule rate, not merchants.mdr_bps");
+  assert.equal(report.gapFils, 0);
+  assert.equal(report.explained, true);
+});
+
 test("GET /v1/settlement/summary sums captured amounts for transactions with a single capture event", async () => {
   const { rawKey } = await createApprovedMerchantWithApiKey("summary-single-event", 250);
   const txn1 = await authorize(rawKey, 10_000);
