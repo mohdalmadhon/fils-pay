@@ -250,6 +250,12 @@ export async function listBatchTransactions(
  * gapFils = ledgerMerchantPayableNetFils - settlementNetPayoutFils -
  * pendingUnbatchedFils. Refund legs are included both in the ledger figure
  * and in pending, so a period with refunds still explains to zero.
+ *
+ * ledgerMerchantPayableNetFils is what the merchant EARNED in the period
+ * (captures, fees, refunds, adjustments), not what was paid out: payout legs
+ * (PayoutBatch and split payouts, the only merchant_payable legs that carry
+ * a settlement_batch_id) are the settlement side of the comparison and are
+ * left out, or every period containing a payout would show it as a gap.
  */
 export interface ReconciliationReport {
   periodFrom: string;
@@ -290,6 +296,7 @@ export async function getReconciliationReport(
       `SELECT COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount_fils ELSE -amount_fils END), 0) AS net
          FROM ledger_entries
         WHERE merchant_id = $1 AND account_id = 'merchant_payable'
+          AND settlement_batch_id IS NULL
           AND occurred_at >= $2 AND occurred_at < $3`,
       [input.merchantId, windowStart, windowEnd],
     ),
