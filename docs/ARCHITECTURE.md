@@ -66,6 +66,10 @@ a `Webhook-Delivery-Id` and is signed with HMAC-SHA256.
 
 - Merchant login is password then OTP. The pending session grants nothing
   until the OTP is verified.
+  Protected session lookup requires `authenticated = true`, no revocation,
+  and a future expiry directly on `sessions`; membership in `live_sessions`
+  alone does not establish authentication. See the
+  [OTP bypass investigation](solved-problems/007-merchant-otp-session-gate.md).
 - Merchant-scoped queries take the merchant from the authenticated context.
 - Outbound webhook signatures are HMAC-SHA256 compared in constant time.
 - KYC uploads are validated by detected content type (magic bytes).

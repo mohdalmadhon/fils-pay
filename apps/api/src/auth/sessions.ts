@@ -74,7 +74,11 @@ export interface AuthenticatedSessionLookup {
   role: "owner" | "finance" | "support";
 }
 
-/** Resolves a session token to its user. */
+/**
+ * Resolves only OTP-verified, unrevoked, unexpired merchant sessions.
+ * Query the base table with the full auth predicate: live_sessions also
+ * contains pending sessions, since being live does not prove OTP completion.
+ */
 export async function lookupSession(
   pool: Pool,
   rawToken: string,
@@ -87,9 +91,12 @@ export async function lookupSession(
     role: "owner" | "finance" | "support";
   }>(
     `SELECT s.id AS session_id, s.merchant_user_id, mu.merchant_id, mu.role
-       FROM live_sessions s
+       FROM sessions s
        JOIN merchant_users mu ON mu.id = s.merchant_user_id
-      WHERE s.token_hash = $1`,
+      WHERE s.token_hash = $1
+        AND s.authenticated = true
+        AND s.revoked_at IS NULL
+        AND s.expires_at > now()`,
     [tokenHash],
   );
   const row = result.rows[0];
