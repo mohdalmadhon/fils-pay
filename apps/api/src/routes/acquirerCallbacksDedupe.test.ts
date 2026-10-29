@@ -64,7 +64,7 @@ function body(transactionId: string, callbackId: string): AcquirerCallbackInput 
 }
 
 function signed(payload: unknown) {
-  const timestamp = 1_757_930_000;
+  const timestamp = Math.floor(Date.now() / 1000);
   const signature = createHmac("sha256", ACQUIRER_SECRET)
     .update(`${timestamp}.${JSON.stringify(payload)}`)
     .digest("hex");
