@@ -77,6 +77,15 @@
  * buttons and generous rounding. Unbounded for display type. */
 :root,
 :root[data-design="carnival"] {
+  --side-bg: #1f2672;
+  --side-surface: #283090;
+  --side-surface-3: #323ba3;
+  --side-line: #3b45ad;
+  --side-ink: #f6f5ff;
+  --side-ink-2: #d9dbfa;
+  --side-ink-3: #bfc3f2;
+  --side-active-bg: #ffb42e;
+  --side-active-ink: #151a52;
   color-scheme: light;
   --font-display: "Unbounded Variable", "Geist", system-ui, sans-serif;
   --display-tracking: -0.01em; /* Unbounded is wide already */
@@ -127,6 +136,9 @@
 
 :root:not([data-design])[data-theme="night"],
 :root[data-design="carnival"][data-theme="night"] {
+  --side-bg: #171d5e;
+  --side-surface: #222a85;
+  --side-surface-3: #2b3496;
   color-scheme: dark;
   --c-bg: #1f2672;
   --c-surface: #283090;
@@ -165,6 +177,15 @@
  * warm plum, not black, with blush buttons. Bricolage Grotesque for
  * display type. */
 :root[data-design="blush"] {
+  --side-bg: #fbeee9;
+  --side-surface: #fff8f5;
+  --side-surface-3: #f2dcd6;
+  --side-line: #ecd3cc;
+  --side-ink: #151314;
+  --side-ink-2: #3f3a3b;
+  --side-ink-3: #625a5b;
+  --side-active-bg: #151314;
+  --side-active-ink: #fff8f5;
   color-scheme: light;
   --font-display: "Bricolage Grotesque Variable", "Geist", system-ui, sans-serif;
   --display-tracking: -0.035em;
@@ -213,6 +234,15 @@
 }
 
 :root[data-design="blush"][data-theme="night"] {
+  --side-bg: #33272e;
+  --side-surface: #3e3039;
+  --side-surface-3: #4a3943;
+  --side-line: #4e3d47;
+  --side-ink: #fbeee9;
+  --side-ink-2: #e8d3cd;
+  --side-ink-3: #c9b0aa;
+  --side-active-bg: #f2b8b0;
+  --side-active-ink: #2b2127;
   color-scheme: dark;
   --c-bg: #2b2127;
   --c-surface: #382b33;
@@ -254,6 +284,15 @@
  * corners and squarer buttons than the other two. Dark is a mid slate
  * (#26324d), clearly lighter than night-black. Lexend for display type. */
 :root[data-design="slate"] {
+  --side-bg: #2f3d5c;
+  --side-surface: #3a4a6c;
+  --side-surface-3: #44557a;
+  --side-line: #4a5b80;
+  --side-ink: #f1f4fa;
+  --side-ink-2: #d3dbea;
+  --side-ink-3: #c6d0e2;
+  --side-active-bg: #ff6b6b;
+  --side-active-ink: #1e2a46;
   color-scheme: light;
   --font-display: "Lexend Variable", "Geist", system-ui, sans-serif;
   --display-tracking: -0.02em;
@@ -302,6 +341,9 @@
 }
 
 :root[data-design="slate"][data-theme="night"] {
+  --side-bg: #1f2a44;
+  --side-surface: #2a3756;
+  --side-surface-3: #334264;
   color-scheme: dark;
   --c-bg: #26324d;
   --c-surface: #2f3d5c;
@@ -453,6 +495,48 @@ h1 {
 :is(.dash-form button[type="submit"], .dash-button-primary, .dash-button-link, .admin-form button[type="submit"], .admin-button-primary) {
   padding-inline: var(--sp-5);
   font-weight: 600;
+}
+
+/* The sidebar has its own colours: an indigo panel in Carnival, a soft
+ * blush panel in Blush, slate navy in Slate. Redefining the colour tokens
+ * inside it means the merchant chip, search, nav and theme switch all
+ * follow without their own rules. The current page is a coloured pill. */
+:root:not([data-costume="halloween"]) :is(.dash-sidebar, .admin-sidebar) {
+  --c-surface: var(--side-surface);
+  --c-surface-2: var(--side-surface);
+  --c-surface-3: var(--side-surface-3);
+  --c-line: var(--side-line);
+  --c-line-2: var(--side-line);
+  --c-ink: var(--side-ink);
+  --c-ink-2: var(--side-ink-2);
+  --c-ink-3: var(--side-ink-3);
+  --c-ink-4: var(--side-ink-3);
+  color: var(--side-ink);
+  background: var(--side-bg);
+  border-right-color: var(--side-line);
+}
+
+:root:not([data-costume="halloween"]) :is(.dash-nav, .admin-nav) a {
+  border-radius: var(--r-button);
+}
+
+:root:not([data-costume="halloween"]) :is(.dash-nav, .admin-nav) a.active {
+  color: var(--side-active-ink);
+  background: var(--side-active-bg);
+  box-shadow: none;
+}
+
+:root:not([data-costume="halloween"]) :is(.dash-nav, .admin-nav) a.active svg {
+  color: currentColor;
+}
+
+:root:not([data-costume="halloween"]) :is(.dash-nav, .admin-nav) a.active::before {
+  display: none;
+}
+
+:root:not([data-costume="halloween"]) :is(.dash-merchant-avatar, .admin-identity-avatar) {
+  color: var(--side-active-ink);
+  background: var(--side-active-bg);
 }
 
 /* Page backdrops. Carnival and Slate get a dot grid in the top corner

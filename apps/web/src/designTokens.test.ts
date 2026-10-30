@@ -71,6 +71,15 @@ const REQUIRED = [
   "--c-danger-soft",
   "--c-neutral-soft",
   "--font-display",
+  "--side-bg",
+  "--side-surface",
+  "--side-surface-3",
+  "--side-line",
+  "--side-ink",
+  "--side-ink-2",
+  "--side-ink-3",
+  "--side-active-bg",
+  "--side-active-ink",
 ];
 
 /** [text token, background token]: the pairs components actually draw. */
@@ -89,6 +98,11 @@ const PAIRS: Array<[string, string]> = [
   ["--c-warn", "--c-surface"],
   ["--c-danger", "--c-surface"],
   ["--c-ink-2", "--c-neutral-soft"],
+  // The sidebar has its own colours (indigo in Carnival, slate in Slate).
+  ...["--side-ink", "--side-ink-2", "--side-ink-3"].flatMap((ink) =>
+    ["--side-bg", "--side-surface", "--side-surface-3"].map((bg): [string, string] => [ink, bg]),
+  ),
+  ["--side-active-ink", "--side-active-bg"],
 ];
 
 for (const design of DESIGNS) {
