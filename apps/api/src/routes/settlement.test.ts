@@ -154,7 +154,8 @@ function addOneCalendarDay(dateStr: string): string {
  * bound, so a late capture from an earlier day is swept in, as CloseBatch
  * does), recomputes fee PER EVENT (via the
  * same `applyRateFils` capture.ts and CloseBatch both use) then sums,
- * freezes the batch, marks events batched, writes truncated
+ * claims refunds and subtracts them from the net payout, freezes the
+ * batch, marks events batched, writes truncated
  * scheme_export_lines, and posts the payout ledger legs.
  */
 async function closeAndPayoutBatch(
@@ -229,7 +230,24 @@ async function closeAndPayoutBatch(
     batchFee += feeFils;
     eventIds.push(row.id);
   }
-  const netPayout = batchGross - batchFee;
+  // CloseBatch also claims the merchant's unbatched succeeded refunds before
+  // the window end, oldest first, skipping any that would push the net below
+  // zero (carried forward), and pays out that much less.
+  const refundsResult = await pool.query<{ id: string; net_fils: string }>(
+    `SELECT id, amount_fils - fee_reversed_fils AS net_fils
+       FROM refunds
+      WHERE merchant_id = $1 AND status = 'succeeded' AND settlement_batch_id IS NULL AND occurred_at < $2
+      ORDER BY occurred_at, id`,
+    [merchantId, end],
+  );
+  let netPayout = batchGross - batchFee;
+  const claimedRefundIds: string[] = [];
+  for (const row of refundsResult.rows) {
+    const refundNet = Number(row.net_fils);
+    if (refundNet > netPayout) continue;
+    netPayout -= refundNet;
+    claimedRefundIds.push(row.id);
+  }
 
   await pool.query(
     `UPDATE settlement_batches
@@ -243,6 +261,10 @@ async function closeAndPayoutBatch(
       eventIds,
       batchId,
     ]);
+  }
+
+  if (claimedRefundIds.length > 0) {
+    await pool.query(`UPDATE refunds SET settlement_batch_id = $2 WHERE id = ANY($1::uuid[])`, [claimedRefundIds, batchId]);
   }
 
   for (let i = 0; i < orderedTxnIds.length; i++) {

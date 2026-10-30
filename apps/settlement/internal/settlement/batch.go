@@ -52,6 +52,11 @@ type BatchResult struct {
 	NetPayoutFils money.Fils
 	EventCount    int
 	LineCount     int
+	// RefundCount and RefundNetFils describe the refunds this batch claimed:
+	// NetPayoutFils is already reduced by RefundNetFils (each refund's
+	// amount_fils minus its fee_reversed_fils).
+	RefundCount   int
+	RefundNetFils money.Fils
 }
 
 // PayoutResult is PayoutBatch's return value.
@@ -250,6 +255,18 @@ func CloseBatch(ctx context.Context, db *pgxpool.Pool, merchantID uuid.UUID, bus
 	}
 	netPayout := NetPayableFils(batchGross, batchFee)
 
+	// Step 9: claim the merchant's refunds. processRefund.ts already debited
+	// merchant_payable by each refund (net of the fee it reversed), so the
+	// payout has to be smaller by the same amount or the merchant is paid
+	// for money that went back to the cardholder. Same window rule as the
+	// captures above: every unclaimed succeeded refund before this day's end.
+	refunds, err := claimableRefunds(ctx, tx, merchantID, end)
+	if err != nil {
+		return BatchResult{}, err
+	}
+	claimedRefundIDs, refundNet := chooseRefundsToClaim(refunds, netPayout)
+	netPayout -= refundNet
+
 	// Record this batch's contribution to the platform-wide lifetime
 	// processed-volume counter, in the same transaction that freezes this
 	// batch's own totals — so the counter and the batch it describes
@@ -312,6 +329,16 @@ func CloseBatch(ctx context.Context, db *pgxpool.Pool, merchantID uuid.UUID, bus
 		}
 	}
 
+	// Step 12: mark the claimed refunds as settled by this batch.
+	if len(claimedRefundIDs) > 0 {
+		_, err = tx.Exec(ctx, `
+			UPDATE refunds SET settlement_batch_id = $2 WHERE id = ANY($1)
+		`, claimedRefundIDs, batchID)
+		if err != nil {
+			return BatchResult{}, fmt.Errorf("settlement: CloseBatch: mark refunds batched: %w", err)
+		}
+	}
+
 	// Step 13: enqueue settlement.batch_closed onto the shared outbox, in
 	// the same transaction as the frozen totals.
 	payload, err := buildBatchClosedPayload(merchantID, batchID, batchDateOnly, batchGross, batchFee, netPayout)
@@ -345,7 +372,68 @@ func CloseBatch(ctx context.Context, db *pgxpool.Pool, merchantID uuid.UUID, bus
 		NetPayoutFils: netPayout,
 		EventCount:    len(eventIDs),
 		LineCount:     len(lines),
+		RefundCount:   len(claimedRefundIDs),
+		RefundNetFils: refundNet,
 	}, nil
+}
+
+type claimableRefund struct {
+	id      uuid.UUID
+	netFils money.Fils // amount_fils - fee_reversed_fils
+}
+
+// claimableRefunds locks and returns, oldest first, the merchant's
+// succeeded refunds that no batch has claimed and that happened before
+// `end`. Uses idx_refunds_merchant_unbatched (migration 0042).
+func claimableRefunds(ctx context.Context, tx pgx.Tx, merchantID uuid.UUID, end time.Time) ([]claimableRefund, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT id, amount_fils - fee_reversed_fils
+		  FROM refunds
+		 WHERE merchant_id = $1
+		   AND status = 'succeeded'
+		   AND settlement_batch_id IS NULL
+		   AND occurred_at < $2
+		 ORDER BY occurred_at, id
+		 FOR UPDATE
+	`, merchantID, end)
+	if err != nil {
+		return nil, fmt.Errorf("settlement: CloseBatch: select refunds: %w", err)
+	}
+	defer rows.Close()
+	var out []claimableRefund
+	for rows.Next() {
+		var r claimableRefund
+		var netFils int64
+		if err := rows.Scan(&r.id, &netFils); err != nil {
+			return nil, fmt.Errorf("settlement: CloseBatch: scan refund: %w", err)
+		}
+		r.netFils = money.Fils(netFils)
+		out = append(out, r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("settlement: CloseBatch: iterate refunds: %w", err)
+	}
+	return out, nil
+}
+
+// chooseRefundsToClaim picks which refunds this batch takes, oldest first,
+// so that the net payout never goes below zero. A batch can only pay money
+// out (PayoutBatch posts nothing for net <= 0), so a negative net would
+// record the refund as settled while nobody ever collected it. A refund
+// that does not fit is left unclaimed and carried forward to a later batch
+// with enough captures to cover it; smaller refunds behind it may still be
+// taken now.
+func chooseRefundsToClaim(refunds []claimableRefund, netPayout money.Fils) (ids []uuid.UUID, totalNet money.Fils) {
+	remaining := netPayout
+	for _, r := range refunds {
+		if r.netFils > remaining {
+			continue
+		}
+		ids = append(ids, r.id)
+		totalNet += r.netFils
+		remaining -= r.netFils
+	}
+	return ids, totalNet
 }
 
 // PayoutBatch posts the ledger legs representing an actual payout for an
