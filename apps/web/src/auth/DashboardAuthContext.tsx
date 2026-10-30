@@ -48,9 +48,8 @@ export function writeLastMerchantId(merchantId: string): void {
  * exists so the UI can show the right screen, not so it can decide what is
  * allowed.
  *
- * Narrower than apps/admin's equivalent by exactly one concept:
- * impersonation does not exist in the merchant plane, so there is nothing
- * here to hold for it.
+ * `/v1/auth/me` also answers for an admin's "view as merchant" grant; then
+ * `me.impersonation` is set and `me.email` is null.
  */
 // memory leak here — me() refetched every render? heap grows on overview — am
 // FH: the effect runs once afaict. heap growth is probably the overview page

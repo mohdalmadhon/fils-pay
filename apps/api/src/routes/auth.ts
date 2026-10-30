@@ -4,9 +4,11 @@ import { attemptOtp, consumeOtpChallenge, issueChallenge } from "../auth/otp.js"
 import { requireSession } from "../auth/middleware.js";
 import { sendOtpCode } from "../auth/notifier.js";
 import { canonicalMerchantId, merchantAccountKey, recordAuthFailure, releaseLoginAttempt, reserveLoginAttempt } from "../auth/throttle.js";
+import { lookupImpersonationGrant } from "../admin/impersonation.js";
 import {
   createPendingSession,
   lookupPendingSession,
+  lookupSession,
   promoteSession,
   revokeSession,
 } from "../auth/sessions.js";
@@ -287,14 +289,19 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     reply.code(200).send(responseBody);
   });
 
-  app.get(
-    "/me",
-    { preHandler: requireSession },
-    async (request: FastifyRequest) => {
-      const auth = request.auth;
-      if (!auth) {
-        throw new UnauthorizedError("unauthenticated");
-      }
+  /**
+   * "Who am I" for the dashboard. A real merchant session (fp_sid) wins.
+   * Without one, an admin's "view as merchant" grant (its own cookie, the
+   * one requireMerchantAuth also reads) is accepted, so the dashboard can
+   * open for the operator. That answer has no merchant user behind it:
+   * merchantUserId and email are null, role is what the grant gives
+   * (support, or owner for a super_admin), and `impersonation` is set so
+   * the dashboard shows its banner.
+   */
+  app.get("/me", async (request: FastifyRequest) => {
+    const sessionToken = request.cookies[app.config.cookieName];
+    const session = sessionToken ? await lookupSession(app.db, sessionToken) : null;
+    if (session) {
       const result = await app.db.query<{
         email: string;
         merchant_id: string;
@@ -305,24 +312,49 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
            FROM merchant_users mu
            JOIN merchants m ON m.id = mu.merchant_id
           WHERE mu.id = $1`,
-        [auth.merchantUserId],
+        [session.merchantUserId],
       );
       const row = result.rows[0];
       if (!row) {
         throw new UnauthorizedError("unauthenticated");
       }
       return {
-        merchantUserId: auth.merchantUserId,
+        merchantUserId: session.merchantUserId,
         email: row.email,
-        role: auth.role,
+        role: session.role,
         merchant: {
           id: row.merchant_id,
           displayName: row.display_name,
           onboardingStatus: row.onboarding_status,
         },
       };
-    },
-  );
+    }
+
+    const grantToken = request.cookies[app.config.impersonationCookieName];
+    const grant = grantToken ? await lookupImpersonationGrant(app.db, grantToken) : null;
+    if (!grant) {
+      throw new UnauthorizedError("unauthenticated");
+    }
+    const merchantResult = await app.db.query<{ display_name: string; onboarding_status: string }>(
+      `SELECT display_name, onboarding_status FROM merchants WHERE id = $1`,
+      [grant.merchantId],
+    );
+    const merchant = merchantResult.rows[0];
+    if (!merchant) {
+      throw new UnauthorizedError("unauthenticated");
+    }
+    return {
+      merchantUserId: null,
+      email: null,
+      role: grant.merchantRole,
+      merchant: {
+        id: grant.merchantId,
+        displayName: merchant.display_name,
+        onboardingStatus: merchant.onboarding_status,
+      },
+      impersonation: { grantId: grant.grantId, readOnly: grant.merchantRole !== "owner" },
+    };
+  });
 
   app.post(
     "/logout",

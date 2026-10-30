@@ -14,10 +14,10 @@ const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigat
 export const shortcutLabel = isMac ? "⌘K" : "Ctrl K";
 
 /** Nav shell for every merchant dashboard screen: a quiet sidebar on wide
- *  screens, a top bar with a slide-in drawer on phones. No impersonation
- *  banner here: nothing in the merchant plane impersonates anyone; when an
- *  admin "views as merchant", they arrive with a `support`-role session and
- *  see exactly what a support user sees. */
+ *  screens, a top bar with a slide-in drawer on phones. When an admin
+ *  "views as merchant", `/v1/auth/me` says so (`me.impersonation`) and a
+ *  banner sits above every page; the operator sees what the grant's role
+ *  (support, or owner for a super admin) sees. */
 export function DashboardLayout() {
   const { me, signOut } = useDashboardAuth();
   const navigate = useNavigate();
@@ -148,7 +148,7 @@ export function DashboardLayout() {
             </span>
             <span className="dash-merchant-text">
               <span className="dash-merchant-name">{me.merchant.displayName}</span>
-              <span className="dash-merchant-user">{me.email}</span>
+              <span className="dash-merchant-user">{me.email ?? "FilsPay staff"}</span>
             </span>
             <span className="dash-role-chip">{me.role}</span>
           </div>
@@ -224,6 +224,13 @@ export function DashboardLayout() {
 
       <div className="dash-content">
         <main id="main" className="dash-main" tabIndex={-1}>
+          {me?.impersonation ? (
+            <div className="dash-impersonation" role="status">
+              <strong>Viewing as {me.merchant.displayName}.</strong>{" "}
+              {me.impersonation.readOnly ? "You can look but not change anything. " : ""}
+              End this from the admin console when you are done.
+            </div>
+          ) : null}
           {error ? <ErrorBanner message={error} /> : null}
           {/* Re-keyed per page so each one settles in. */}
           <div key={location.pathname} className="fp-page-enter">

@@ -729,6 +729,15 @@
   background-size: 16px;
 }
 
+.dash-impersonation {
+  margin: 0 0 var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--c-ink);
+  background: var(--c-warn-soft);
+  border: 1px solid color-mix(in srgb, var(--c-warn) 40%, transparent);
+  border-radius: var(--r-3);
+}
+
 .dash-error {
   background-color: var(--c-danger-soft);
   border-color: color-mix(in srgb, var(--c-danger) 30%, transparent);

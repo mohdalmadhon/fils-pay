@@ -67,10 +67,13 @@ export interface DashboardOtpVerifyResponse {
 }
 
 export interface DashboardMe {
-  merchantUserId: string;
-  email: string;
+  /** null when an admin is viewing as this merchant (no merchant user). */
+  merchantUserId: string | null;
+  email: string | null;
   role: MerchantRole;
   merchant: { id: string; displayName: string; onboardingStatus: string };
+  /** Present only when an admin opened the dashboard with "View as merchant". */
+  impersonation?: { grantId: string; readOnly: boolean };
 }
 
 // --- transactions ---
