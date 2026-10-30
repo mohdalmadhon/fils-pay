@@ -40,10 +40,12 @@ service disagree on a computed fee, the Go version is correct — it matches
 the acquirer's own reconciliation and was validated against their test
 vectors.
 
-Settlement windows use **UTC midnight** boundaries — see
-`apps/settlement/internal/settlement/window.go`. The Asia/Bahrain timezone
-in `window.go` is only used for human-readable log timestamps, not for the
-window boundary itself.
+A settlement business day runs from **Asia/Bahrain midnight to the next
+Bahrain midnight** (UTC+3, no DST): `BusinessDayWindow` in
+`apps/settlement/internal/settlement/window.go`. The Bahrain zone is the
+boundary itself, not just log formatting. (This used to say "UTC midnight";
+see `docs/fixes/daily-close-timing.md`.) To find the business day of an
+instant, use `BusinessDateAt`, not the UTC date.
 
 ## Frozen packages
 
