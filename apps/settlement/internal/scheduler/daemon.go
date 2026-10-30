@@ -100,12 +100,21 @@ func runIfDue(ctx context.Context, db *pgxpool.Pool, runDelayMinutes int) {
 		return
 	}
 
+	runPass(ctx, db, businessDate)
+	logNextRunEstimate(now, runDelayMinutes)
+}
+
+// runPass runs one daily batching pass for businessDate, then the payout
+// notification scan. The scan always runs, even when some merchants failed:
+// RunDailyBatch keeps going past a failed merchant, so the others are paid
+// in this same pass and their merchants must still be told.
+func runPass(ctx context.Context, db *pgxpool.Pool, businessDate time.Time) {
 	report, err := settlement.RunDailyBatch(ctx, db, businessDate, nil)
 	if err != nil {
 		log.Printf("settlement daemon: RunDailyBatch(%s) failed: %v", businessDate.Format("2006-01-02"), err)
-		return
 	}
-	log.Printf("settlement daemon: RunDailyBatch(%s) processed %d merchant(s)", businessDate.Format("2006-01-02"), len(report.MerchantResults))
+	log.Printf("settlement daemon: RunDailyBatch(%s) processed %d merchant(s), %d failed",
+		businessDate.Format("2006-01-02"), len(report.MerchantResults), len(report.Failed()))
 
 	// Merchant-facing payout notifications for every batch that has reached
 	// 'paid', whichever payout path got it there. Its own NOT EXISTS guard
@@ -121,6 +130,4 @@ func runIfDue(ctx context.Context, db *pgxpool.Pool, runDelayMinutes int) {
 	} else if enqueued > 0 {
 		log.Printf("settlement daemon: enqueued %d settlement.paid event(s)", enqueued)
 	}
-
-	logNextRunEstimate(now, runDelayMinutes)
 }
