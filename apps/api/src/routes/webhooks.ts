@@ -12,6 +12,7 @@ import { updateWebhookEndpoint } from "../webhooks/update.js";
 import { replayWebhookDelivery } from "../webhooks/replay.js";
 import { getWebhookDelivery, listWebhookDeliveries } from "../webhooks/deliveries.js";
 import { sendTestWebhookEvent } from "../webhooks/testSend.js";
+import { parseLimitParam } from "../lib/queryParams.js";
 
 interface MerchantIdParams {
   merchantId: string;
@@ -192,7 +193,7 @@ export async function webhookEndpointRoutes(app: FastifyInstance): Promise<void>
 
       const q = request.query;
       const status = q.status === undefined ? undefined : Array.isArray(q.status) ? q.status : [q.status];
-      const limit = q.limit !== undefined ? Number.parseInt(q.limit, 10) : undefined;
+      const limit = parseLimitParam(q.limit);
 
       const result = await listWebhookDeliveries(app.db, {
         merchantId: request.params.merchantId,

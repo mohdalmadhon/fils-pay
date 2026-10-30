@@ -11,6 +11,7 @@ import { getTransactionById, listTransactions } from "../transactions/query.js";
 import { listTransactionEvents } from "../transactions/events.js";
 import { BadRequestError, NotFoundError } from "../lib/errors.js";
 import type { SimulatedCardInput } from "../acquirer/types.js";
+import { parseLimitParam } from "../lib/queryParams.js";
 
 interface AuthorizeBody {
   amountFils?: number;
@@ -139,7 +140,7 @@ export async function transactionRoutes(app: FastifyInstance): Promise<void> {
     async (request) => {
       const q = request.query;
       const status = q.status === undefined ? undefined : Array.isArray(q.status) ? q.status : [q.status];
-      const limit = q.limit !== undefined ? Number.parseInt(q.limit, 10) : undefined;
+      const limit = parseLimitParam(q.limit);
 
       return listTransactions(app.db, {
         merchantId: request.merchantAuth!.merchantId,
