@@ -22,6 +22,7 @@ import { adminRoutes, type AdminRoutesOptions } from "./routes/admin.js";
 import { acquirerCallbackRoutes } from "./routes/acquirerCallbacks.js";
 import { createFetchTransport, type WebhookTransport } from "./webhooks/transport.js";
 import { requestLogSerializer } from "./lib/logRedaction.js";
+import { securityHeadersPlugin } from "./plugins/securityHeaders.js";
 
 export interface BuildAppOptions {
   /** Test seam for the admin plane's cross-process settlement calls only —
@@ -56,6 +57,7 @@ export function buildApp(config: Config, pool: Pool, options: BuildAppOptions = 
   // First, so the CORS headers (and preflight answers) are on every
   // response, errors and 404s included.
   app.register(corsPlugin);
+  app.register(securityHeadersPlugin, { config });
   app.register(cookiesPlugin);
   app.register(multipartPlugin, { config });
   app.setErrorHandler(errorHandler);
