@@ -53,10 +53,18 @@ for f in .env .env.docker; do
 done
 touch "$CONF/.env" "$CONF/.env.docker"
 chmod 600 "$CONF/.env" "$CONF/.env.docker"
-# Adds KEY=value to a settings file unless KEY is already there.
+# Adds KEY=value to a settings file unless KEY is already there. For secrets:
+# a new deploy must never replace one.
 ensure() {
   local file="$1" key="$2" value="$3"
   grep -q "^$key=" "$file" || printf '%s=%s\n' "$key" "$value" >> "$file"
+}
+# Sets KEY=value, replacing any earlier value. For the addresses, which
+# follow SITE_HOST, OPS_HOST and HTTP_ONLY on every deploy.
+set_key() {
+  local file="$1" key="$2" value="$3"
+  sed -i "/^$key=/d" "$file"
+  printf '%s=%s\n' "$key" "$value" >> "$file"
 }
 
 ip="${PUBLIC_IP:-$(curl -fsS --max-time 5 https://api.ipify.org || hostname -I | awk '{print $1}')}"
@@ -71,16 +79,16 @@ ensure "$CONF/.env" REPORTING_DB_PASSWORD "$(rand)"
 ensure "$CONF/.env" WEBHOOK_SECRET_ENCRYPTION_KEY "$(openssl rand -base64 32)"
 ensure "$CONF/.env" SETTLEMENT_INTERNAL_TOKEN "$(rand)"
 if [ "$scheme" = http ]; then
-  ensure "$CONF/.env" SITE_ADDRESS "http://$site_host"
-  ensure "$CONF/.env" OPS_ADDRESS "http://$ops_host"
-  ensure "$CONF/.env" COOKIE_SECURE false
+  set_key "$CONF/.env" SITE_ADDRESS "http://$site_host"
+  set_key "$CONF/.env" OPS_ADDRESS "http://$ops_host"
+  set_key "$CONF/.env" COOKIE_SECURE false
 else
-  ensure "$CONF/.env" SITE_ADDRESS "$site_host"
-  ensure "$CONF/.env" OPS_ADDRESS "$ops_host"
-  ensure "$CONF/.env" COOKIE_SECURE true
+  set_key "$CONF/.env" SITE_ADDRESS "$site_host"
+  set_key "$CONF/.env" OPS_ADDRESS "$ops_host"
+  set_key "$CONF/.env" COOKIE_SECURE true
 fi
-ensure "$CONF/.env" PUBLIC_SITE_URL "$scheme://$site_host"
-ensure "$CONF/.env" PUBLIC_OPS_URL "$scheme://$ops_host"
+set_key "$CONF/.env" PUBLIC_SITE_URL "$scheme://$site_host"
+set_key "$CONF/.env" PUBLIC_OPS_URL "$scheme://$ops_host"
 
 ensure "$CONF/.env.docker" NODE_ENV production
 ensure "$CONF/.env.docker" PORT 3000
