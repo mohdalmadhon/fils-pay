@@ -9,11 +9,20 @@ export interface TransactionsExportFilters {
   status?: string[];
 }
 
-function csvEscape(value: string): string {
-  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-    return `"${value.replace(/"/g, '""')}"`;
+/**
+ * One CSV cell. The reference is caller-supplied (often end-customer order
+ * text), so a value starting with = + - @, tab or CR would be run as a
+ * formula when the merchant opens the export in Excel or Sheets (CSV
+ * injection: =HYPERLINK(...) to exfiltrate, =cmd|... on old Excel). Such
+ * values get a leading ' so they open as text, per OWASP's guidance; then
+ * the usual RFC 4180 quoting, now also on CR.
+ */
+export function csvEscape(value: string): string {
+  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  if (/[",\n\r]/.test(safe)) {
+    return `"${safe.replace(/"/g, '""')}"`;
   }
-  return value;
+  return safe;
 }
 
 function toCsvRow(row: TransactionRow): string {
