@@ -70,7 +70,7 @@ async function merchant(discountBps: number) {
   return { merchantId, rawKey: key.rawKey, keyId: key.id };
 }
 
-/** Authorize + capture through the real routes, so the discount adjustment runs. */
+/** Authorize + capture through the real routes, so the discounted fee is posted. */
 async function captured(rawKey: string, amountFils: number): Promise<string> {
   const auth = await app.inject({
     method: "POST",
@@ -116,7 +116,9 @@ test("a full refund for a discounted merchant reverses exactly the fee they paid
   const { merchantId, rawKey, keyId } = await merchant(2_000); // 20 % off the MDR
   const txn = await captured(rawKey, 100_000);
   const before = await feeLedger(txn);
-  assert.ok(before.discount > 0, "the capture discount must have been applied for this test to mean anything");
+  // The discount is now part of the fee capture posts (docs/improvements/06),
+  // not a separate adjustment, so check the net fee is below the full MDR.
+  assert.ok(before.gross - before.discount < 2_500, "the capture discount must have been applied for this test to mean anything");
 
   const res = await refund(merchantId, keyId, txn);
   assert.equal(res.statusCode, 200, JSON.stringify(res.body));

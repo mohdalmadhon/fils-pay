@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
-import { ZERO_FILS, addFils, applyRateFils, compareFils, subtractFils, toFils, type Fils } from "@filspay/money";
+import { ZERO_FILS, addFils, compareFils, subtractFils, toFils, type Fils } from "@filspay/money";
 import { enqueueEvent } from "@filspay/events";
 import { withTransaction } from "../db/withTransaction.js";
 import type { AcquirerSimulator } from "../acquirer/types.js";
@@ -10,6 +10,7 @@ import { serializeTransaction, type TransactionRow } from "../transactions/seria
 import { ConflictError, UnprocessableEntityError } from "../lib/errors.js";
 import { getEffectiveMdrBps } from "../fees/feeSchedule.js";
 import { getVolumeTierBonusBps } from "../fees/platformVolumeTier.js";
+import { settlementFeeFils } from "../fees/settlementFee.js";
 
 async function recordCaptureMetric(
   client: import("pg").PoolClient,
@@ -163,8 +164,8 @@ export async function captureTransactionWithClient(
     return { statusCode: 422, body };
   }
 
-  const merchantResult = await client.query<{ mdr_bps: number }>(
-    `SELECT mdr_bps FROM merchants WHERE id = $1`,
+  const merchantResult = await client.query<{ mdr_bps: number; negotiated_discount_bps: number }>(
+    `SELECT mdr_bps, negotiated_discount_bps FROM merchants WHERE id = $1`,
     [input.merchantId],
   );
   const merchant = merchantResult.rows[0];
@@ -206,7 +207,20 @@ export async function captureTransactionWithClient(
 
   // outcome === 'approved'. Integer math throughout — no float ever
   // enters this path.
-  const feeFils = applyRateFils(requestedAmount, Math.max(0, effectiveMdrBps - volumeTierBonusBps));
+  //
+  // The fee is the one settlement will charge for this event
+  // (ComputeSettlementFee): a negotiated discount reduces the amount the MDR
+  // is charged on (docs/ARCHITECTURE.md, "Settlement"). It used to charge the
+  // full MDR here and reverse discount x fee in a separate adjustment, only
+  // on the API capture route: a different formula (off by a fil at times)
+  // and nothing at all for payment-link captures. docs/improvements/06.
+  const feeFils = toFils(
+    settlementFeeFils(
+      Number(requestedAmount),
+      Math.max(0, effectiveMdrBps - volumeTierBonusBps),
+      merchant.negotiated_discount_bps ?? 0,
+    ),
+  );
   const newCapturedFils = addFils(capturedSoFar, requestedAmount);
   const newStatus = compareFils(newCapturedFils, amountAuthorized) === 0 ? "captured" : "partially_captured";
 
