@@ -65,10 +65,6 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
 - **Finance problems 001-013:** fixed and documented in `docs/solved-problems/`.
 
 ### Known issues
-- Recorded in `docs/fixes/reconciliation-pending-rate.md`:
-  - payment-link captures don't get the negotiated discount posted
-  - capture and settlement apply the discount with different formulas
-  - fee-schedule tie-breaks differ between the API and settlement
 - Test failures that predate this work, listed in the verification report:
   - 2 API tests
   - 4 `RecalculateMDR` Go tests
