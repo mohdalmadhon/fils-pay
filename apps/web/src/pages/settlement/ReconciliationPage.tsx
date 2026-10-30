@@ -70,7 +70,7 @@ export function ReconciliationPage() {
     return (
       <section>
         <h1>Reconciliation</h1>
-        <p className="dash-error">
+        <p className="dash-error" role="alert">
           You don&apos;t have permission to view this report — ask an owner or
           finance user on your account.
         </p>

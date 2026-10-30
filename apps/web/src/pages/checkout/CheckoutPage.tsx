@@ -192,12 +192,13 @@ export function CheckoutPage() {
     <CheckoutFrame
       summary={
         <div className="checkout-summary">
-          <p className="checkout-payee">
+          {/* The page's one h1: what this page is for. Styled as before. */}
+          <h1 className="checkout-payee">
             <span className="checkout-payee-mark" aria-hidden>
               {link.merchantDisplayName.trim().charAt(0).toUpperCase()}
             </span>
             Pay {link.merchantDisplayName}
-          </p>
+          </h1>
           <p className="checkout-amount">
             <Amount fils={link.amountFils} />
           </p>

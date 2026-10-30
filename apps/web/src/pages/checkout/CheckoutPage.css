@@ -53,6 +53,9 @@
   margin: 0 0 var(--sp-3);
   font-size: var(--text-md);
   font-weight: 500;
+  /* An h1 now; keep the paragraph's spacing. */
+  letter-spacing: normal;
+  line-height: inherit;
   color: var(--c-ink-2);
 }
 
