@@ -100,6 +100,11 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
   retained 9 existing fixes and fixed 15 remaining issues in separate commits.
   Per-problem explanations, source references, verification and migration
   requirements: `docs/audits/future-fixes-disposition.md`.
+- **Merging main into UI/UX:** both lines had fixed the platform volume
+  counter, the fee-schedule tie order and the negotiated discount
+  independently. The write-up covers how each overlap was resolved, the
+  reporting role's missing grant found afterwards, and why migrations 0080
+  and 0081 each have two files: `docs/merges/2026-10-30-main-into-ui-ux.md`.
 
 ### Known issues
 - Recorded in `docs/fixes/reconciliation-pending-rate.md`:
