@@ -1,0 +1,16 @@
+# Keep the build context small and free of secrets. Both Dockerfiles in ops/
+# build from the repo root.
+.git
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+data
+apps/settlement/settlement
+apps/settlement/settlement.exe
+# Environment files hold real secrets; they reach containers at run time
+# (env_file / environment), never inside an image.
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env*.example
