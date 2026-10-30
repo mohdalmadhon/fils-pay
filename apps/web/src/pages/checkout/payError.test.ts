@@ -18,3 +18,10 @@ test("a link in flight is still retryable, and other outcomes are unchanged", ()
   assert.match(describePayFailure(402, { stage: "capture" }).message, /approved/);
   assert.equal(describePayFailure(500, { message: "boom" }).message, "boom");
 });
+
+test("a busy API's 503 keeps the form and says nothing was charged", () => {
+  const f = describePayFailure(503, { error: "overloaded" });
+  assert.equal(f.kind, "declined");
+  assert.equal(f.countsAsDecline, false);
+  assert.match(f.message, /No payment was taken/);
+});

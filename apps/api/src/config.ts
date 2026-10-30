@@ -13,6 +13,12 @@ export interface Config {
   databaseUrl: string;
 
   pgPoolMax: number;
+  /** Load shedding (plugins/overloadGuard.ts): in-flight request limit; 0 turns it off. */
+  overloadMaxInFlight: number;
+  /** Shed while the event loop's p99 delay is above this (ms); 0 ignores it. */
+  overloadMaxEventLoopDelayMs: number;
+  /** Shed while this many requests wait for a database connection; 0 ignores it. */
+  overloadMaxPoolWaiting: number;
   pgPoolMin: number;
   pgPoolIdleTimeoutMs: number;
   pgPoolConnectionTimeoutMs: number;
@@ -281,10 +287,23 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     port: parseIntEnv(env.PORT, 3000),
     databaseUrl,
 
-    pgPoolMax: parseIntEnv(env.PG_POOL_MAX, 5),
+    // 20, not 5: checkout holds a connection while the acquirer answers
+    // (authorize and capture each wait 100-400 ms on the network with their
+    // transaction open), so 5 connections capped the whole API at about 10
+    // checkouts a second with the CPU mostly idle. Measured on one vCPU,
+    // 20 reaches the CPU's limit (~37/s); 40 is no faster.
+    // docs/perf/checkout-capacity.md.
+    pgPoolMax: parseIntEnv(env.PG_POOL_MAX, 20),
     pgPoolMin: parseIntEnv(env.PG_POOL_MIN, 0),
     pgPoolIdleTimeoutMs: parseIntEnv(env.PG_POOL_IDLE_TIMEOUT_MS, 30_000),
     pgPoolConnectionTimeoutMs: parseIntEnv(env.PG_POOL_CONNECTION_TIMEOUT_MS, 5_000),
+
+    // Sized from the capacity test on one vCPU: ~30 checkouts/s, so ~32
+    // requests in flight keeps an accepted checkout near 1 s.
+    overloadMaxInFlight: parseIntEnv(env.OVERLOAD_MAX_IN_FLIGHT, 32),
+    // A stall, not ordinary busyness: the in-flight limit does that work.
+    overloadMaxEventLoopDelayMs: parseIntEnv(env.OVERLOAD_MAX_EVENT_LOOP_DELAY_MS, 2000),
+    overloadMaxPoolWaiting: parseIntEnv(env.OVERLOAD_MAX_POOL_WAITING, 10),
 
     sessionTtlHours: parseIntEnv(env.SESSION_TTL_HOURS, 12),
     pendingSessionTtlMinutes: parseIntEnv(env.PENDING_SESSION_TTL_MINUTES, 10),

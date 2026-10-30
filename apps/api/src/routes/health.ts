@@ -10,7 +10,15 @@ import { isReady } from "../health/state.js";
 export async function healthRoutes(app: FastifyInstance): Promise<void> {
   // GET /healthz — liveness. Never touches the database. Returns 200 as
   // long as the Node process is up and Fastify can handle a request.
-  app.get("/healthz", async () => ({ status: "ok", uptimeSeconds: process.uptime() }));
+  // `load` is the overload guard's view (plugins/overloadGuard.ts): requests
+  // in flight, requests turned away since start, event-loop delay.
+  app.get("/healthz", async () => ({
+    status: "ok",
+    uptimeSeconds: process.uptime(),
+    load: app.overload
+      ? { inFlight: app.overload.inFlight, shedTotal: app.overload.shedTotal, eventLoopDelayMs: app.overload.eventLoopDelayMs }
+      : undefined,
+  }));
 
   // GET /readyz — readiness. Reports whether the process ever successfully
   // connected to the database at startup. Does NOT re-check the connection

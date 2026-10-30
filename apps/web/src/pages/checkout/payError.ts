@@ -20,6 +20,16 @@ export function describePayFailure(statusCode: number, body: { error?: string; s
         : "Your card was declined. Try another card, or contact your bank.";
     return { kind: "declined", message, countsAsDecline: true };
   }
+  // The API turned the request away because it is full
+  // (plugins/overloadGuard.ts): nothing was attempted, so nothing was
+  // charged, and the form stays for a retry.
+  if (statusCode === 503 && body.error === "overloaded") {
+    return {
+      kind: "declined",
+      message: "We're very busy right now. No payment was taken. Try again in a few seconds.",
+      countsAsDecline: false,
+    };
+  }
   if (statusCode === 502) {
     return {
       kind: "declined",

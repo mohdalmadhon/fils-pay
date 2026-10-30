@@ -1,7 +1,8 @@
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, { LogController, type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import type { Pool } from "pg";
 import type { Config } from "./config.js";
 import { createAcquirerSimulator } from "./acquirer/simulator.js";
+import { overloadGuardPlugin } from "./plugins/overloadGuard.js";
 import { corsPlugin } from "./plugins/cors.js";
 import { cookiesPlugin } from "./plugins/cookies.js";
 import { multipartPlugin } from "./plugins/multipart.js";
@@ -25,6 +26,22 @@ import { createFetchTransport, type WebhookTransport } from "./webhooks/transpor
 import { requestLogSerializer } from "./lib/logRedaction.js";
 import { securityHeadersPlugin } from "./plugins/securityHeaders.js";
 
+/**
+ * One "request completed" line per request (Fastify's default also logs an
+ * "incoming request" line), and none for requests the overload guard turns
+ * away: under a flood, logging every 503 twice took a large share of the
+ * CPU the guard is there to protect (docs/perf/checkout-capacity.md).
+ * Errors are still logged.
+ */
+class QuietSheddingLogController extends LogController {
+  override incomingRequest(): void {}
+
+  override requestCompleted(error: Error | null | undefined, request: FastifyRequest, reply: FastifyReply, metadata?: Record<string, unknown>): void {
+    if (!error && reply.statusCode === 503 && reply.getHeader("retry-after") !== undefined) return;
+    super.requestCompleted(error, request, reply, metadata);
+  }
+}
+
 export interface BuildAppOptions {
   /** Test seam for the admin plane's cross-process settlement calls only —
    *  see routes/admin.ts. Never set in production. */
@@ -47,6 +64,7 @@ export function buildApp(config: Config, pool: Pool, options: BuildAppOptions = 
     // Request lines go through requestLogSerializer so payment link tokens
     // (bearer credentials for the public pay page) never reach the logs.
     logger: { serializers: { req: requestLogSerializer } },
+    logController: new QuietSheddingLogController(),
     trustProxy: config.trustProxy,
   });
 
@@ -58,6 +76,9 @@ export function buildApp(config: Config, pool: Pool, options: BuildAppOptions = 
   // First, so the CORS headers (and preflight answers) are on every
   // response, errors and 404s included.
   app.register(corsPlugin);
+  // Next, so a full API turns requests away before any other work
+  // (docs/perf/checkout-capacity.md).
+  app.register(overloadGuardPlugin, { config, pool });
   app.register(securityHeadersPlugin, { config });
   app.register(cookiesPlugin);
   app.register(multipartPlugin, { config });

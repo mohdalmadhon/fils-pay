@@ -14,6 +14,8 @@ import "./CheckoutPage.css";
 
 type LoadState =
   | { kind: "loading" }
+  /** The API is full (503 overloaded): waiting to try again. */
+  | { kind: "busy" }
   | { kind: "not_found" }
   | { kind: "loaded"; link: PaymentLinkPublicDto };
 
@@ -43,17 +45,31 @@ export function CheckoutPage() {
       return;
     }
     let cancelled = false;
-    getPaymentLink(token)
-      .then((link) => {
-        if (!cancelled) setLoadState({ kind: "loaded", link });
-      })
-      .catch(() => {
-        // Never distinguishes "malformed token" from "doesn't exist" —
-        // matches the API's own non-disclosure choice.
-        if (!cancelled) setLoadState({ kind: "not_found" });
-      });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const load = (attempt: number): void => {
+      getPaymentLink(token)
+        .then((link) => {
+          if (!cancelled) setLoadState({ kind: "loaded", link });
+        })
+        .catch((err: unknown) => {
+          if (cancelled) return;
+          // A busy API turns requests away with 503 (plugins/overloadGuard.ts
+          // on the API): wait and try again rather than calling the link
+          // missing. 1, 2, 4, then every 5 seconds.
+          if (err instanceof ApiError && err.statusCode === 503) {
+            setLoadState({ kind: "busy" });
+            timer = setTimeout(() => load(attempt + 1), Math.min(5000, 1000 * 2 ** attempt));
+            return;
+          }
+          // Never distinguishes "malformed token" from "doesn't exist" —
+          // matches the API's own non-disclosure choice.
+          setLoadState({ kind: "not_found" });
+        });
+    };
+    load(0);
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
     };
   }, [token]);
 
@@ -88,10 +104,10 @@ export function CheckoutPage() {
     loadState.kind === "loaded" ? `Pay ${loadState.link.merchantDisplayName}` : loadState.kind === "not_found" ? "Payment link not found" : "Checkout";
   usePageTitle(payState.kind === "success" ? "Payment received" : pageTitle);
 
-  if (loadState.kind === "loading") {
+  if (loadState.kind === "loading" || loadState.kind === "busy") {
     return (
       <CheckoutFrame>
-        <Loading label="Opening your payment" />
+        <Loading label={loadState.kind === "busy" ? "We're very busy. Opening your payment in a moment" : "Opening your payment"} />
       </CheckoutFrame>
     );
   }
