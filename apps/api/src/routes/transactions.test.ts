@@ -379,3 +379,17 @@ test("an invalid date filter on the list and export is a 400, not a 500 (docs/bu
     assert.equal(res.json().error, "invalid_date");
   }
 });
+
+test("a tampered list cursor restarts from the first page instead of a 500 (docs/bugs/011)", async () => {
+  const { rawKey, merchantId } = await createApprovedMerchantWithApiKey("bad-cursor");
+  await authorize(rawKey, 1_000);
+  const cursor = Buffer.from("x|y", "utf8").toString("base64url");
+  for (const url of [
+    `/v1/transactions?cursor=${cursor}`,
+    `/v1/settlement/batches?cursor=${cursor}`,
+    `/v1/merchants/${merchantId}/payment-links?cursor=${cursor}`,
+  ]) {
+    const res = await app.inject({ method: "GET", url, headers: authHeader(rawKey) });
+    assert.equal(res.statusCode, 200, `${url}: ${res.body}`);
+  }
+});

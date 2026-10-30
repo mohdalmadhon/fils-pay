@@ -1,6 +1,8 @@
 import type { Pool } from "pg";
 import { effectiveMdrBpsAt, settlementFeeFils, type FeeScheduleRow } from "../fees/settlementFee.js";
 import { VOLUME_TIER_BONUS_BPS, VOLUME_TIER_THRESHOLD_FILS } from "../fees/platformVolumeTier.js";
+import { isCalendarDate } from "../lib/cursorParts.js";
+import { canonicalUuid } from "../lib/uuid.js";
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
@@ -96,8 +98,13 @@ function decodeCursor(cursor: string | null | undefined): DecodedCursor | null {
   if (separatorIndex === -1) return null;
   const batchDate = decoded.slice(0, separatorIndex);
   const id = decoded.slice(separatorIndex + 1);
-  if (!batchDate || !id) return null;
-  return { batchDate, id };
+  // A tampered cursor must restart from the first page, not reach SQL:
+  // a bad timestamp or id used to fail the ::timestamptz / ::uuid cast
+  // and come back as a 500. docs/bugs/011.
+  if (!batchDate || !isCalendarDate(batchDate)) return null;
+  const canonicalId = canonicalUuid(id);
+  if (!canonicalId) return null;
+  return { batchDate, id: canonicalId };
 }
 
 function encodeCursor(batchDate: Date, id: string): string {
