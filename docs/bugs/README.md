@@ -20,3 +20,4 @@ more detail, with how to reproduce it.
 |---|---|---|---|
 | [001](001-settlement-summary-double-counts-partial-captures.md) | Settlement summary counts a payment captured in parts more than once | API: settlement | High |
 | [002](002-capture-idempotency-key-replays-other-transaction.md) | Reusing a capture Idempotency-Key on another transaction replays the first one | API: payments | High |
+| [003](003-failed-checkout-leaves-link-reserved.md) | A checkout attempt that errors leaves the payment link stuck as "reserved" | API: payment links | Medium |

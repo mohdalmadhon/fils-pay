@@ -120,6 +120,11 @@ export async function payPaymentLink(
   // Step 2 — authorize.
   // am: keys include link.id so two links can never collide on idempotency. good
   const authorizeKey = `paylink:${link.id}:${input.idempotencyKey}:authorize`;
+  // Anything that throws from here on (a malformed card, a reused key, an
+  // acquirer or database error) must hand the link back first, or it stays
+  // 'reserved' until the timeout and blocks every real buyer (and the
+  // merchant's cancel) — and anyone could keep it blocked with one bad
+  // request a minute. docs/bugs/003.
   const authResult = await authorizeTransaction(pool, acquirer, {
     merchantId: link.merchantId,
     amountFils: link.amountFils,
@@ -129,7 +134,7 @@ export async function payPaymentLink(
     // No merchant session/API key initiated this — a customer did, via
     // the public link.
     actor: { type: "system" },
-  });
+  }).catch(releaseThenRethrow(pool, link.id, reservationToken));
 
   if (authResult.statusCode !== 201) {
     await releaseReservation(pool, link.id, reservationToken);
@@ -202,7 +207,7 @@ export async function payPaymentLink(
       [link.id, txnId],
     );
     return { kind: "paid" as const, paidAt: finalized.rows[0]!.paid_at };
-  });
+  }).catch(releaseThenRethrow(pool, link.id, reservationToken));
 
   if (outcome.kind === "lost") {
     // Nothing was captured, so the cardholder was not charged. Release the
@@ -233,6 +238,17 @@ export async function payPaymentLink(
       amountFils: link.amountFils,
       paidAt: outcome.paidAt.toISOString(),
     },
+  };
+}
+
+/** A `.catch` handler: release this attempt's reservation, then rethrow the
+ *  original error. A failure to release is logged, never thrown over it. */
+function releaseThenRethrow(pool: Pool, linkId: string, reservationToken: string) {
+  return async (err: unknown): Promise<never> => {
+    await releaseReservation(pool, linkId, reservationToken).catch((releaseErr: unknown) => {
+      console.error(`payPaymentLink: could not release reservation on link ${linkId}`, releaseErr);
+    });
+    throw err;
   };
 }
 
