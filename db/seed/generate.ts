@@ -156,6 +156,11 @@ export interface SeedSummary {
   apiKeyCount: number;
   adminUserCount: number;
   ledgerChecksum: string;
+  /** The raw API keys this run issued, one per merchant. generate() does
+   *  not print them: index.ts prints the set from the last run, after the
+   *  self-checks (the determinism check runs generate() again, which
+   *  replaces every key). */
+  issuedApiKeys: Array<{ merchantDisplayName: string; rawKey: string }>;
 }
 
 interface InsertedMerchant {
@@ -880,6 +885,7 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
   // (recordKycReview opens its own transaction via the pool).
   let kycReviewCount = 0;
   let apiKeyCount = 0;
+  const issuedApiKeys: SeedSummary["issuedApiKeys"] = [];
   for (const merchant of insertedMerchants) {
     await recordKycReview(pool, {
       merchantId: merchant.merchantId,
@@ -896,8 +902,8 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
     });
     apiKeyCount += 1;
     // Dev/test convenience only: the raw key is never stored, so this is
-    // the only place it's ever visible. Fine to print for seed data.
-    console.log(`seed: issued API key for ${merchant.displayName}: ${issued.rawKey}`);
+    // the only place it's ever visible. index.ts prints it.
+    issuedApiKeys.push({ merchantDisplayName: merchant.displayName, rawKey: issued.rawKey });
   }
 
   return {
@@ -918,6 +924,7 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
     apiKeyCount,
     adminUserCount,
     ledgerChecksum,
+    issuedApiKeys,
   };
 }
 

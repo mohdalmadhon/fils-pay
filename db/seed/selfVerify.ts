@@ -1,6 +1,6 @@
 import { allocateRemainder, toFils } from "@filspay/money";
 import type { Pool } from "pg";
-import { computeLedgerChecksum, generate } from "./generate.js";
+import { computeLedgerChecksum, generate, type SeedSummary } from "./generate.js";
 
 export interface Assertion {
   id: string;
@@ -16,9 +16,14 @@ export interface Assertion {
  * Builds the ordered assertion list. `initialLedgerChecksum` is the
  * checksum captured immediately after the seed run that already populated
  * the database (see index.ts) — the `seed-deterministic` assertion
- * re-generates from scratch and compares against it.
+ * re-generates from scratch and compares against it. That re-run truncates
+ * api_keys and issues new keys, so it hands its summary to `onRegenerated`:
+ * the caller must print the keys from the latest run, not the first.
  */
-export function buildAssertions(pool: Pool, ctx: { initialLedgerChecksum: string }): Assertion[] {
+export function buildAssertions(
+  pool: Pool,
+  ctx: { initialLedgerChecksum: string; onRegenerated?: (summary: SeedSummary) => void },
+): Assertion[] {
   return [
     {
       id: "ledger-balances",
@@ -98,6 +103,7 @@ export function buildAssertions(pool: Pool, ctx: { initialLedgerChecksum: string
       status: "real",
       run: async () => {
         const rerun = await generate(pool);
+        ctx.onRegenerated?.(rerun);
         const rerunChecksum = await computeLedgerChecksum(pool);
         if (rerunChecksum !== rerun.ledgerChecksum) {
           return { pass: false, detail: "generate()'s own returned checksum did not match a fresh re-query" };
