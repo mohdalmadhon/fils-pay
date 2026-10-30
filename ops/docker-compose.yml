@@ -59,11 +59,17 @@ services:
       postgres:
         condition: service_healthy
 
-  # One-off: deterministic seed data. Re-run any time; db/seed/index.ts
-  # resets and regenerates from scratch on every invocation.
-  # AM: the seed only truncates its own fixture tables, so pointing this at a
-  # shared database is fine. MK: correct. (see RUNBOOK)
+  # One-off: deterministic demo data. NOT part of a normal `up`: the seed
+  # TRUNCATEs merchants, transactions, the ledger, batches and admin users
+  # (CASCADE), i.e. it empties the database, and it used to run on every
+  # `docker compose up`, including on the hosted box. (An old note here said
+  # it only truncated its own fixture tables and was safe on a shared
+  # database; it wasn't.) Run it on purpose, on a local database:
+  #   docker compose -f ops/docker-compose.yml --profile seed run --rm seed
+  # It refuses NODE_ENV=production and any database with merchants it didn't
+  # create (db/seed/guard.ts). docs/improvements/12.
   seed:
+    profiles: ["seed"]
     build:
       context: ..
       dockerfile: ops/Dockerfile.node
