@@ -177,6 +177,67 @@ func TestRecalculateMDR_LeavesClosedAndPaidBatchesAlone(t *testing.T) {
 	}
 }
 
+func TestRecalculateMDR_UnchangedRateAdjustsNothing(t *testing.T) {
+	pool := mustPool(t)
+	ctx := context.Background()
+	const mdrBps = 250
+	merchantID := insertActiveMerchant(t, pool, mdrBps)
+
+	businessDate := time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC)
+	start, _ := BusinessDayWindow(businessDate)
+	insertCaptureEvent(t, pool, merchantID, mdrBps, 7_500, start.Add(time.Hour))
+	tier := currentTierBonusBps(t, pool)
+	insertOpenBatch(t, pool, merchantID, businessDate, 7_500, feeAt(7_500, mdrBps, tier))
+
+	from, to := recalcWindow(businessDate)
+	result, err := RecalculateMDR(ctx, pool, merchantID, from, to)
+	if err != nil {
+		t.Fatalf("RecalculateMDR: %v", err)
+	}
+	if result.BatchesConsidered != 1 {
+		t.Errorf("BatchesConsidered = %d, want 1", result.BatchesConsidered)
+	}
+	if len(result.Adjusted) != 0 {
+		t.Errorf("len(Adjusted) = %d, want 0 (an unchanged rate is a no-op)", len(result.Adjusted))
+	}
+}
+
+func TestRecalculateMDR_OutOfRangeBatchUntouched(t *testing.T) {
+	pool := mustPool(t)
+	ctx := context.Background()
+	const originalMdrBps = 250
+	merchantID := insertActiveMerchant(t, pool, originalMdrBps)
+
+	inRangeDate := time.Date(2026, 4, 7, 0, 0, 0, 0, time.UTC)
+	outOfRangeDate := time.Date(2026, 4, 9, 0, 0, 0, 0, time.UTC)
+	tier := currentTierBonusBps(t, pool)
+	for _, d := range []time.Time{inRangeDate, outOfRangeDate} {
+		start, _ := BusinessDayWindow(d)
+		insertCaptureEvent(t, pool, merchantID, originalMdrBps, 6_000, start.Add(time.Hour))
+	}
+	insertOpenBatch(t, pool, merchantID, inRangeDate, 6_000, feeAt(6_000, originalMdrBps, tier))
+	outID := insertOpenBatch(t, pool, merchantID, outOfRangeDate, 6_000, feeAt(6_000, originalMdrBps, tier))
+
+	if _, err := pool.Exec(ctx, `UPDATE merchants SET mdr_bps = 400 WHERE id = $1`, merchantID); err != nil {
+		t.Fatalf("update mdr_bps: %v", err)
+	}
+	from, to := recalcWindow(inRangeDate)
+	result, err := RecalculateMDR(ctx, pool, merchantID, from, to)
+	if err != nil {
+		t.Fatalf("RecalculateMDR: %v", err)
+	}
+	if result.BatchesConsidered != 1 || len(result.Adjusted) != 1 {
+		t.Errorf("considered %d, adjusted %d; want 1, 1", result.BatchesConsidered, len(result.Adjusted))
+	}
+	var gotFee int64
+	if err := pool.QueryRow(ctx, `SELECT fee_fils FROM settlement_batches WHERE id = $1`, outID).Scan(&gotFee); err != nil {
+		t.Fatalf("read out-of-range batch: %v", err)
+	}
+	if gotFee != int64(feeAt(6_000, originalMdrBps, tier)) {
+		t.Errorf("out-of-range batch fee_fils = %d, want unchanged %d", gotFee, feeAt(6_000, originalMdrBps, tier))
+	}
+}
+
 // compile-time assertion that RecalculateMDR keeps the *pgxpool.Pool
 // signature the internal API handler passes it.
 var _ func(context.Context, *pgxpool.Pool, uuid.UUID, time.Time, time.Time) (RecalcResult, error) = RecalculateMDR
