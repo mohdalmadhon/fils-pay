@@ -1193,63 +1193,76 @@ button.fp-nav-search:hover {
   position: absolute;
   left: 0;
   top: 0;
-  width: 44px;
-  height: 52px;
+  width: 48px; /* 16x18 pixels at 3x */
+  height: 54px;
   will-change: transform;
-  filter: drop-shadow(0 8px 16px rgba(255, 122, 26, 0.35));
+  opacity: 0.92;
+  /* Fading in and out in four steps, like an old sprite. */
+  transition: opacity 600ms steps(4);
 }
 
-.fp-hw-ghost svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
+.fp-hw-ghost.is-gone {
+  opacity: 0;
 }
 
-.fp-hw-ghost.is-boo svg {
-  animation: fp-ghost-spin 700ms var(--ease);
+/* The hem wiggles: two frames, slower than a bat's wings. */
+.fp-hw-ghost .fp-hw-frame {
+  animation-duration: 700ms;
 }
 
-@keyframes fp-ghost-spin {
-  40% {
-    transform: scale(1.25) rotate(-12deg);
+.fp-hw-ghost.is-boo .fp-hw-frame {
+  animation-name: fp-flap, fp-ghost-shake;
+  animation-duration: 700ms, 480ms;
+  animation-timing-function: steps(1), steps(1);
+}
+
+@keyframes fp-ghost-shake {
+  0%,
+  50% {
+    translate: -3px 0;
   }
-  70% {
-    transform: scale(0.95) rotate(8deg);
+  25%,
+  75% {
+    translate: 3px 0;
+  }
+  100% {
+    translate: 0 0;
   }
 }
 
 .fp-hw-ghost-bubble {
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 6px);
-  padding: 2px 8px;
+  bottom: calc(100% + 8px);
+  padding: 3px 8px;
+  font-family: var(--font-pixel);
   font-size: var(--text-xs);
   font-weight: 600;
   white-space: nowrap;
   color: #1a0d05;
   background: var(--hw-bone);
-  border-radius: var(--r-2);
+  border: 2px solid #05030a;
+  box-shadow: 3px 3px 0 #05030a;
   transform: translateX(-50%);
-  animation: fp-boo 1100ms var(--ease) forwards;
+  animation: fp-boo 1100ms steps(6) forwards;
   pointer-events: none;
 }
 
 @keyframes fp-boo {
   0% {
     opacity: 0;
-    transform: translate(-50%, 6px) scale(0.8);
+    transform: translate(-50%, 6px);
   }
   15% {
     opacity: 1;
-    transform: translate(-50%, 0) scale(1);
+    transform: translate(-50%, 0);
   }
   80% {
     opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: translate(-50%, -8px);
+    transform: translate(-50%, -6px);
   }
 }
 
@@ -1258,12 +1271,13 @@ button.fp-nav-search:hover {
   left: 50%;
   top: var(--sp-3);
   padding: 3px 10px;
+  font-family: var(--font-pixel);
   font-size: var(--text-xs);
   font-weight: 500;
-  color: var(--hw-bone);
-  background: rgba(30, 20, 24, 0.8);
-  border: 1px solid rgba(247, 239, 224, 0.25);
-  border-radius: 999px;
+  color: var(--hw-candy);
+  background: #150f21;
+  border: 2px solid var(--c-line-2);
+  box-shadow: 3px 3px 0 #05030a;
   transform: translateX(-50%);
   animation: fp-fade var(--dur) var(--ease);
 }

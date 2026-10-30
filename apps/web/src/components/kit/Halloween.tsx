@@ -10,7 +10,9 @@
  *   - bats that wander the sky and flee from the pointer; catch one (touch
  *     it with the pointer) and it vanishes in a puff, with a running count
  *   - a spider on a thread that can be pulled down and springs back
- *   - a small ghost that trails the pointer and says boo if you catch it
+ *   - a ghost that haunts the page on its own: it drifts from place to
+ *     place, fades away and reappears somewhere else. It never follows the
+ *     pointer; touch it and it says boo and vanishes
  *
  * Bats and the ghost never take clicks (pointer-events: none), so the page
  * underneath always works; only the small spider can be grabbed.
@@ -151,7 +153,9 @@ function HalloweenLayer() {
     lastMove: 0,
     lastBoo: 0,
     bats: [] as Bat[],
-    ghost: { x: 0, y: 0 },
+    // The ghost drifts toward (tx, ty); when it gets there, or every so
+    // often, it fades out (hiddenUntil) and reappears somewhere else.
+    ghost: { x: 0, y: 0, tx: 0, ty: 0, nextVanish: 0, hiddenUntil: 0 },
     spider: { len: 120, v: 0, rest: 120, dragging: false },
   });
 
@@ -169,7 +173,7 @@ function HalloweenLayer() {
       phase: Math.random() * Math.PI * 2,
       gone: false,
     }));
-    s.ghost = { x: 80, y: h() - 140 };
+    s.ghost = { x: w() * 0.3, y: h() * 0.55, tx: w() * 0.3, ty: h() * 0.55, nextVanish: 0, hiddenUntil: 0 };
     s.spider.rest = Math.min(160, h() * 0.18);
     s.spider.len = s.spider.rest;
 
@@ -196,10 +200,16 @@ function HalloweenLayer() {
         b.x = w() * 0.62 + i * 52;
         b.y = 70 + (i % 2) * 26;
       });
-      s.ghost = { x: w() - 120, y: h() - 130 };
+      s.ghost = { ...s.ghost, x: w() - 120, y: h() - 150 };
       render(0);
       return;
     }
+
+    const vanish = (now: number, forMs: number) => {
+      // The fade takes 600ms (CSS), then it is gone until hiddenUntil.
+      s.ghost.hiddenUntil = now + 600 + forMs;
+      ghostEl.current?.classList.add("is-gone");
+    };
 
     let raf = 0;
     let last = performance.now();
@@ -245,18 +255,36 @@ function HalloweenLayer() {
         b.y = Math.max(20, Math.min(H * 0.55, b.y));
       }
 
-      // The ghost trails the pointer, keeping a polite distance.
-      const idle = now - s.lastMove > 2500 || s.px < 0;
-      const tx = idle ? W - 116 : s.px - 70;
-      const ty = idle ? H - 132 : s.py - 72;
-      s.ghost.x += (Math.max(8, Math.min(W - 52, tx)) - s.ghost.x) * Math.min(1, dt * 3);
-      s.ghost.y += (Math.max(8, Math.min(H - 60, ty)) - s.ghost.y) * Math.min(1, dt * 3);
-      // Catch the ghost and it says boo, then darts off.
-      if (Math.hypot(s.px - (s.ghost.x + 22), s.py - (s.ghost.y + 26)) < 30 && now - s.lastBoo > 1400) {
-        s.lastBoo = now;
-        booRef.current();
-        s.ghost.x += s.px > s.ghost.x + 22 ? -90 : 90;
-        s.ghost.y -= 40;
+      // The ghost haunts on its own and pays the pointer no attention.
+      const g = s.ghost;
+      if (g.nextVanish === 0) g.nextVanish = now + 9000 + Math.random() * 7000;
+      if (g.hiddenUntil > 0) {
+        if (now >= g.hiddenUntil) {
+          // Reappear somewhere new, with a new place to drift to.
+          g.hiddenUntil = 0;
+          g.x = 40 + Math.random() * (W - 130);
+          g.y = H * 0.2 + Math.random() * (H * 0.6);
+          pickGhostTarget(g, W, H);
+          g.nextVanish = now + 9000 + Math.random() * 7000;
+          ghostEl.current?.classList.remove("is-gone");
+        }
+      } else {
+        const dx = g.tx - g.x;
+        const dy = g.ty - g.y;
+        const d = Math.hypot(dx, dy);
+        if (d < 6) pickGhostTarget(g, W, H);
+        else {
+          const speed = 38; // px per second: a slow, aimless float
+          g.x += (dx / d) * speed * dt;
+          g.y += (dy / d) * speed * dt;
+        }
+        if (now >= g.nextVanish) vanish(now, 900 + Math.random() * 2200);
+        // Touch it and it says boo, then vanishes.
+        else if (Math.hypot(s.px - (g.x + 24), s.py - (g.y + 27)) < 30 && now - s.lastBoo > 1400) {
+          s.lastBoo = now;
+          booRef.current();
+          g.nextVanish = now + 900; // say it first, then fade away
+        }
       }
 
       // The spider: a spring on a thread, unless someone is pulling it.
@@ -368,7 +396,8 @@ function HalloweenLayer() {
         ref={ghostEl}
         className={`fp-hw-ghost${boo ? " is-boo" : ""}`}
       >
-        <Ghost />
+        <PixelArt sprite="ghostA" className="fp-hw-frame fp-hw-frame-a" />
+        <PixelArt sprite="ghostB" className="fp-hw-frame fp-hw-frame-b" />
         {boo ? (
           <span key={boo.id} className="fp-hw-ghost-bubble" onAnimationEnd={() => setBoo(null)}>
             {boo.text}
@@ -385,26 +414,8 @@ function HalloweenLayer() {
   );
 }
 
-function Ghost() {
-  return (
-    <svg viewBox="0 0 44 52">
-      <defs>
-        <linearGradient id="fp-hw-ghost" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#fff6f1" />
-          <stop offset="100%" stopColor="#ffcdb2" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M22 2C11 2 4 10 4 21v27l6-5 6 5 6-5 6 5 6-5 6 5V21C40 10 33 2 22 2Z"
-        fill="url(#fp-hw-ghost)"
-        stroke="#e5989b"
-        strokeWidth="1"
-      />
-      <ellipse cx="16" cy="20" rx="2.6" ry="3.6" fill="#2a1418" />
-      <ellipse cx="28" cy="20" rx="2.6" ry="3.6" fill="#2a1418" />
-      <ellipse cx="22" cy="29" rx="3" ry="2.2" fill="#2a1418" opacity="0.8" />
-      <circle cx="12" cy="26" r="2.4" fill="#e5989b" opacity="0.5" />
-      <circle cx="32" cy="26" r="2.4" fill="#e5989b" opacity="0.5" />
-    </svg>
-  );
+/** Somewhere new for the ghost to drift to, away from the very edges. */
+function pickGhostTarget(g: { tx: number; ty: number }, W: number, H: number): void {
+  g.tx = 30 + Math.random() * Math.max(60, W - 110);
+  g.ty = H * 0.15 + Math.random() * (H * 0.65);
 }
