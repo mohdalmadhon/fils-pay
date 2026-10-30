@@ -101,6 +101,8 @@ jobs:
           done
           echo "servers did not start"; cat api.log web.log; exit 1
       - run: npm run e2e:browser
+      - name: Accessibility (axe, WCAG 2.1 AA) on every page, light and night
+        run: npm run e2e:a11y
       - name: Keep screenshots and logs when it fails
         if: failure()
         uses: actions/upload-artifact@v4
