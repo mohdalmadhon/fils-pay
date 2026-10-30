@@ -234,6 +234,29 @@ test("capture with a reused idempotency key on a DIFFERENT transaction is reject
   assert.equal(row.rows[0]!.status, "authorized");
 });
 
+test("an authorization past its 7-day hold can no longer be captured", async () => {
+  // docs/bugs/005: capture only checked the status, so a stale authorization
+  // (hold expired and swept by expire_holds) was still captured.
+  const { rawKey } = await createApprovedMerchantWithApiKey("expired-auth");
+  const txn = await authorize(rawKey, 5_000);
+  await pool.query(
+    `UPDATE holds SET expires_at = now() - interval '1 day' WHERE transaction_id = $1`,
+    [txn.id],
+  );
+  await pool.query(`UPDATE transactions SET occurred_at = now() - interval '8 days', created_at = now() - interval '8 days' WHERE id = $1`, [txn.id]);
+  await pool.query(`DELETE FROM holds WHERE transaction_id = $1 AND status = 'active' AND expires_at < now()`, [txn.id]);
+
+  const res = await capture(rawKey, txn.id);
+  assert.equal(res.statusCode, 409, res.body);
+  assert.equal(res.json().error, "authorization_expired");
+  const row = await pool.query<{ status: string; captured_fils: string }>(
+    `SELECT status, captured_fils FROM transactions WHERE id = $1`,
+    [txn.id],
+  );
+  assert.equal(row.rows[0]!.status, "authorized");
+  assert.equal(Number(row.rows[0]!.captured_fils), 0);
+});
+
 test("capture with a reused idempotency key but a different body is rejected as a conflict", async () => {
   const { rawKey } = await createApprovedMerchantWithApiKey("idempotent-conflict");
   const txn = await authorize(rawKey, 8_000);

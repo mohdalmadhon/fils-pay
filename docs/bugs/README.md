@@ -22,3 +22,4 @@ more detail, with how to reproduce it.
 | [002](002-capture-idempotency-key-replays-other-transaction.md) | Reusing a capture Idempotency-Key on another transaction replays the first one | API: payments | High |
 | [003](003-failed-checkout-leaves-link-reserved.md) | A checkout attempt that errors leaves the payment link stuck as "reserved" | API: payment links | Medium |
 | [004](004-failed-checkout-capture-leaves-authorization-open.md) | When checkout's capture fails, the buyer's authorization is left open | API: payment links | Medium |
+| [005](005-capture-after-authorization-expired.md) | An authorization can still be captured after its 7-day hold has lapsed | API: payments | Medium |

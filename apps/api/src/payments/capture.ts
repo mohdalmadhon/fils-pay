@@ -70,6 +70,8 @@ interface LockedTransactionRow {
   amount_fils: string | number;
   captured_fils: string | number;
   acquirer_reference: string;
+  /** The authorization's hold has lapsed (docs/bugs/005). */
+  authorization_expired: boolean;
 }
 
 /**
@@ -135,10 +137,18 @@ export async function captureTransactionWithClient(
   // so ownership can never be satisfied by a value the caller controls
   // independently of how they authenticated.
   const lockResult = await client.query<LockedTransactionRow>(
-    `SELECT id, merchant_id, status, amount_fils, captured_fils, acquirer_reference
-       FROM transactions
+    // authorization_expired: the hold authorize placed (7 days, the scheme
+    // rule for card-not-present) has passed. expire_holds deletes lapsed
+    // holds, so with no hold row left the 7 days are counted from the
+    // authorization itself. Judged on the database clock.
+    `SELECT id, merchant_id, status, amount_fils, captured_fils, acquirer_reference,
+            COALESCE(
+              (SELECT max(h.expires_at) FROM holds h WHERE h.transaction_id = t.id),
+              t.occurred_at + interval '7 days'
+            ) <= now() AS authorization_expired
+       FROM transactions t
       WHERE id = $1 AND merchant_id = $2
-      FOR UPDATE`,
+      FOR UPDATE OF t`,
     [input.transactionId, input.merchantId],
   );
   const txn = lockResult.rows[0];
@@ -152,6 +162,14 @@ export async function captureTransactionWithClient(
   // acquirer.
   if (txn.status !== "authorized" && txn.status !== "partially_captured") {
     const body = { error: "not_capturable", status: txn.status };
+    await completeIdempotencyKey(client, claim.row.id, { statusCode: 409, body });
+    return { statusCode: 409, body };
+  }
+
+  // A lapsed authorization is no longer the cardholder's promise to pay; the
+  // scheme would refuse the capture. It used to be captured anyway.
+  if (txn.authorization_expired) {
+    const body = { error: "authorization_expired", status: txn.status };
     await completeIdempotencyKey(client, claim.row.id, { statusCode: 409, body });
     return { statusCode: 409, body };
   }
