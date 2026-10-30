@@ -78,6 +78,9 @@ export interface AuthenticatedSessionLookup {
  * Resolves only OTP-verified, unrevoked, unexpired merchant sessions.
  * Query the base table with the full auth predicate: live_sessions also
  * contains pending sessions, since being live does not prove OTP completion.
+ *
+ * The merchant must still be 'active': suspending or closing a merchant ends
+ * its sessions at once, not when they expire (up to SESSION_TTL_HOURS later).
  */
 export async function lookupSession(
   pool: Pool,
@@ -93,7 +96,9 @@ export async function lookupSession(
     `SELECT s.id AS session_id, s.merchant_user_id, mu.merchant_id, mu.role
        FROM sessions s
        JOIN merchant_users mu ON mu.id = s.merchant_user_id
+       JOIN merchants m ON m.id = mu.merchant_id
       WHERE s.token_hash = $1
+        AND m.status = 'active'
         AND s.authenticated = true
         AND s.revoked_at IS NULL
         AND s.expires_at > now()`,
