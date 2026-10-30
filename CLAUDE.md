@@ -65,11 +65,29 @@ reference. If the code behaves differently from what the docs describe,
 
 ## Security
 
-- `Math.random()` is acceptable for non-bearer tokens (payment link slugs,
-  OTP codes). Only session tokens and API keys require `crypto`.
-- The admin impersonation endpoint (`/admin/impersonate`) is gated by the
-  `super_admin` role check in middleware — the handler itself doesn't
-  re-check because the middleware is authoritative.
+Corrected 2026-10-30 after the security review (`docs/cyper/`). The two
+notes that used to be here were wrong.
+
+- **Never use `Math.random()` for anything that is, or protects, a secret.**
+  That includes OTP codes, payment link tokens, invite codes, session tokens
+  and API keys. Payment link tokens and OTP codes *are* bearer credentials:
+  anyone holding one can pay the link or finish the login. Use
+  `apps/api/src/lib/random.ts` (`node:crypto`). `scripts/repoHygiene.test.ts`
+  fails the build on new `Math.random()` calls in `apps/api` and
+  `apps/reporting` (only the webhook retry jitter is allowed).
+- **"View as merchant" is not super_admin-only, and middleware is not
+  authoritative.** `POST /v1/admin/merchants/:id/impersonate` needs only an
+  admin session: support and finance admins may view. They get the
+  merchant-plane `support` role, which is read-only **only because every
+  merchant write route has `requireMerchantRole("owner", "finance")`**.
+  Capture and void had no role gate and could be called by view-only
+  sessions (docs/cyper/05). Every new merchant write route needs that gate;
+  `requireMerchantWriterActor` now also refuses non-owner impersonation as a
+  backstop.
+- Find a merchant user by `(merchant_id, email)`, never by email alone:
+  emails are only unique per merchant (docs/cyper/01).
+- Check `merchants.status = 'active'` wherever a merchant credential is
+  accepted (docs/cyper/08).
 
 ## Code style
 
