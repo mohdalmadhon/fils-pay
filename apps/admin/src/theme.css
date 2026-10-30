@@ -244,6 +244,105 @@
   --shadow-pop: 0 24px 60px -20px rgba(10, 4, 8, 0.7);
 }
 
+/* Slate ------------------------------------------------------------------
+ * Calm and technical: slate blue with coral actions and sky-blue links,
+ * line illustrations and a dot grid (image 3 of the brief). Tighter
+ * corners and squarer buttons than the other two. Dark is a mid slate
+ * (#26324d), clearly lighter than night-black. Lexend for display type. */
+:root[data-design="slate"] {
+  color-scheme: light;
+  --font-display: "Lexend Variable", "Geist", system-ui, sans-serif;
+  --c-bg: #e6eaf1;
+  --c-surface: #f5f7fa;
+  --c-surface-2: #eef1f6;
+  --c-surface-3: #dfe4ec;
+  --c-line: #d3d9e4;
+  --c-line-2: #b7c0d0;
+  --c-ink: #1e2a46;
+  --c-ink-2: #3b4766;
+  --c-ink-3: #56627f;
+  --c-ink-4: #8f99ad;
+  --c-primary: #cc3434;
+  --c-primary-hover: #b52c2c;
+  --c-on-primary: #ffffff;
+  --c-accent: #ff6b6b;
+  --c-accent-ink: #1d5fa8;
+  --c-accent-soft: #dceafa;
+  --c-good: #15704a;
+  --c-good-soft: #d9f0e5;
+  --c-warn: #845200;
+  --c-warn-soft: #f6ead0;
+  --c-danger: #b5242d;
+  --c-danger-soft: #f8dfe0;
+  --c-neutral-soft: #e2e7ef;
+  --c-focus: rgba(29, 95, 168, 0.4);
+  --c-scrim: rgba(30, 42, 70, 0.45);
+  --art-1: #ff6b6b;
+  --art-2: #6cb6ff;
+  --art-3: #2f3d5c;
+  --art-4: #ffd27a;
+  --art-5: #1e2a46;
+  --hero-bg: #2f3d5c;
+  --hero-ink: #f1f4fa;
+  --hero-ink-2: #c3cde0;
+  --r-1: 4px;
+  --r-2: 6px;
+  --r-3: 10px;
+  --r-4: 14px;
+  --r-button: 8px;
+  --shadow-xs: 0 1px 1px rgba(30, 42, 70, 0.06);
+  --shadow-sm: 0 1px 3px rgba(30, 42, 70, 0.1);
+  --shadow-pop: 0 16px 40px -12px rgba(30, 42, 70, 0.35);
+}
+
+:root[data-design="slate"][data-theme="night"] {
+  color-scheme: dark;
+  --c-bg: #26324d;
+  --c-surface: #2f3d5c;
+  --c-surface-2: #344363;
+  --c-surface-3: #3c4c6f;
+  --c-line: #3f5074;
+  --c-line-2: #546690;
+  --c-ink: #f1f4fa;
+  --c-ink-2: #d3dbea;
+  --c-ink-3: #b3bfd6;
+  --c-ink-4: #8492ae;
+  --c-primary: #ff6b6b;
+  --c-primary-hover: #ff8585;
+  --c-on-primary: #1e2a46;
+  --c-accent: #ff6b6b;
+  --c-accent-ink: #8cc8ff;
+  --c-accent-soft: #304970;
+  --c-good: #6fdcaa;
+  --c-good-soft: #2f5257;
+  --c-warn: #ffd27a;
+  --c-warn-soft: #4e4c4e;
+  --c-danger: #ff9a9a;
+  --c-danger-soft: #523e55;
+  --c-neutral-soft: #3a4a6c;
+  --c-focus: rgba(140, 200, 255, 0.5);
+  --c-scrim: rgba(12, 18, 32, 0.55);
+  --hero-bg: #1e2a46;
+  --art-3: #3c4c6f;
+  --art-5: #f1f4fa;
+  --shadow-xs: 0 1px 1px rgba(8, 12, 24, 0.3);
+  --shadow-sm: 0 1px 3px rgba(8, 12, 24, 0.4);
+  --shadow-pop: 0 18px 44px -12px rgba(8, 12, 24, 0.65);
+}
+
+/* Compact spacing (Settings): a tighter grid and shorter controls, for
+ * people who want more rows on screen. Works with every design. */
+:root[data-density="compact"] {
+  --sp-3: 10px;
+  --sp-4: 12px;
+  --sp-5: 16px;
+  --sp-6: 18px;
+  --sp-8: 24px;
+  --sp-10: 28px;
+  --control-h: 32px;
+  --control-h-lg: 40px;
+}
+
 /* Halloween costume: a pixel-art Halloween night. Pumpkin orange, witch
  * purple and slime green on a purple-black sky; square pixel corners, hard
  * pixel shadows and a pixel font for headings. Set from the pumpkin button

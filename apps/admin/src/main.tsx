@@ -10,6 +10,7 @@ import { HalloweenToggle, initCostume } from "./components/kit/Halloween.js";
 // Display faces for the three designs. Each only downloads when used.
 import "@fontsource-variable/unbounded/index.css";
 import "@fontsource-variable/bricolage-grotesque/index.css";
+import "@fontsource-variable/lexend/index.css";
 import "@fontsource/pixelify-sans/latin-500.css";
 import "@fontsource/pixelify-sans/latin-600.css";
 import "./theme.css";
