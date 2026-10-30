@@ -79,6 +79,8 @@
 :root[data-design="carnival"] {
   color-scheme: light;
   --font-display: "Unbounded Variable", "Geist", system-ui, sans-serif;
+  --display-tracking: -0.01em; /* Unbounded is wide already */
+  --display-weight: 600;
   --c-bg: #eceafb;
   --c-surface: #f8f7ff;
   --c-surface-2: #f2f0fd;
@@ -165,6 +167,8 @@
 :root[data-design="blush"] {
   color-scheme: light;
   --font-display: "Bricolage Grotesque Variable", "Geist", system-ui, sans-serif;
+  --display-tracking: -0.035em;
+  --display-weight: 750;
   --c-bg: #f6e3df;
   --c-surface: #fff8f5;
   --c-surface-2: #fbeeea;
@@ -252,6 +256,8 @@
 :root[data-design="slate"] {
   color-scheme: light;
   --font-display: "Lexend Variable", "Geist", system-ui, sans-serif;
+  --display-tracking: -0.02em;
+  --display-weight: 600;
   --c-bg: #e6eaf1;
   --c-surface: #f5f7fa;
   --c-surface-2: #eef1f6;
@@ -390,11 +396,87 @@
   --r-2: 0;
   --r-3: 0;
   --r-4: 0;
+  --r-button: 0;
   --shadow-sm: 2px 2px 0 #05030a;
   --shadow-pop: 4px 4px 0 #05030a, 0 0 0 2px var(--c-line-2);
   --hw-pixel-shadow: 3px 3px 0 #05030a;
   /* Two-tone, hard stop: a pixel highlight on orange buttons. */
   --hw-gradient: linear-gradient(180deg, #ffa24c 0 50%, #ff7a1a 50% 100%);
+}
+
+/* Design shapes and type -------------------------------------------------
+ * What changes between designs beyond colour: display type for headings,
+ * amounts and the name; each design's button shape; and its page
+ * backdrop. Written with :is() so one rule covers the dashboard (dash-*),
+ * the Ops console (admin-*) and checkout (checkout-*). */
+
+h1,
+h2,
+.fp-wordmark {
+  font-family: var(--font-display);
+  letter-spacing: var(--display-tracking, -0.02em);
+}
+
+h1 {
+  font-weight: var(--display-weight, 600);
+}
+
+/* Amounts: the design's display face, with figures that line up. */
+.fp-amount {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--display-tracking, -0.02em);
+}
+
+.fp-amount .fp-amount-bd {
+  font-weight: var(--display-weight, 600);
+}
+
+/* Buttons, segmented controls and status pills take the design's button
+ * shape: pills in Carnival and Blush, 8px in Slate, square in costume. */
+:is(
+    .dash-button,
+    .dash-button-link,
+    .dash-form button[type="submit"],
+    .admin-button,
+    .admin-button-primary,
+    .admin-form button[type="submit"],
+    .checkout-form button[type="submit"],
+    .fp-segment,
+    .fp-segment button,
+    .dash-status
+  ) {
+  border-radius: var(--r-button);
+}
+
+/* The primary action is a little taller and weightier than the rest. */
+:is(.dash-form button[type="submit"], .dash-button-primary, .dash-button-link, .admin-form button[type="submit"], .admin-button-primary) {
+  padding-inline: var(--sp-5);
+  font-weight: 600;
+}
+
+/* Page backdrops. Carnival and Slate get a dot grid in the top corner
+ * (from the brief's images 2 and 3); Blush a blush-to-peach wash. */
+:is(:root[data-design="carnival"], :root:not([data-design]), :root[data-design="slate"]):not([data-costume="halloween"]) body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 300px;
+  height: 230px;
+  pointer-events: none;
+  background: radial-gradient(circle, var(--c-line-2) 0 3px, transparent 3.5px) 0 0 / 24px 24px;
+  -webkit-mask-image: linear-gradient(215deg, #000 15%, transparent 70%);
+  mask-image: linear-gradient(215deg, #000 15%, transparent 70%);
+  opacity: 0.8;
+}
+
+:root[data-design="blush"]:not([data-costume="halloween"]) body {
+  background:
+    radial-gradient(900px 520px at 0% 0%, color-mix(in srgb, var(--art-2) 45%, transparent), transparent 70%),
+    radial-gradient(800px 600px at 100% 100%, color-mix(in srgb, var(--art-1) 35%, transparent), transparent 70%),
+    var(--c-bg);
+  background-attachment: fixed;
 }
 
 /* Base -------------------------------------------------------------------- */
