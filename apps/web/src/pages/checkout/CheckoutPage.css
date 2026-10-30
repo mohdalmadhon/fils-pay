@@ -545,3 +545,14 @@
     grid-column: span 2;
   }
 }
+
+/* The payee line is the page's h1 for screen readers, but it is styled as a
+   line of text: the Halloween costume's gradient h1 treatment doesn't apply
+   to it (it didn't when it was a <p>). */
+:root[data-costume="halloween"] .checkout-payee {
+  background: none;
+  color: var(--c-ink-2);
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  animation: none;
+}
