@@ -131,8 +131,20 @@ firewalls such as ufw.
 
 ## Resource sizing
 
-The hosted demo box is 0.5 vCPU / 2 GB RAM / 2 GB disk; the API container is
-limited to 512 MB. Postgres defaults are fine at this size. The settlement
+The hosted box on Dilmun Cloud is 1 vCPU / 1-2 GB. On one vCPU the stack
+serves about 38 checkouts a second at p95 under 1 s, turns the excess away
+with `503` and `Retry-After`, and restarts itself after a crash without
+losing data: `docs/perf/checkout-capacity.md` (how it was measured, the
+settings, and how to re-run it here). Memory limits: api 768 MB (heap
+512 MB), reporting 384 MB, settlement 256 MB; Postgres takes the rest
+(`max_connections=120`).
+
+Every long-running service has `restart: unless-stopped`; the api also has a
+watchdog that kills it if its event loop freezes, so it is restarted too.
+`docker ps` shows restarts; `GET /healthz` shows the api's `load` (requests
+in flight, requests turned away since start).
+
+(It was 0.5 vCPU / 2 GB / 2 GB disk with the API limited to 512 MB, earlier.) The settlement
 image is built on the box with `go build` from `Dockerfile.go`.
 
 > **AM:** first build on the box filled the disk (go build cache). cleared it and it went through on the second try
