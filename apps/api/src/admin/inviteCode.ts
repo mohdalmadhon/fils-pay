@@ -1,15 +1,18 @@
 import type { Pool } from "pg";
 import { BadRequestError } from "../lib/errors.js";
+import { randomFromAlphabet } from "../lib/random.js";
 
 const INVITE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
-/** Generates a short, human-readable invite code for admin user onboarding. */
-export function generateInviteCode(length: number = 8): string {
-  let code = "";
-  for (let i = 0; i < length; i++) {
-    code += INVITE_ALPHABET[Math.floor(Math.random() * INVITE_ALPHABET.length)];
-  }
-  return code;
+/**
+ * A human-readable invite code for admin onboarding. Redeeming one creates an
+ * admin with the invite's role, so it is a bearer credential: drawn with
+ * node:crypto (lib/random.ts), 16 characters of a 32-letter alphabet = 80
+ * bits. It used to be Math.random() and 8 characters (40 bits), following a
+ * team note that Math.random() was fine for "non-bearer" codes.
+ */
+export function generateInviteCode(length: number = 16): string {
+  return randomFromAlphabet(INVITE_ALPHABET, length);
 }
 
 export async function createAdminInvite(
