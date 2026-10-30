@@ -61,6 +61,9 @@ export function describePayFailure(statusCode: number, body: { error?: string; s
       countsAsDecline: false,
     };
   }
+  if (statusCode === 422 && body.error === "card_expired") {
+    return { kind: "declined", message: "This card has expired. Use another card.", countsAsDecline: true };
+  }
   if (statusCode === 409) {
     return {
       kind: "declined",

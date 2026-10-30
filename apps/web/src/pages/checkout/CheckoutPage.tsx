@@ -10,6 +10,7 @@ import { DesignArt } from "../../components/art/DesignArt.js";
 import { useCountUp } from "../../components/kit/CountUp.js";
 import { Amount, Loading, StatePanel, usePageTitle } from "../../components/ui.js";
 import { describePayFailure } from "./payError.js";
+import { cardProblem, normalizeExpiryYear } from "./cardChecks.js";
 import "./CheckoutPage.css";
 
 type LoadState =
@@ -77,13 +78,25 @@ export function CheckoutPage() {
     event.preventDefault();
     if (!token) return;
 
+    // Expired card, bad month or a CVV of the wrong length: say so now,
+    // without sending anything.
+    const problem = cardProblem(card);
+    if (problem) {
+      setPayState({ kind: "declined", message: problem, retryable: true });
+      return;
+    }
+
     // A fresh Idempotency-Key per explicit user action — every click,
     // including a "try again" after a decline, is a new attempt.
     const idempotencyKey = crypto.randomUUID();
     setPayState({ kind: "submitting" });
 
     try {
-      const result = await payPaymentLink(token, { card }, idempotencyKey);
+      const result = await payPaymentLink(
+        token,
+        { card: { ...card, expiryYear: normalizeExpiryYear(card.expiryYear) } },
+        idempotencyKey,
+      );
       setPayState({ kind: "success", result });
     } catch (err) {
       if (err instanceof ApiError) {
@@ -294,7 +307,7 @@ export function CheckoutPage() {
               type="number"
               inputMode="numeric"
               autoComplete="cc-exp-year"
-              min={new Date().getFullYear()}
+              placeholder="YYYY"
               required
               value={card.expiryYear}
               onChange={(e) => setCard({ ...card, expiryYear: Number(e.target.value) })}
@@ -306,7 +319,7 @@ export function CheckoutPage() {
               type="text"
               inputMode="numeric"
               autoComplete="cc-csc"
-              maxLength={4}
+              maxLength={brandHint === "amex" ? 4 : 3}
               required
               value={card.cvv}
               onFocus={() => setCvvFocused(true)}

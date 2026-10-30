@@ -32,3 +32,9 @@ test("a merchant that isn't approved yet ends the checkout with a clear message"
   assert.equal(f.countsAsDecline, false);
   assert.equal(f.message, "This business can't accept payments yet. No payment was taken.");
 });
+
+test("an expired card keeps the form and asks for another card", () => {
+  const f = describePayFailure(422, { error: "card_expired", stage: "authorize" });
+  assert.equal(f.kind, "declined");
+  assert.match(f.message, /expired/);
+});
