@@ -963,42 +963,43 @@ button.fp-nav-search:hover {
   background: var(--c-surface);
 }
 
-.fp-hw-toggle svg {
-  width: 26px;
-  height: 26px;
-  overflow: visible;
+/* The pumpkin is an 18x16 pixel sprite drawn at 2x: whole-number scales
+ * keep every sprite pixel the same size. */
+.fp-hw-pumpkin {
+  display: block;
+  width: 36px;
+  height: 32px;
 }
 
-.fp-hw-toggle .fp-hw-face {
-  fill: var(--c-surface-3);
-  transition: fill var(--dur-slow) var(--ease);
-}
-
+/* Lit: a square pixel button with a hard shadow, and the candle flickers. */
 .fp-hw-toggle[aria-pressed="true"],
 .fp-hw-toggle[aria-pressed="true"]:hover {
-  border-color: var(--hw-pumpkin);
-  background: radial-gradient(circle at 50% 60%, #3a2026, var(--c-surface) 70%);
-  box-shadow: 0 0 0 1px rgba(255, 122, 26, 0.25), 0 10px 30px -6px rgba(255, 122, 26, 0.45);
+  width: 48px;
+  height: 48px;
+  border: 2px solid var(--hw-pumpkin);
+  border-radius: 0;
+  background: #1b1429;
+  box-shadow: 4px 4px 0 #05030a;
 }
 
-.fp-hw-toggle[aria-pressed="true"] .fp-hw-face {
-  fill: #ffd23f;
-  animation: fp-flicker 2.4s ease-in-out infinite;
+.fp-hw-toggle[aria-pressed="true"] .fp-hw-pumpkin {
+  animation: fp-flicker 2.4s steps(1) infinite;
 }
 
+/* A candle flicker, in steps rather than a smooth fade. */
 @keyframes fp-flicker {
   0%,
   100% {
-    opacity: 1;
+    filter: brightness(1);
   }
   45% {
-    opacity: 0.82;
+    filter: brightness(0.85);
   }
   50% {
-    opacity: 0.6;
+    filter: brightness(0.7);
   }
   55% {
-    opacity: 0.9;
+    filter: brightness(1.1);
   }
 }
 
@@ -1075,14 +1076,16 @@ button.fp-nav-search:hover {
 .fp-hw-web {
   position: absolute;
   top: 0;
-  width: 170px;
-  height: 170px;
-  color: var(--hw-bone);
-  opacity: 0.3;
+  width: 144px; /* 36 pixels at 4x */
+  height: 144px;
+  opacity: 0.35;
 }
 
 .fp-hw-web-left {
   left: 0;
+  width: 108px; /* 3x: smaller and fainter, so the logo stays readable */
+  height: 108px;
+  opacity: 0.22;
 }
 
 .fp-hw-web-right {
@@ -1094,67 +1097,59 @@ button.fp-nav-search:hover {
   position: absolute;
   top: 56px;
   right: 9%;
-  width: 72px;
+  width: 72px; /* 18 pixels at 4x */
   height: 72px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 38% 36%, #fff3ea, #ffd23f 45%, #ff7a1a 100%);
-  box-shadow: 0 0 60px 10px rgba(255, 122, 26, 0.22);
-  opacity: 0.9;
-}
-
-.fp-hw-moon::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 64% 60%, rgba(181, 130, 140, 0.45) 0 7px, transparent 8px),
-    radial-gradient(circle at 36% 68%, rgba(181, 130, 140, 0.35) 0 4px, transparent 5px),
-    radial-gradient(circle at 58% 30%, rgba(181, 130, 140, 0.3) 0 3px, transparent 4px);
+  filter: drop-shadow(0 0 0 #ffd23f) drop-shadow(0 0 24px rgba(255, 210, 63, 0.35));
 }
 
 .fp-hw-bat {
   position: absolute;
   left: 0;
   top: 0;
-  width: 46px;
-  height: 24px;
-  color: #0c0609;
+  width: 60px; /* 20x10 pixels at 3x */
+  height: 30px;
   will-change: transform;
-  filter: drop-shadow(0 0 6px rgba(255, 122, 26, 0.45));
 }
 
-.fp-hw-bat svg {
-  display: block;
+/* Two frames, wings up and down, swapped in steps: a pixel flap. */
+.fp-hw-frame {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  overflow: visible;
 }
 
-.fp-hw-wing {
-  transform-box: view-box;
-  transform-origin: 23px 12px;
-  animation: fp-flap 240ms ease-in-out infinite alternate;
+.fp-hw-frame-b {
+  animation: fp-flap 260ms steps(1) infinite;
+}
+
+.fp-hw-frame-a {
+  animation: fp-flap 260ms steps(1) infinite reverse;
 }
 
 @keyframes fp-flap {
-  from {
-    transform: scaleY(1);
+  0% {
+    opacity: 0;
   }
-  to {
-    transform: scaleY(0.3);
+  50% {
+    opacity: 1;
   }
 }
 
 .fp-hw-bat.is-poof {
-  animation: fp-poof 520ms var(--ease) forwards;
+  animation: fp-poof 420ms steps(4) forwards;
   pointer-events: none;
 }
 
+/* Caught: the bat breaks into pixels and is gone. */
 @keyframes fp-poof {
+  40% {
+    scale: 1.4;
+    filter: brightness(2.5);
+  }
   to {
     opacity: 0;
-    filter: blur(8px) drop-shadow(0 0 14px #ff7a1a);
+    scale: 0.2;
   }
 }
 
@@ -1162,35 +1157,32 @@ button.fp-nav-search:hover {
   position: absolute;
   top: 0;
   left: 72%;
-  width: 34px;
+  width: 45px; /* 15x12 pixels at 3x */
 }
 
 .fp-hw-thread {
   position: absolute;
-  left: 16.5px;
+  left: 21px;
   top: 0;
-  width: 1px;
-  background: linear-gradient(rgba(247, 239, 224, 0.2), var(--hw-bone));
+  width: 3px; /* one sprite pixel */
+  background: repeating-linear-gradient(180deg, rgba(247, 239, 224, 0.75) 0 6px, rgba(247, 239, 224, 0.35) 6px 9px);
 }
 
 .fp-hw-spider-body {
   position: absolute;
   left: 0;
   top: 0;
-  width: 34px;
-  height: 34px;
-  color: #0c0609;
+  width: 45px;
+  height: 36px;
   pointer-events: auto;
   cursor: grab;
   touch-action: none;
-  filter: drop-shadow(0 0 6px rgba(255, 122, 26, 0.55));
 }
 
 .fp-hw-spider-body svg {
   display: block;
   width: 100%;
   height: 100%;
-  overflow: visible;
 }
 
 .fp-hw-spider-body:active {
@@ -1322,18 +1314,18 @@ button.fp-nav-search:hover {
   .fp-hw-toggle:hover {
     transform: none;
   }
-  .fp-hw-toggle svg {
-    width: 24px;
+  .fp-hw-toggle .fp-hw-pumpkin {
+    width: 27px;
     height: 24px;
     margin-left: 4px;
   }
   .fp-hw-web {
-    width: 100px;
-    height: 100px;
+    width: 72px; /* 2x */
+    height: 72px;
   }
   .fp-hw-moon {
-    width: 48px;
-    height: 48px;
+    width: 54px; /* 3x */
+    height: 54px;
     top: 64px;
   }
 }

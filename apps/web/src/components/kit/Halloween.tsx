@@ -15,13 +15,14 @@
  * Bats and the ghost never take clicks (pointer-events: none), so the page
  * underneath always works; only the small spider can be grabbed.
  *
- * The pumpkin's eyes follow the pointer while it is lit. The choice is kept
- * in this browser. Under prefers-reduced-motion everything is still: the
+ * Everything is pixel art (pixelArt.tsx). The choice is kept in this
+ * browser. Under prefers-reduced-motion everything is still: the
  * decorations stay, nothing flies or follows. All decorations are
  * aria-hidden; the button itself is a normal toggle (aria-pressed).
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { prefersReducedMotion } from "./motion.js";
+import { PixelArt } from "./pixelArt.js";
 
 const KEY = "fp-costume";
 const CHANGE = "fp-costume-change";
@@ -97,22 +98,6 @@ export function useCostume(): { on: boolean; toggle: (origin?: { x: number; y: n
 export function HalloweenToggle() {
   const { on, toggle } = useCostume();
   const button = useRef<HTMLButtonElement>(null);
-  const eyes = useRef<SVGGElement>(null);
-
-  // While lit, the pumpkin watches the pointer.
-  useEffect(() => {
-    if (!on || prefersReducedMotion()) return;
-    const onMove = (e: PointerEvent) => {
-      const box = button.current?.getBoundingClientRect();
-      if (!box || !eyes.current) return;
-      const dx = e.clientX - (box.left + box.width / 2);
-      const dy = e.clientY - (box.top + box.height / 2);
-      const d = Math.max(1, Math.hypot(dx, dy));
-      eyes.current.style.transform = `translate(${((dx / d) * 1.4).toFixed(2)}px, ${((dy / d) * 1.1).toFixed(2)}px)`;
-    };
-    window.addEventListener("pointermove", onMove);
-    return () => window.removeEventListener("pointermove", onMove);
-  }, [on]);
 
   return (
     <>
@@ -127,37 +112,14 @@ export function HalloweenToggle() {
           toggle(box ? { x: box.left + box.width / 2, y: box.top + box.height / 2 } : undefined);
         }}
       >
-        <Pumpkin lit={on} eyesRef={eyes} />
+        {/* A pixel jack-o'-lantern: dark until the costume lights it. */}
+        <PixelArt sprite={on ? "pumpkinLit" : "pumpkinDark"} className="fp-hw-pumpkin" />
         <span className="fp-hw-tip" aria-hidden>
           {on ? "Take off the costume" : "Halloween costume"}
         </span>
       </button>
       {on ? <HalloweenLayer /> : null}
     </>
-  );
-}
-
-function Pumpkin({ lit, eyesRef }: { lit: boolean; eyesRef: React.Ref<SVGGElement> }) {
-  return (
-    <svg viewBox="0 0 32 32" aria-hidden focusable={false}>
-      <defs>
-        <linearGradient id="fp-hw-pumpkin" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#ffb4a2" />
-          <stop offset="55%" stopColor="#e5989b" />
-          <stop offset="100%" stopColor="#b5828c" />
-        </linearGradient>
-      </defs>
-      <path d="M16 8.5c0-2 .8-3.6 2.6-4.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <g fill={lit ? "url(#fp-hw-pumpkin)" : "none"} stroke={lit ? "#2a1418" : "currentColor"} strokeWidth="1.4">
-        <ellipse cx="10.5" cy="18" rx="7.5" ry="9" />
-        <ellipse cx="21.5" cy="18" rx="7.5" ry="9" />
-        <ellipse cx="16" cy="18" rx="6.5" ry="9.5" />
-      </g>
-      <g ref={eyesRef} style={{ transition: "transform 120ms ease-out" }}>
-        <path className="fp-hw-face" d="M10 15.5l2.6-3 2.4 3Z M17 15.5l2.4-3 2.6 3Z" />
-      </g>
-      <path className="fp-hw-face" d="M10 20.5c1.6 2.6 10.4 2.6 12 0-1.4.6-2.2.4-3 1.4-.6-.9-1.3-.9-2-.2-.7-.7-1.4-.7-2 .2-.8-1-1.6-.8-3-1.4Z" />
-    </svg>
   );
 }
 
@@ -224,7 +186,7 @@ function HalloweenLayer() {
       }
       if (spiderEl.current && threadEl.current) {
         threadEl.current.style.height = `${s.spider.len.toFixed(1)}px`;
-        spiderEl.current.style.transform = `translateY(${(s.spider.len - 4).toFixed(1)}px)`;
+        spiderEl.current.style.transform = `translateY(${(s.spider.len - 3).toFixed(1)}px)`;
       }
     };
 
@@ -251,8 +213,8 @@ function HalloweenLayer() {
       for (const b of s.bats) {
         if (b.gone) continue;
         b.phase += dt;
-        const dx = b.x + 23 - s.px;
-        const dy = b.y + 12 - s.py;
+        const dx = b.x + 30 - s.px; // the bat sprite's middle (60x30)
+        const dy = b.y + 15 - s.py;
         const d = Math.hypot(dx, dy);
         if (d < 28) {
           poofRef.current(s.bats.indexOf(b));
@@ -370,9 +332,9 @@ function HalloweenLayer() {
     <div ref={layer} className="fp-hw-layer" aria-hidden>
       <div className="fp-hw-lantern" />
       <div className="fp-hw-vignette" />
-      <span className="fp-hw-moon" />
-      <Cobweb className="fp-hw-web fp-hw-web-left" />
-      <Cobweb className="fp-hw-web fp-hw-web-right" />
+      <PixelArt sprite="moon" className="fp-hw-moon" />
+      <PixelArt sprite="cobweb" className="fp-hw-web fp-hw-web-left" />
+      <PixelArt sprite="cobweb" className="fp-hw-web fp-hw-web-right" />
 
       {[0, 1, 2, 3].map((i) => (
         <div
@@ -382,16 +344,8 @@ function HalloweenLayer() {
           }}
           className="fp-hw-bat"
         >
-          <svg viewBox="0 0 46 24">
-            <g fill="currentColor">
-              <path className="fp-hw-wing" d="M23 12C18 6 12 4 2 6c4 2 5 5 4 8 3-2 6-2 8 1 1-3 4-4 9-3Z" />
-              <path className="fp-hw-wing fp-hw-wing-r" d="M23 12c5-6 11-8 21-6-4 2-5 5-4 8-3-2-6-2-8 1-1-3-4-4-9-3Z" />
-              <ellipse cx="23" cy="13" rx="3.4" ry="4.6" />
-              <path d="M20.4 9.2l.8-3 1.4 2.4ZM25.6 9.2l-.8-3-1.4 2.4Z" />
-            </g>
-            <circle cx="21.8" cy="12" r="0.8" fill="#ffcdb2" />
-            <circle cx="24.2" cy="12" r="0.8" fill="#ffcdb2" />
-          </svg>
+          <PixelArt sprite="batUp" className="fp-hw-frame fp-hw-frame-a" />
+          <PixelArt sprite="batDown" className="fp-hw-frame fp-hw-frame-b" />
         </div>
       ))}
 
@@ -406,7 +360,7 @@ function HalloweenLayer() {
             state.current.spider.dragging = true;
           }}
         >
-          <Spider />
+          <PixelArt sprite="spider" />
         </div>
       </div>
 
@@ -428,50 +382,6 @@ function HalloweenLayer() {
         </span>
       )}
     </div>
-  );
-}
-
-function Cobweb({ className }: { className: string }) {
-  // Spokes from the corner, joined by sagging threads.
-  const spokes = [0, 18, 36, 54, 72, 90];
-  const rings = [30, 60, 95, 135];
-  const point = (r: number, deg: number) => [Math.cos((deg * Math.PI) / 180) * r, Math.sin((deg * Math.PI) / 180) * r] as const;
-  return (
-    <svg className={className} viewBox="0 0 170 170" fill="none" stroke="currentColor" strokeWidth="0.9">
-      {spokes.map((deg) => {
-        const [x, y] = point(175, deg);
-        return <path key={deg} d={`M0 0L${x.toFixed(1)} ${y.toFixed(1)}`} />;
-      })}
-      {rings.map((r) => (
-        <path
-          key={r}
-          d={spokes
-            .slice(0, -1)
-            .map((deg, i) => {
-              const [x1, y1] = point(r, deg);
-              const [x2, y2] = point(r, spokes[i + 1]!);
-              const [cx, cy] = point(r * 0.86, deg + 9);
-              return `${i === 0 ? `M${x1.toFixed(1)} ${y1.toFixed(1)}` : ""} Q${cx.toFixed(1)} ${cy.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`;
-            })
-            .join(" ")}
-        />
-      ))}
-    </svg>
-  );
-}
-
-function Spider() {
-  return (
-    <svg viewBox="0 0 34 34">
-      <g stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" fill="none">
-        <path d="M12 15l-6-4-3 3M12 18l-7 0-3 4M12 21l-6 4-2 5M13 23l-3 5" />
-        <path d="M22 15l6-4 3 3M22 18l7 0 3 4M22 21l6 4 2 5M21 23l3 5" />
-      </g>
-      <ellipse cx="17" cy="20" rx="6" ry="7" fill="currentColor" />
-      <circle cx="17" cy="12.5" r="4" fill="currentColor" />
-      <circle cx="15.4" cy="12" r="1" fill="#ffcdb2" />
-      <circle cx="18.6" cy="12" r="1" fill="#ffcdb2" />
-    </svg>
   );
 }
 
