@@ -11,7 +11,7 @@
  * Requires DATABASE_URL pointing at a real, migrated Postgres.
  */
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { test } from "node:test";
 import { Pool } from "pg";
 import { toFils } from "@filspay/money";
@@ -20,7 +20,7 @@ import { loadConfig } from "../config.js";
 import { issueApiKey } from "../apiKeys/issue.js";
 import { recordKycReview } from "../onboarding/review.js";
 import { createMerchant } from "../testing/adminFixtures.js";
-import { hashRequest } from "./idempotency.js";
+import { canonicalJson } from "./idempotency.js";
 import { authorizeRequestHash } from "./authorize.js";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -74,7 +74,9 @@ test("the stored request_hash is not a hash of the full card", async () => {
     [merchantId, idem],
   );
   const stored = row.rows[0]!.request_hash;
-  assert.notEqual(stored, hashRequest({ amountFils: 5_000, card: CARD, reference: "r-1" }), "full PAN + CVV hash stored");
+  // The old fingerprint, computed directly (hashRequest now refuses card data).
+  const oldStyle = createHash("sha256").update(canonicalJson({ amountFils: 5_000, card: CARD, reference: "r-1" })).digest("hex");
+  assert.notEqual(stored, oldStyle, "full PAN + CVV hash stored");
 
   // Idempotency still works: same request replays, a different card is refused.
   const replay = await send(CARD);
