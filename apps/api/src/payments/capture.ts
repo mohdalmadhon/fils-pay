@@ -1,3 +1,4 @@
+import { applyPayableCacheDelta } from "./balanceCache.js";
 import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { ZERO_FILS, addFils, applyRateFils, compareFils, subtractFils, toFils, type Fils } from "@filspay/money";
@@ -242,6 +243,8 @@ export async function captureTransactionWithClient(
       [entryGroupId, input.merchantId, txn.id, feeFils],
     );
   }
+
+  await applyPayableCacheDelta(client, input.merchantId, requestedAmount - feeFils);
 
   // Hold lifecycle: released exactly when nothing remains outstanding.
   if (newStatus === "captured") {

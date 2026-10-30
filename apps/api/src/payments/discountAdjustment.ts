@@ -1,3 +1,4 @@
+import { applyPayableCacheDelta } from "./balanceCache.js";
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { applyRateFils, parseBhdToFils, toFils } from "@filspay/money";
@@ -68,6 +69,7 @@ export async function applyCaptureDiscountAdjustment(
           [randomUUID(), input.merchantId, input.transactionId, discountFils],
         );
       }
+      if (discountFils > 0) await applyPayableCacheDelta(client, input.merchantId, discountFils);
       await client.query(
         `UPDATE transaction_events SET metadata = metadata || jsonb_build_object('negotiatedDiscountAppliedFils', $2::bigint)
           WHERE id = $1`, [event.id, discountFils],
