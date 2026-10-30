@@ -1849,7 +1849,7 @@ button.fp-nav-search:hover {
 }
 
 :root[data-costume="halloween"] .fp-wordmark > span:not([class]) {
-  color: var(--hw-witch);
+  color: #c98af5; /* a lighter witch purple: 4.5:1 on the haunted band too */
   text-shadow: none;
 }
 

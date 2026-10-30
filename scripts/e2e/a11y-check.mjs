@@ -1,8 +1,12 @@
 #!/usr/bin/env node
 /**
  * Accessibility check: runs axe-core (WCAG 2.1 A and AA, plus axe's best
- * practices) on every dashboard page, in the light and night themes and the
- * Halloween costume, and on the public checkout page, in Chromium. Write-up: docs/improvements/18.
+ * practices) on every dashboard page and the public checkout page, in
+ * Chromium, for every look: the three designs (Carnival, Blush, Slate) in
+ * light and dark, and the Halloween costume. Write-up:
+ * docs/improvements/18; the designs: docs/design/README.md.
+ *
+ * LOOKS=carnival-light,slate-dark limits the run to some looks.
  *
  * Any violation fails the run, with the rule, the elements and axe's
  * explanation. axe finds about a third of real problems: keyboard use,
@@ -38,7 +42,11 @@ const DASHBOARD_PAGES = [
   "overview",
   "webhooks",
   "webhooks/new",
+  "settings",
 ];
+
+const ALL_LOOKS = ["carnival-light", "carnival-dark", "blush-light", "blush-dark", "slate-light", "slate-dark", "halloween"];
+const LOOKS = process.env.LOOKS ? process.env.LOOKS.split(",") : ALL_LOOKS;
 
 let failures = 0;
 let pagesChecked = 0;
@@ -108,15 +116,16 @@ async function main() {
   const browser = await chromium.launch();
   try {
     // Each look in its own browser context (the choice is per browser).
-    // "halloween" is the costume (components/kit/Halloween.tsx) over night.
-    for (const theme of ["light", "night", "halloween"]) {
+    // "halloween" is the costume (components/kit/Halloween.tsx) over Carnival.
+    for (const theme of LOOKS) {
       const context = await browser.newContext();
-      await context.addInitScript((t) => {
+      await context.addInitScript((look) => {
+        const [design, mode] = look === "halloween" ? ["carnival", "dark"] : look.split("-");
         try {
-          window.localStorage.setItem("fp-theme", t === "light" ? "light" : "night");
-          window.localStorage.setItem("fp-costume", t === "halloween" ? "halloween" : "off");
+          window.localStorage.setItem("fp-appearance", JSON.stringify({ design, mode, layout: "sidebar", density: "comfortable" }));
+          window.localStorage.setItem("fp-costume", look === "halloween" ? "halloween" : "off");
         } catch {
-          /* storage blocked: the system theme applies */
+          /* storage blocked: the defaults apply */
         }
       }, theme);
       const page = await context.newPage();

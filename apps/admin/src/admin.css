@@ -252,7 +252,7 @@
   width: 36px;
   height: 36px;
   padding: 0;
-  color: #ededef;
+  color: var(--side-ink);
   background: transparent;
   border: 0;
   border-radius: var(--r-2);
@@ -283,12 +283,12 @@
     gap: var(--sp-1);
     height: 56px;
     padding: 0 var(--sp-3) 0 var(--sp-4);
-    color: #ededef;
-    background: #141416;
+    color: var(--side-ink);
+    background: var(--side-bg);
   }
 
   .admin-topbar .fp-wordmark > span:not([class]) {
-    color: #8b8b93;
+    color: var(--side-ink-3);
   }
 
   .admin-topbar-search {
@@ -773,7 +773,7 @@ input[type="radio"] {
   flex-direction: column;
   /* Text starts after the ledger's margin rule at 64px. */
   padding: var(--sp-8) var(--sp-12) var(--sp-8) 96px;
-  color: #ededef;
+  color: var(--hero-ink);
   background-color: #141416;
   background-image:
     linear-gradient(90deg, transparent 63px, rgba(217, 122, 30, 0.55) 63px, rgba(217, 122, 30, 0.55) 64px, transparent 64px),
@@ -781,11 +781,11 @@ input[type="radio"] {
 }
 
 .admin-login-aside .fp-wordmark {
-  color: #ffffff;
+  color: var(--hero-ink);
 }
 
 .admin-login-aside .fp-wordmark > span:not([class]) {
-  color: #8b8b93;
+  color: var(--hero-ink-2);
 }
 
 .admin-login-pitch {
@@ -810,7 +810,7 @@ input[type="radio"] {
   font-weight: 500;
   line-height: 1.25;
   letter-spacing: -0.025em;
-  color: #ffffff;
+  color: var(--hero-ink);
 }
 
 .admin-login-points {
@@ -819,7 +819,7 @@ input[type="radio"] {
   margin: 0;
   padding: 0;
   list-style: none;
-  color: #b9b9c0;
+  color: var(--hero-ink-2);
 }
 
 .admin-login-points li {
@@ -837,7 +837,7 @@ input[type="radio"] {
 .admin-login-foot {
   margin: 0;
   font-size: var(--text-xs);
-  color: #63636b;
+  color: var(--hero-ink-2);
 }
 
 .admin-login-panel {

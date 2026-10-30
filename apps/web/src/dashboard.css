@@ -912,7 +912,7 @@
   flex-direction: column;
   /* Text starts after the ledger's margin rule at 64px. */
   padding: var(--sp-8) var(--sp-12) var(--sp-8) 96px;
-  color: #ededef;
+  color: var(--hero-ink);
   background-color: #141416;
   background-image:
     linear-gradient(90deg, transparent 63px, rgba(217, 122, 30, 0.55) 63px, rgba(217, 122, 30, 0.55) 64px, transparent 64px),
@@ -921,11 +921,11 @@
 }
 
 .dash-login-aside .fp-wordmark {
-  color: #ffffff;
+  color: var(--hero-ink);
 }
 
 .dash-login-aside .fp-wordmark > span:not([class]) {
-  color: #8b8b93;
+  color: var(--hero-ink-2);
 }
 
 .dash-login-pitch {
@@ -941,7 +941,7 @@
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #8b8b93;
+  color: var(--hero-ink-2);
 }
 
 .dash-login-figure {
@@ -954,7 +954,7 @@
   font-weight: 500;
   line-height: 1;
   letter-spacing: -0.04em;
-  color: #ffffff;
+  color: var(--hero-ink);
 }
 
 .dash-login-figure .dim {
@@ -973,7 +973,7 @@
   font-size: 0.28em;
   font-weight: 600;
   letter-spacing: 0.08em;
-  color: #8b8b93;
+  color: var(--hero-ink-2);
 }
 
 .dash-login-pitch h2 {
@@ -982,7 +982,7 @@
   font-weight: 500;
   line-height: 1.35;
   letter-spacing: -0.02em;
-  color: #ededef;
+  color: var(--hero-ink);
 }
 
 .dash-login-points {
@@ -991,7 +991,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  color: #b9b9c0;
+  color: var(--hero-ink-2);
 }
 
 .dash-login-points li {
@@ -1009,7 +1009,7 @@
 .dash-login-foot {
   margin: 0;
   font-size: var(--text-xs);
-  color: #63636b;
+  color: var(--hero-ink-2);
 }
 
 .dash-login-panel {
