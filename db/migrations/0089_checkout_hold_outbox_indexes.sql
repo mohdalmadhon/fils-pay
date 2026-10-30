@@ -1,0 +1,24 @@
+-- Indexes for the two remaining full-table scans every checkout makes
+-- (docs/perf/2026-10-30-hosted-capacity.md).
+--
+-- holds(transaction_id): capture reads a transaction's latest hold expiry
+-- (apps/api/src/payments/capture.ts, the lock SELECT) and then releases
+-- its active hold; void releases it too. Each of those read the whole
+-- holds table. With 18,000 holds, pg_stat_user_tables showed 36,091
+-- sequential scans and no index scans on it after one load run.
+--
+-- outbox_events(aggregate_id, event_type): the pay flow adds the
+-- discounted fee to its capture event's outbox payload
+-- (apps/api/src/paymentLinks/pay.ts), found by aggregate_id and
+-- event_type. That UPDATE was the most expensive statement in a checkout
+-- (1.6 ms mean at 18,000 outbox rows) and grew with every payment. The
+-- existing partial unique index on aggregate_id (0075) only covers
+-- settlement.paid rows.
+--
+-- Both scans ran inside the capture transaction, holding the link and
+-- transaction row locks and a pool connection, and got slower with every
+-- payment. Plain CREATE INDEX (the runner applies each file in a
+-- transaction): it blocks writes to these two tables while it builds, well
+-- under a second at the hosted box's size.
+CREATE INDEX IF NOT EXISTS idx_holds_transaction ON holds (transaction_id);
+CREATE INDEX IF NOT EXISTS idx_outbox_events_aggregate ON outbox_events (aggregate_id, event_type);

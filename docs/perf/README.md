@@ -2,6 +2,7 @@
 
 | Report | Scope |
 |---|---|
+| [Hosted box capacity](2026-10-30-hosted-capacity.md) | Measured on the live 1-vCPU box with the API's real 0.5-vCPU / 512-MiB limits; hold/outbox scan indexes (0089); why the pool is not raised. |
 | [Remaining capacity fixes](2026-10-30-remaining-capacity-fixes.md) | Search indexes, webhook/import/reporting batching, bounded delivery concurrency, CSV memory, compiled runtime and hosting limits; output parity and measured results. |
 | [2026-10-30 capacity follow-up](2026-10-30-capacity-follow-up.md) | Independent review of capacity commits, batching fixes and CSV compatibility check, comparative verification and measured checkout ceiling. |
 | [Checkout capacity and recovery](checkout-capacity.md) | Original capacity work: pool sizing, ledger indexes, shorter balance locks, overload and restart behavior. |
