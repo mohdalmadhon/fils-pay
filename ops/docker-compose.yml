@@ -22,10 +22,15 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: filspay
-      POSTGRES_PASSWORD: filspay_dev_password
+      # From your shell or ops/.env (gitignored). No default: the hosted box
+      # ran this file with a password that is in the repo.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
       POSTGRES_DB: filspay
+    # Loopback only. Docker-published ports bypass host firewalls such as
+    # ufw, so "5432:5432" put the database on the internet on the hosted
+    # box. The services reach it over the compose network as postgres:5432.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - filspay_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -49,7 +54,7 @@ services:
       # bridge network and never talk to the database over a link that
       # leaves the host, so there's no path for this connection to be
       # intercepted in this environment.
-      DATABASE_URL: postgres://filspay:filspay_dev_password@postgres:5432/filspay?sslmode=disable
+      DATABASE_URL: postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -64,7 +69,7 @@ services:
       dockerfile: ops/Dockerfile.node
     command: ["npm", "run", "seed"]
     environment:
-      DATABASE_URL: postgres://filspay:filspay_dev_password@postgres:5432/filspay?sslmode=disable
+      DATABASE_URL: postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -84,7 +89,7 @@ services:
       # above, authenticate as that same role, which keeps local
       # onboarding to a single password instead of provisioning per-service
       # grants by hand.
-      DATABASE_URL: postgres://filspay:filspay_dev_password@postgres:5432/filspay?sslmode=disable
+      DATABASE_URL: postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable
       # TODO(YA, Jan): give the api its own role before anything is hosted.
       SETTLEMENT_INTERNAL_URL: http://settlement:8091
       # The browser apps' origins (apps/web, apps/admin dev servers). Without
@@ -107,12 +112,12 @@ services:
     command: ["./settlement", "daemon"]
     environment:
       SETTLEMENT_INTERNAL_TOKEN: ${SETTLEMENT_INTERNAL_TOKEN:?set SETTLEMENT_INTERNAL_TOKEN}
-      DATABASE_URL: postgres://filspay:filspay_dev_password@postgres:5432/filspay?sslmode=disable
+      DATABASE_URL: postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable
       # Batch close and scheme export get their own pool so a long close
       # can't starve the API's connections.
       # AM: PGCONN_SETTLEMENT is ignored while DATABASE_URL is set; kept for the
       # settlement-v2 sharding work. safe to leave.
-      PGCONN_SETTLEMENT: postgres://filspay:filspay_dev_password@postgres:5432/filspay?sslmode=disable
+      PGCONN_SETTLEMENT: postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -124,7 +129,7 @@ services:
     # No subcommand = `worker`. (MK)
     command: ["npx", "tsx", "apps/reporting/src/index.ts"]
     environment:
-      DATABASE_URL: postgres://filspay:filspay_dev_password@postgres:5432/filspay?sslmode=disable
+      DATABASE_URL: postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy

@@ -49,7 +49,8 @@ what a passing run looks like, are in
 
 Every service, plus the one-off `migrate`/`seed` jobs, connects with the
 same `filspay` role and the same `DATABASE_URL`
-(`postgres://filspay:filspay_dev_password@postgres:5432/filspay?sslmode=disable`).
+(`postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable`,
+with the password from `ops/.env`).
 One role keeps local setup to a single password instead of hand-rolling
 per-service grants for a stack this size. `sslmode=disable` is safe here:
 Postgres and every service run on the same Docker Compose bridge network,
@@ -78,15 +79,22 @@ first.
 | settlement | `DATABASE_URL` | `environment:` |
 | reporting | `DATABASE_URL` | `environment:`; runs `worker` by default |
 
-Generate the two secrets once, for example:
+Before the first `up`, create the two env files. Both are gitignored.
 
 ```bash
+cp ops/.env.docker.example ops/.env.docker   # then set the acquirer secret
+echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)" >> ops/.env
 echo "WEBHOOK_SECRET_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> ops/.env
 echo "SETTLEMENT_INTERNAL_TOKEN=$(openssl rand -hex 32)" >> ops/.env
 ```
 
-`ops/.env` is gitignored. Compose reads it for the `${...}` values in the
-compose file; it does not inject it into containers.
+Compose reads `ops/.env` for the `${...}` values in the compose file; it
+does not inject it into containers. `ops/.env.docker` is injected into the
+api with `env_file:`.
+
+Postgres is published on `127.0.0.1:5432` only, for local tools. Don't change
+it to `5432:5432` on a hosted box: Docker's published ports bypass host
+firewalls such as ufw.
 
 ## Resource sizing
 
