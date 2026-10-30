@@ -22,13 +22,18 @@ export interface ReportingConfig {
 }
 
 /**
- * Number.parseInt rejects trailing characters, so '15s' fails loudly at boot.
- * A typo in an interval can never be silently truncated.
+ * Accepts only a plain base-10 integer. Number.parseInt on its own stops at
+ * the first bad character ('15s' -> 15, '1.5e4' -> 1), so the whole string
+ * is checked first: '15s' fails loudly at boot, and a typo in an interval
+ * can never be silently truncated.
  */
 function parseIntEnv(value: string | undefined, fallback: number): number {
   if (value === undefined || value === "") return fallback;
+  if (!/^-?\d+$/.test(value)) {
+    throw new Error(`loadConfig: expected an integer, got "${value}"`);
+  }
   const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed)) {
+  if (!Number.isSafeInteger(parsed)) {
     throw new Error(`loadConfig: expected an integer, got "${value}"`);
   }
   return parsed;
