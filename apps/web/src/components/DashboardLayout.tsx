@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useDashboardAuth } from "../auth/DashboardAuthContext.js";
-import { RequireRole } from "../auth/RequireRole.js";
 import { describeError } from "../api/client.js";
 import { Wordmark } from "./art/Art.js";
 import { icons } from "./art/Icons.js";
@@ -9,6 +8,8 @@ import { ErrorBanner } from "./ui.js";
 import { CommandPalette, useCommandPaletteShortcut, type Command } from "./kit/CommandPalette.js";
 import { useTheme } from "./kit/theme.js";
 import { useCostume } from "./kit/Halloween.js";
+import { SidebarNav, visibleNavLinks } from "./nav/SidebarNav.js";
+import { loadNavOrder, type NavId } from "./nav/navOrder.js";
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 export const shortcutLabel = isMac ? "⌘K" : "Ctrl K";
@@ -28,6 +29,8 @@ export function DashboardLayout() {
   const { theme, setTheme, toggle: toggleTheme } = useTheme();
   const { on: costume, toggle: toggleCostume } = useCostume();
   const openPalette = useCallback(() => setPaletteOpen(true), []);
+  const [navOrder] = useState<NavId[] | null>(() => loadNavOrder());
+  const navLinks = useMemo(() => visibleNavLinks(me?.role, navOrder), [me?.role, navOrder]);
   useCommandPaletteShortcut(openPalette);
 
   // Close the drawer whenever the page changes, and on Escape.
@@ -160,47 +163,7 @@ export function DashboardLayout() {
           <kbd className="fp-kbd">{shortcutLabel}</kbd>
         </button>
 
-        <nav className="dash-nav" aria-label="Main">
-          <span className="dash-nav-label">Payments</span>
-          <NavLink to="/dashboard/overview">
-            {icons.overview}
-            Overview
-          </NavLink>
-          <NavLink to="/dashboard/transactions">
-            {icons.transactions}
-            Transactions
-          </NavLink>
-          <NavLink to="/dashboard/payment-links">
-            {icons.links}
-            Payment links
-          </NavLink>
-          <span className="dash-nav-label">Money out</span>
-          <NavLink to="/dashboard/settlement">
-            {icons.settlement}
-            Settlement
-          </NavLink>
-          {/* Webhooks and reconciliation are owner/finance-only server-side,
-              so the links are hidden from support rather than offered and
-              then refused. */}
-          <RequireRole allow={["owner", "finance"]}>
-            <NavLink to="/dashboard/reconciliation">
-              {icons.reconciliation}
-              Reconciliation
-            </NavLink>
-          </RequireRole>
-          <RequireRole allow={["owner", "finance"]}>
-            <span className="dash-nav-label">Developers</span>
-            <NavLink to="/dashboard/webhooks">
-              {icons.webhooks}
-              Webhooks
-            </NavLink>
-          </RequireRole>
-          <span className="dash-nav-label">You</span>
-          <NavLink to="/dashboard/settings">
-            {icons.settings}
-            Settings
-          </NavLink>
-        </nav>
+        <SidebarNav links={navLinks} />
 
         <div className="dash-sidebar-foot">
           <div className="fp-segment" role="group" aria-label="Theme">
