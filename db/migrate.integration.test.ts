@@ -63,6 +63,33 @@ test("all migrations apply to an empty database, and re-running is a no-op", { t
       // 0054's view resolves against the real batching column.
       await db.query("SELECT event_id FROM v_unbatched_capture_events LIMIT 1");
 
+      // ...and lists partial captures too: CloseBatch settles both
+      // 'captured' and 'partially_captured' events.
+      const m = await db.query<{ id: string }>(
+        "INSERT INTO merchants (display_name, mdr_bps) VALUES ('view check', 250) RETURNING id",
+      );
+      const t = await db.query<{ id: string }>(
+        `INSERT INTO transactions (merchant_id, status, amount_fils, captured_fils, acquirer_reference, occurred_at)
+         VALUES ($1, 'partially_captured', 10000, 4000, 'acq-view-check', now()) RETURNING id`,
+        [m.rows[0]!.id],
+      );
+      await db.query(
+        `INSERT INTO transaction_events (transaction_id, event_type, amount_fils, actor_type, occurred_at)
+         VALUES ($1, 'captured', 1000, 'system', now()), ($1, 'partially_captured', 3000, 'system', now())`,
+        [t.rows[0]!.id],
+      );
+      const unbatched = await db.query<{ event_type: string; amount_fils: string }>(
+        "SELECT event_type, amount_fils FROM v_unbatched_capture_events WHERE transaction_id = $1 ORDER BY amount_fils",
+        [t.rows[0]!.id],
+      );
+      assert.deepEqual(
+        unbatched.rows.map((r) => [r.event_type, Number(r.amount_fils)]),
+        [
+          ["captured", 1000],
+          ["partially_captured", 3000],
+        ],
+      );
+
       // 0055's suspense accounts exist with 0007's columns.
       const accounts = await db.query<{ id: string; kind: string }>(
         "SELECT id, kind FROM chart_of_accounts WHERE id IN ('fx_rounding_difference', 'chargeback_suspense') ORDER BY id",
