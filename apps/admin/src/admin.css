@@ -780,15 +780,6 @@ input[type="radio"] {
     repeating-linear-gradient(180deg, transparent 0 31px, rgba(255, 255, 255, 0.045) 31px 32px);
 }
 
-:root[data-costume="halloween"] .admin-login-aside {
-  /* The night sky behind the sign-in pitch. */
-  background-color: #0a0612;
-  background-image:
-    linear-gradient(90deg, transparent 62px, rgba(255, 122, 26, 0.55) 62px, rgba(255, 122, 26, 0.55) 64px, transparent 64px),
-    repeating-linear-gradient(90deg, transparent 0 15px, rgba(180, 92, 240, 0.06) 15px 16px),
-    repeating-linear-gradient(180deg, transparent 0 15px, rgba(180, 92, 240, 0.06) 15px 16px);
-}
-
 .admin-login-aside .fp-wordmark {
   color: #ffffff;
 }

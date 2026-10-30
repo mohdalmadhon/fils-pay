@@ -554,10 +554,15 @@ h1 {
   display: none;
 }
 
-:is(:root[data-design="carnival"], :root:not([data-design])) .fp-art-carnival,
-:root[data-design="blush"] .fp-art-blush,
-:root[data-design="slate"] .fp-art-slate {
+:is(:root[data-design="carnival"], :root:not([data-design])):not([data-costume="halloween"]) .fp-art-carnival,
+:root[data-design="blush"]:not([data-costume="halloween"]) .fp-art-blush,
+:root[data-design="slate"]:not([data-costume="halloween"]) .fp-art-slate,
+:root[data-costume="halloween"] .fp-art-halloween {
   display: inline;
+}
+
+.fp-art-hw-windows {
+  filter: drop-shadow(0 0 4px rgba(255, 180, 46, 0.9));
 }
 
 .fp-design-art .a1 { fill: var(--art-1); }
@@ -577,7 +582,7 @@ h1 {
 /* Sign-in panels and the checkout summary sit on the design's hero
  * colour, with its illustration. Colour tokens are redefined inside them,
  * like the sidebar, so their text and lines follow. */
-:root:not([data-costume="halloween"]) :is(.dash-login-aside, .admin-login-aside, .checkout-sea) {
+:root :is(.dash-login-aside, .admin-login-aside, .checkout-sea) {
   --c-ink: var(--hero-ink);
   --c-ink-2: var(--hero-ink-2);
   --c-ink-3: var(--hero-ink-2);
@@ -590,7 +595,7 @@ h1 {
   background-image: none;
 }
 
-:root:not([data-costume="halloween"]) :is(.dash-login-aside, .admin-login-aside) {
+:root :is(.dash-login-aside, .admin-login-aside) {
   padding: var(--sp-8) var(--sp-12);
 }
 
@@ -600,7 +605,7 @@ h1 {
 }
 
 /* The page's purpose in plain words, not a monospace all-caps label. */
-:root:not([data-costume="halloween"]) :is(.dash-login-kicker, .admin-login-kicker) {
+:root :is(.dash-login-kicker, .admin-login-kicker) {
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   letter-spacing: 0;
@@ -608,22 +613,22 @@ h1 {
   color: var(--hero-ink-2);
 }
 
-:root:not([data-costume="halloween"]) .dash-login-figure {
+:root .dash-login-figure {
   font-family: var(--font-display);
   color: var(--hero-ink);
 }
 
-:root:not([data-costume="halloween"]) .dash-login-figure .dim {
+:root .dash-login-figure .dim {
   color: var(--hero-ink-2);
 }
 
-:root:not([data-costume="halloween"]) .dash-login-figure mark {
+:root .dash-login-figure mark {
   color: var(--hero-action-ink);
   background: var(--hero-action-bg);
   border-radius: var(--r-2);
 }
 
-:root:not([data-costume="halloween"]) :is(.dash-login-points, .admin-login-points) svg {
+:root :is(.dash-login-points, .admin-login-points) svg {
   color: var(--hero-action-bg);
 }
 
@@ -641,10 +646,6 @@ h1 {
   height: auto;
   margin-top: auto;
   padding-top: var(--sp-8);
-}
-
-:root[data-costume="halloween"] :is(.fp-login-art, .checkout-art) {
-  display: none;
 }
 
 /* The card picture on checkout, in each design's colours. */
