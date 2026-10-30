@@ -17,6 +17,14 @@ apps/web and apps/admin aren't part of this compose file — they're plain
 Vite dev servers that talk to apps/api over HTTP (`npm run dev` inside
 each package), not services with their own database connection.
 
+## Deploying to the hosted box
+
+From your machine, in Git Bash: `ops/deploy.sh` (add `SEED=1` the first
+time). It sends the committed code over SSH and runs `ops/remote-deploy.sh`
+there, which keeps the settings in `~/fils-pay-config` and starts the stack
+with `docker-compose.prod.yml` (Caddy with HTTPS in front of the api).
+Details, rollback and what works there: `docs/deploy.md`.
+
 ## Checking a deployment end to end
 
 After deploying (or after `migrate` + `seed` locally), run the payment check
@@ -27,6 +35,20 @@ reconciliation is zero:
 ```
 API_URL=https://<api host> WEBHOOK_URL=<public receiver> node scripts/e2e/payment-check.mjs
 ```
+
+That works locally, where the seeded merchant still has the public seed
+password (the script's default). On the hosted box `remote-deploy.sh`
+replaces that password on every deploy (unless `SHOW_OTP=0`) and keeps the
+new one in `~/fils-pay-config/demo-passwords.txt` on the server, so pass it
+in:
+
+```
+MERCHANT_PASSWORD="$(ssh <user@server> "grep 'new password for .* merchant users:' ~/fils-pay-config/demo-passwords.txt | tail -1 | sed 's/.*: //'")" \
+API_URL=https://<api host> WEBHOOK_URL=<public receiver> node scripts/e2e/payment-check.mjs
+```
+
+(The file is appended to on each deploy; the last "merchant users" line is
+the current password.)
 
 Use staging, not production; it creates real rows. The full options, and
 what a passing run looks like, are in
@@ -40,6 +62,9 @@ what a passing run looks like, are in
 | `.env.docker` | api settings, loaded with `env_file:` (create it from `.env.docker.example`) |
 | `Dockerfile.node` | image for api, reporting, migrate and seed (Node 22, dev dependencies for tsx) |
 | `Dockerfile.go` | multi-stage build of `apps/settlement` |
+| `docker-compose.prod.yml` | the hosted box: adds Caddy (`web`) and the api's public settings |
+| `Dockerfile.web`, `Caddyfile` | the built dashboard, checkout and Ops console behind Caddy |
+| `deploy.sh`, `remote-deploy.sh` | deploy from your machine; the part that runs on the server |
 
 The two Dockerfiles were missing from the repo until 2026-10-30
 (`docs/improvements/09`); they had never been committed.
@@ -69,9 +94,13 @@ psql "$OWNER_DATABASE_URL" -v api_password=... -v settlement_password=... \
   -v reporting_password=... -f ops/db/service-roles.sql
 ```
 
-The settlement worker can be given a second connection string,
-`PGCONN_SETTLEMENT`, for its batch-close pool. It only takes effect when
-`DATABASE_URL` is unset.
+The settlement worker reads an optional `PGCONN_SETTLEMENT`. When it is set
+(not empty) it **replaces** `DATABASE_URL` for the whole worker, which then
+uses only that connection string (one pool, for batch close and everything
+else). `DATABASE_URL` must still be set: the worker refuses to start without
+it, even when `PGCONN_SETTLEMENT` is given
+(`apps/settlement/internal/config/config.go`, `Load`). Compose sets both to
+the same `filspay_settlement` URL, so today they make no difference.
 
 To reset a **local** database to the demo data, run the `seed` job above.
 It empties the whole database first (it does not only touch its own tables),

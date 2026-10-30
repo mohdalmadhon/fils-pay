@@ -103,3 +103,25 @@ test("admin: after too many wrong passwords, even the right one is refused with 
   }
   assert.equal((await login(ADMIN_PASSWORD)).statusCode, 429);
 });
+
+test("login with a non-string email or password is a 400 on both planes, not a 500", async () => {
+  const merchantId = randomUUID();
+  const merchantBodies = [
+    { merchantId, email: 5, password: "whatever password" },
+    { merchantId, email: ["a@b.test"], password: "whatever password" },
+    { merchantId, email: "a@b.test", password: { p: 1 } },
+  ];
+  for (const payload of merchantBodies) {
+    const res = await app.inject({ method: "POST", url: "/v1/auth/login", payload });
+    assert.equal(res.statusCode, 400, `merchant ${JSON.stringify(payload)}: ${res.body}`);
+  }
+  const adminBodies = [
+    { email: 5, password: "whatever password" },
+    { email: { e: 1 }, password: "whatever password" },
+    { email: "a@b.test", password: 12345 },
+  ];
+  for (const payload of adminBodies) {
+    const res = await app.inject({ method: "POST", url: "/v1/admin/auth/login", payload });
+    assert.equal(res.statusCode, 400, `admin ${JSON.stringify(payload)}: ${res.body}`);
+  }
+});

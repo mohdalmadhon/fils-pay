@@ -26,7 +26,8 @@ export interface AuthorizeInput {
 
 /**
  * 201 + serialized transaction on approval; 402 on decline (replays as
- * 402); 403 when the merchant is not approved; 502 on acquirer error, in
+ * 402); 403 when the merchant is not approved; 422 card_expired when the
+ * card's expiry month has passed; 502 on acquirer error, in
  * which case the same key may be retried.
  */
 export interface AuthorizeResult {
@@ -68,6 +69,22 @@ export function authorizeRequestHash(input: Pick<AuthorizeInput, "amountFils" | 
     },
     reference: input.reference ?? null,
   });
+}
+
+/**
+ * True when the card's expiry month is already over. A card is valid to the
+ * end of its expiry month; "now" is read in Asia/Bahrain (fixed UTC+3), the
+ * platform's business time zone. A two-digit year means 20YY.
+ */
+export function isCardExpired(card: Pick<SimulatedCardInput, "expiryMonth" | "expiryYear">, now: Date = new Date()): boolean {
+  const month = Number(card.expiryMonth);
+  let year = Number(card.expiryYear);
+  if (!Number.isInteger(month) || !Number.isInteger(year)) return false; // shape checks live elsewhere
+  if (year >= 0 && year < 100) year += 2000;
+  const bahrain = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+  const currentYear = bahrain.getUTCFullYear();
+  const currentMonth = bahrain.getUTCMonth() + 1;
+  return year < currentYear || (year === currentYear && month < currentMonth);
 }
 
 export async function authorizeTransaction(
@@ -112,6 +129,14 @@ export async function authorizeTransaction(
       const body = { error: "merchant_not_approved" };
       await completeIdempotencyKey(client, claim.row.id, { statusCode: 403, body });
       return { statusCode: 403, body };
+    }
+
+    // An expired card is refused like a decline, before the acquirer is
+    // asked, and the answer is saved so a retry with the same key replays it.
+    if (isCardExpired(input.card)) {
+      const body = { error: "card_expired", message: "The card has expired." };
+      await completeIdempotencyKey(client, claim.row.id, { statusCode: 422, body });
+      return { statusCode: 422, body };
     }
 
     const acquirerResult = await acquirer.authorize({

@@ -14,6 +14,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -115,14 +116,17 @@ func main() {
 			onlyMerchant = &id
 		}
 
-		report, err := settlement.RunDailyBatch(ctx, pool, businessDate, onlyMerchant)
-		if err != nil {
-			log.Fatalf("settlement run-batch: %v", err)
+		report, runErr := settlement.RunDailyBatch(ctx, pool, businessDate, onlyMerchant)
+		if runErr != nil && !errors.Is(runErr, settlement.ErrMerchantsFailed) {
+			log.Fatalf("settlement run-batch: %v", runErr)
 		}
-		fmt.Printf("run-batch: business date %s, %d merchant(s) processed\n", *dateFlag, len(report.MerchantResults))
+		fmt.Printf("run-batch: business date %s, %d merchant(s) processed, %d failed\n", *dateFlag, len(report.MerchantResults), len(report.Failed()))
 		for _, r := range report.MerchantResults {
 			fmt.Printf("  merchant=%s batch=%s alreadyClosed=%v alreadyPaid=%v gross=%d fee=%d netPayout=%d\n",
 				r.MerchantID, r.BatchID, r.AlreadyClosed, r.AlreadyPaid, r.GrossFils, r.FeeFils, r.NetPayoutFils)
+			if r.Error != "" {
+				fmt.Printf("    FAILED: %s\n", r.Error)
+			}
 		}
 
 		// A manually-triggered or backfill batch run produces merchant payout
@@ -135,6 +139,11 @@ func main() {
 			log.Fatalf("settlement run-batch: enqueue payout notifications: %v", err)
 		}
 		fmt.Printf("run-batch: enqueued %d settlement.paid event(s)\n", enqueued)
+		// Some merchants failed: the others were still paid and notified
+		// above, but exit non-zero so whoever ran this knows to look.
+		if runErr != nil {
+			log.Fatalf("settlement run-batch: %v", runErr)
+		}
 
 	// Both this CLI and the admin console's Rebuild button (internalapi)
 	// call ledger.RebuildAllBalances, so they always produce the same figure.

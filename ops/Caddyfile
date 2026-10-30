@@ -1,0 +1,37 @@
+# Caddy for the hosted box (ops/Dockerfile.web). Two sites, both passing the
+# API through so each app calls /v1 on its own origin:
+#
+#   SITE_ADDRESS  merchant dashboard (/dashboard) and checkout (/pay/...)
+#   OPS_ADDRESS   the Ops console
+#
+# A bare host name (e.g. 159-89-173-8.sslip.io) gets an HTTPS certificate
+# from Let's Encrypt automatically and HTTP redirects to it; an address
+# starting with http:// serves plain HTTP (HTTP_ONLY=1 in remote-deploy.sh).
+# Ports 80 and 443 must be open to the internet for the certificate.
+
+(app) {
+	encode gzip
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+	@api path /v1/* /healthz /readyz
+	handle @api {
+		reverse_proxy api:3000
+	}
+	handle {
+		root * {args[0]}
+		# The apps route in the browser: unknown paths get index.html.
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+{$SITE_ADDRESS} {
+	import app /srv/web
+}
+
+{$OPS_ADDRESS} {
+	import app /srv/admin
+}

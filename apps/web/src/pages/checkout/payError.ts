@@ -52,6 +52,18 @@ export function describePayFailure(statusCode: number, body: { error?: string; s
       countsAsDecline: false,
     };
   }
+  // The merchant's onboarding/KYC isn't approved (payments/authorize.ts).
+  // Retrying can't help, so the form goes away.
+  if (statusCode === 403 && body.error === "merchant_not_approved") {
+    return {
+      kind: "terminal",
+      message: "This business can't accept payments yet. No payment was taken.",
+      countsAsDecline: false,
+    };
+  }
+  if (statusCode === 422 && body.error === "card_expired") {
+    return { kind: "declined", message: "This card has expired. Use another card.", countsAsDecline: true };
+  }
   if (statusCode === 409) {
     return {
       kind: "declined",

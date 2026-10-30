@@ -32,6 +32,15 @@ test("OTP_DEV_EXPOSE=true in production refuses to boot", () => {
   assert.equal(loadConfig({ ...prod }).otpDevExpose, false);
 });
 
+test("production shows the code on screen only with a second, explicit switch (hosted demo)", () => {
+  // docs/deploy.md: sign-in codes have no delivery channel yet, so the
+  // hosted demo shows them on screen. Both switches, or it refuses as above.
+  assert.equal(loadConfig({ ...prod, OTP_DEV_EXPOSE: "true", OTP_SHOW_IN_PRODUCTION: "true" }).otpDevExpose, true);
+  assert.throws(() => loadConfig({ ...prod, OTP_DEV_EXPOSE: "true", OTP_SHOW_IN_PRODUCTION: "yes" }), /OTP_DEV_EXPOSE/);
+  // The second switch alone turns nothing on.
+  assert.equal(loadConfig({ ...prod, OTP_SHOW_IN_PRODUCTION: "true" }).otpDevExpose, false);
+});
+
 test("an unrecognised NODE_ENV refuses to boot instead of becoming development", () => {
   assert.throws(() => loadConfig({ ...base, NODE_ENV: "prod" }), /NODE_ENV/);
   assert.throws(() => loadConfig({ ...base, NODE_ENV: "Production" }), /NODE_ENV/);

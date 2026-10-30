@@ -13,6 +13,7 @@ import {
   type AdminRole,
 } from "../adminAuth/sessions.js";
 import { withTransaction } from "../db/withTransaction.js";
+import { insertAdminAuditLog } from "../adminAudit/log.js";
 import { BadRequestError, GoneError, TooManyRequestsError, UnauthorizedError } from "../lib/errors.js";
 
 /**
@@ -57,6 +58,10 @@ export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
     const { email, password } = request.body ?? {};
     if (!email || !password) {
       throw new BadRequestError("invalid_request", "email and password are required");
+    }
+    // Client JSON: a non-string email crashed adminAccountKey's trim() (500).
+    if (typeof email !== "string" || typeof password !== "string") {
+      throw new BadRequestError("invalid_request", "email and password must be strings");
     }
 
     // Same throttle as merchant login, checked before the password.
@@ -205,16 +210,31 @@ export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
       if (!auth) {
         throw new UnauthorizedError("unauthenticated");
       }
-      await revokeAdminSession(app.db, auth.adminSessionId);
       // End this admin's live "view as merchant" grants too. A grant is a
       // separate cookie, so without this it kept working for the rest of its
       // TTL (up to 15 minutes) after logout, on whatever machine held it.
-      await app.db.query(
-        `UPDATE admin_impersonation_grants
-            SET revoked_at = now()
-          WHERE admin_user_id = $1 AND revoked_at IS NULL AND ended_at IS NULL AND expires_at > now()`,
-        [auth.adminUserId],
-      );
+      // Each one is closed like the normal "end view-as" path does
+      // (admin/impersonation.ts endImpersonation): ended_at set and an
+      // impersonation_end audit row, in the same transaction.
+      await withTransaction(app.db, async (client) => {
+        await revokeAdminSession(client, auth.adminSessionId);
+        const ended = await client.query<{ id: string; merchant_id: string }>(
+          `UPDATE admin_impersonation_grants
+              SET revoked_at = now(), ended_at = now()
+            WHERE admin_user_id = $1 AND revoked_at IS NULL AND ended_at IS NULL AND expires_at > now()
+          RETURNING id, merchant_id`,
+          [auth.adminUserId],
+        );
+        for (const grant of ended.rows) {
+          await insertAdminAuditLog(client, {
+            adminUserId: auth.adminUserId,
+            action: "impersonation_end",
+            targetType: "merchant",
+            targetId: grant.merchant_id,
+            metadata: { grantId: grant.id, reason: "logout" },
+          });
+        }
+      });
       reply.setCookie(app.config.impersonationCookieName, "", {
         httpOnly: true,
         path: "/",

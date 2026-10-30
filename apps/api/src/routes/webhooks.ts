@@ -13,6 +13,7 @@ import { replayWebhookDelivery } from "../webhooks/replay.js";
 import { getWebhookDelivery, listWebhookDeliveries } from "../webhooks/deliveries.js";
 import { sendTestWebhookEvent } from "../webhooks/testSend.js";
 import { parseLimitParam } from "../lib/queryParams.js";
+import { assertUuidParam } from "../lib/uuid.js";
 
 interface MerchantIdParams {
   merchantId: string;
@@ -106,6 +107,7 @@ export async function webhookEndpointRoutes(app: FastifyInstance): Promise<void>
     { preHandler: [requireMerchantAuth, requireMerchantRole("owner", "finance")] },
     async (request, reply) => {
       assertOwnMerchant(request);
+      assertUuidParam(request.params.id, "webhook_endpoint_not_found");
       const result = await deleteWebhookEndpoint(app.db, {
         merchantId: request.params.merchantId,
         id: request.params.id,
@@ -122,6 +124,7 @@ export async function webhookEndpointRoutes(app: FastifyInstance): Promise<void>
     { preHandler: [requireMerchantAuth, requireMerchantRole("owner", "finance")] },
     async (request) => {
       assertOwnMerchant(request);
+      assertUuidParam(request.params.id, "webhook_endpoint_not_found");
       const updated = await updateWebhookEndpoint(app.db, app.config, {
         merchantId: request.params.merchantId,
         id: request.params.id,
@@ -148,6 +151,7 @@ export async function webhookEndpointRoutes(app: FastifyInstance): Promise<void>
     { preHandler: [requireMerchantAuth, requireMerchantRole("owner", "finance")] },
     async (request, reply) => {
       assertOwnMerchant(request);
+      assertUuidParam(request.params.id, "webhook_endpoint_not_found");
       // Synchronous by design: the merchant is actively watching this
       // response to confirm their receiver is reachable right now, so the
       // signed test payload is sent and awaited inline rather than handed
@@ -165,6 +169,8 @@ export async function webhookEndpointRoutes(app: FastifyInstance): Promise<void>
     { preHandler: [requireMerchantAuth, requireMerchantRole("owner", "finance")] },
     async (request, reply) => {
       assertOwnMerchant(request);
+      assertUuidParam(request.params.id, "webhook_endpoint_not_found");
+      assertUuidParam(request.params.deliveryId, "webhook_delivery_not_found");
       const result = await replayWebhookDelivery(app.db, {
         merchantId: request.params.merchantId,
         endpointId: request.params.id,
@@ -182,6 +188,7 @@ export async function webhookEndpointRoutes(app: FastifyInstance): Promise<void>
     { preHandler: [requireMerchantAuth, requireMerchantRole("owner", "finance", "support")] },
     async (request) => {
       assertOwnMerchant(request);
+      assertUuidParam(request.params.id, "webhook_endpoint_not_found");
       const endpoint = await getWebhookEndpoint(app.db, {
         merchantId: request.params.merchantId,
         id: request.params.id,
@@ -218,6 +225,8 @@ export async function webhookEndpointRoutes(app: FastifyInstance): Promise<void>
     { preHandler: [requireMerchantAuth, requireMerchantRole("owner", "finance", "support")] },
     async (request) => {
       assertOwnMerchant(request);
+      assertUuidParam(request.params.id, "webhook_endpoint_not_found");
+      assertUuidParam(request.params.deliveryId, "webhook_delivery_not_found");
       const endpoint = await getWebhookEndpoint(app.db, {
         merchantId: request.params.merchantId,
         id: request.params.id,

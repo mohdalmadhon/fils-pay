@@ -12,8 +12,21 @@ import { formatBhd, toFils } from "@filspay/money";
 const DESCRIPTION = "March 2026 scheme rounding residue sweep — manual recon per finance";
 const DESCRIPTION_PREFIX = `${DESCRIPTION}; source_sha256=`;
 
+/** Asia/Bahrain is UTC+3 all year (no daylight saving since 1972). */
+const BAHRAIN_OFFSET_MS = 3 * 60 * 60 * 1000;
+
+/**
+ * The Bahrain calendar month: [1st 00:00 +03:00, next 1st 00:00 +03:00).
+ * It used to be the UTC month, which moved the first three Bahrain hours of
+ * the month into the month before and took the next month's first three in.
+ * Batches use the Bahrain business day, so the sweep must too, or it can't
+ * be checked against them (ADR 0009, docs/bugs/017).
+ */
 export function monthBounds(year: number, month: number): { start: Date; end: Date } {
-  return { start: new Date(Date.UTC(year, month - 1, 1)), end: new Date(Date.UTC(year, month, 1)) };
+  return {
+    start: new Date(Date.UTC(year, month - 1, 1) - BAHRAIN_OFFSET_MS),
+    end: new Date(Date.UTC(year, month, 1) - BAHRAIN_OFFSET_MS),
+  };
 }
 
 export interface ResidueRow {
@@ -189,7 +202,7 @@ async function main(): Promise<void> {
   try {
     const report = await runMarchSweep(client, args.includes("--apply"));
     console.log(`March 2026 sweep ${report.mode}; inspected at ${new Date().toISOString()}`);
-    console.log("window: 2026-03-01T00:00:00Z .. 2026-04-01T00:00:00Z (March only, not all Q1)");
+    console.log("window: 2026-03-01T00:00:00+03:00 .. 2026-04-01T00:00:00+03:00 (the Bahrain month of March only, not all Q1)");
     for (const merchant of report.merchants) {
       console.log(`merchant ${merchant.merchantId}: ${merchant.lineCount} transaction(s), `
         + `${formatBhd(toFils(merchant.residueFils))} BD (${merchant.residueFils} fils), `

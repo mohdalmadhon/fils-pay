@@ -1,5 +1,7 @@
 import type { Pool } from "pg";
 import { serializeTransaction, type TransactionDto, type TransactionRow } from "./serialize.js";
+import { isTimestampText } from "../lib/cursorParts.js";
+import { canonicalUuid } from "../lib/uuid.js";
 
 // Tried caching this list behind Redis (ioredis), keyed on
 // `${merchantId}:${JSON.stringify(filters)}` with a short TTL, since this
@@ -62,8 +64,13 @@ function decodeCursor(cursor: string | null | undefined): DecodedCursor | null {
   if (separatorIndex === -1) return null;
   const occurredAt = decoded.slice(0, separatorIndex);
   const id = decoded.slice(separatorIndex + 1);
-  if (!occurredAt || !id) return null;
-  return { occurredAt, id };
+  // A tampered cursor must restart from the first page, not reach SQL:
+  // a bad timestamp or id used to fail the ::timestamptz / ::uuid cast
+  // and come back as a 500. docs/bugs/011.
+  if (!occurredAt || !isTimestampText(occurredAt)) return null;
+  const canonicalId = canonicalUuid(id);
+  if (!canonicalId) return null;
+  return { occurredAt, id: canonicalId };
 }
 
 /**

@@ -6,6 +6,8 @@ import { describeError } from "../../api/client.js";
 import { RequireRole } from "../../auth/RequireRole.js";
 import type { AdminMerchantSummary, MerchantOnboardingStatus } from "../../types.js";
 import { EmptyState, ErrorBanner, Loading } from "../../components/ui.js";
+import { useRequestSequence } from "../../utils/requestSequence.js";
+import { allLoadedSelected as everyLoadedSelected, selectedLoadedIds, toggleAllLoaded } from "./selection.js";
 
 const ONBOARDING_STATUSES: MerchantOnboardingStatus[] = [
   "submitted",
@@ -31,8 +33,12 @@ export function MerchantListPage() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkNotice, setBulkNotice] = useState<string | null>(null);
 
+  const requests = useRequestSequence();
   const load = useCallback(
     async (cursor: string | null) => {
+      const isCurrent = requests.begin();
+      // A first-page load is a new filter: forget the old "Load more" cursor.
+      if (!cursor) setNextCursor(null);
       setLoading(true);
       setError(null);
       try {
@@ -42,13 +48,14 @@ export function MerchantListPage() {
           limit: PAGE_SIZE,
           cursor: cursor ?? undefined,
         });
+        if (!isCurrent()) return;
         const page = result.merchants ?? [];
         setMerchants((previous) => (cursor ? [...previous, ...page] : page));
         setNextCursor(result.nextCursor ?? null);
       } catch (err) {
-        setError(describeError(err));
+        if (isCurrent()) setError(describeError(err));
       } finally {
-        setLoading(false);
+        if (isCurrent()) setLoading(false);
       }
     },
     [appliedQuery, statuses],
@@ -57,6 +64,12 @@ export function MerchantListPage() {
   useEffect(() => {
     void load(null);
   }, [load]);
+
+  // A new search or status filter shows different merchants, so a selection
+  // made under the old one must not carry over to rows the operator can't see.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [appliedQuery, statuses]);
 
   function toggleStatus(status: MerchantOnboardingStatus): void {
     setStatuses((previous) =>
@@ -76,9 +89,7 @@ export function MerchantListPage() {
    *  table, i.e. exactly what the operator can see under the active
    *  search/status filters. */
   function toggleSelectAllLoaded(): void {
-    setSelectedIds((previous) =>
-      previous.size === merchants.length ? new Set() : new Set(merchants.map((m) => m.id)),
-    );
+    setSelectedIds((previous) => toggleAllLoaded(previous, merchants));
   }
 
   // only approves the under_review ones (filtered) — am
@@ -88,7 +99,7 @@ export function MerchantListPage() {
     setError(null);
     setBulkNotice(null);
     try {
-      const result = await bulkApproveKyc([...selectedIds]);
+      const result = await bulkApproveKyc(selectedLoadedIds(selectedIds, merchants));
       setBulkNotice(`Approved KYC for ${result.approvedCount} merchant(s).`);
       setSelectedIds(new Set());
       await load(null);
@@ -99,7 +110,8 @@ export function MerchantListPage() {
     }
   }
 
-  const allLoadedSelected = merchants.length > 0 && selectedIds.size === merchants.length;
+  const allLoadedSelected = everyLoadedSelected(selectedIds, merchants);
+  const selectedCount = selectedLoadedIds(selectedIds, merchants).length;
 
   return (
     <section>
@@ -141,9 +153,9 @@ export function MerchantListPage() {
       {error ? <ErrorBanner message={error} /> : null}
       {bulkNotice ? <p className="admin-muted">{bulkNotice}</p> : null}
 
-      {selectedIds.size > 0 ? (
+      {selectedCount > 0 ? (
         <div className="admin-form admin-form-inline">
-          <span>{selectedIds.size} selected</span>
+          <span>{selectedCount} selected</span>
           <RequireRole allow={["finance", "super_admin"]}>
             <button type="button" disabled={bulkBusy} onClick={() => void approveSelected()}>
               Bulk approve KYC

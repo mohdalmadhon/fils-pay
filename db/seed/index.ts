@@ -49,8 +49,21 @@ async function main(): Promise<void> {
     console.log(`seed: ledger_entries checksum = ${summary.ledgerChecksum}`);
     console.log("");
 
-    const assertions = buildAssertions(pool, { initialLedgerChecksum: summary.ledgerChecksum });
+    // The determinism check runs generate() again, which replaces every API
+    // key, so print the keys only after the checks, from the latest run.
+    let issuedApiKeys = summary.issuedApiKeys;
+    const assertions = buildAssertions(pool, {
+      initialLedgerChecksum: summary.ledgerChecksum,
+      onRegenerated: (rerun) => {
+        issuedApiKeys = rerun.issuedApiKeys;
+      },
+    });
     const allRealPassed = await runAssertions(assertions);
+
+    console.log("");
+    for (const { merchantDisplayName, rawKey } of issuedApiKeys) {
+      console.log(`seed: issued API key for ${merchantDisplayName}: ${rawKey}`);
+    }
 
     if (!allRealPassed) {
       console.error("\nseed: one or more REAL assertions failed");

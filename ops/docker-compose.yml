@@ -142,8 +142,10 @@ services:
       timeout: 3s
       retries: 3
       start_period: 30s
+    # Loopback only: on the hosted box the public reaches the api through
+    # Caddy (docker-compose.prod.yml); locally, localhost:3000 still works.
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     # NODE_ENV, ACQUIRER_CALLBACK_SIGNING_SECRET, ... (see ops/README.md).
     env_file: .env.docker
     environment:
@@ -186,8 +188,8 @@ services:
       DATABASE_URL: postgres://filspay_settlement:${SETTLEMENT_DB_PASSWORD:?set SETTLEMENT_DB_PASSWORD}@postgres:5432/filspay?sslmode=disable
       # Batch close and scheme export get their own pool so a long close
       # can't starve the API's connections.
-      # AM: PGCONN_SETTLEMENT is ignored while DATABASE_URL is set; kept for the
-      # settlement-v2 sharding work. safe to leave.
+      # PGCONN_SETTLEMENT, when set, replaces DATABASE_URL for the whole
+      # worker (DATABASE_URL must still be set). Both are the same URL here.
       PGCONN_SETTLEMENT: postgres://filspay_settlement:${SETTLEMENT_DB_PASSWORD}@postgres:5432/filspay?sslmode=disable
     depends_on:
       postgres:

@@ -24,6 +24,7 @@ import { hashPassword } from "../../apps/api/src/auth/passwords.js";
 import { loadConfig } from "../../apps/api/src/config.js";
 import { recordKycReview } from "../../apps/api/src/onboarding/review.js";
 import { issueApiKey } from "../../apps/api/src/apiKeys/issue.js";
+import { effectiveMdrBpsAt, type FeeScheduleRow } from "../../apps/api/src/fees/settlementFee.js";
 
 /**
  * The fixed dev password for every seeded merchant_users fixture (all 7
@@ -156,6 +157,47 @@ export interface SeedSummary {
   apiKeyCount: number;
   adminUserCount: number;
   ledgerChecksum: string;
+  /** The raw API keys this run issued, one per merchant. generate() does
+   *  not print them: index.ts prints the set from the last run, after the
+   *  self-checks (the determinism check runs generate() again, which
+   *  replaces every key). */
+  issuedApiKeys: Array<{ merchantDisplayName: string; rawKey: string }>;
+}
+
+/**
+ * The fee_schedules rows the seed inserts, by merchant fixture key. The
+ * seeded fees (ledger fee legs, transaction events, settlement batches,
+ * outbox payloads) are computed from these with the same rule the api uses
+ * at capture (apps/api/src/fees/feeSchedule.ts: newest effective_from not
+ * after the capture, later created_at winning a tie, else mdr_bps), so the
+ * seeded fees and the seeded schedules agree. docs/bugs/091-*.md.
+ */
+const SEED_FEE_SCHEDULES: Readonly<Record<string, readonly FeeScheduleRow[]>> = {
+  "beta-digital": [
+    { mdrBps: 180, effectiveFrom: new Date("2026-01-01T00:00:00Z"), createdAt: new Date("2026-01-01T00:00:00Z") },
+    { mdrBps: 165, effectiveFrom: shiftDate(SEED_BASE_DATE, 5), createdAt: shiftDate(SEED_BASE_DATE, 5) },
+  ],
+  "alpha-retail": [
+    { mdrBps: 225, effectiveFrom: new Date("2026-08-01T00:00:00Z"), createdAt: new Date("2026-08-01T00:00:00Z") },
+    { mdrBps: 245, effectiveFrom: new Date("2026-03-01T00:00:00Z"), createdAt: new Date("2026-08-15T00:00:00Z") },
+  ],
+};
+
+/** The rate (bps) a fixture merchant's capture at `at` is charged. */
+function seedMdrBpsAt(fixture: { key: string; mdrBps: number }): (at: Date) => number {
+  const schedules = SEED_FEE_SCHEDULES[fixture.key] ?? [];
+  return (at) => effectiveMdrBpsAt(schedules, at, fixture.mdrBps);
+}
+
+async function insertSeedFeeSchedules(client: PoolClient, merchantId: string, key: string): Promise<number> {
+  const rows = SEED_FEE_SCHEDULES[key] ?? [];
+  for (const row of rows) {
+    await client.query(
+      `INSERT INTO fee_schedules (merchant_id, mdr_bps, effective_from, created_at) VALUES ($1, $2, $3, $4)`,
+      [merchantId, row.mdrBps, row.effectiveFrom.toISOString(), row.createdAt.toISOString()],
+    );
+  }
+  return rows.length;
 }
 
 interface InsertedMerchant {
@@ -292,7 +334,7 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
           const generated = generateMarketplaceOrdersForMerchant({
             merchantId,
             merchantKey: fixture.key,
-            mdrBps: fixture.mdrBps,
+            mdrBpsAt: seedMdrBpsAt(fixture),
             discountBps: fixture.negotiatedDiscountBps ?? 0,
             businessDayCount: fixture.marketplaceBusinessDays,
             rng,
@@ -305,7 +347,7 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
           const generated = generateTransactionsForMerchant({
             merchantId,
             merchantKey: fixture.key,
-            mdrBps: fixture.mdrBps,
+            mdrBpsAt: seedMdrBpsAt(fixture),
             count: fixture.splitParentKey === undefined ? TRANSACTIONS_PER_MERCHANT : 0,
             rng,
             baseDate: SEED_BASE_DATE,
@@ -395,7 +437,7 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
           const multiCapture = generateInstalmentCaptures({
             merchantId,
             merchantKey: fixture.key,
-            mdrBps: fixture.mdrBps,
+            mdrBpsAt: seedMdrBpsAt(fixture),
           });
 
           for (const txn of multiCapture.transactions) {
@@ -469,7 +511,7 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
             const { transactions: dayTxns, ledgerGroups: dayLedgerGroups } = generatePeakDay({
               merchantId,
               merchantKey: fixture.key,
-              mdrBps: fixture.mdrBps,
+              mdrBpsAt: seedMdrBpsAt(fixture),
               count: HIGH_VOLUME_TRANSACTIONS_PER_DAY,
               minAmountFils: HIGH_VOLUME_MIN_AMOUNT_FILS,
               maxAmountFils: HIGH_VOLUME_MAX_AMOUNT_FILS,
@@ -482,7 +524,7 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
             let dayFee: Fils = ZERO_FILS;
             let dayNet: Fils = ZERO_FILS;
             for (const txn of dayTxns) {
-              const fee = applyRateFils(txn.capturedFils, fixture.mdrBps);
+              const fee = applyRateFils(txn.capturedFils, seedMdrBpsAt(fixture)(txn.occurredAt));
               dayGross = addFils(dayGross, txn.capturedFils);
               dayFee = addFils(dayFee, fee);
               dayNet = addFils(dayNet, subtractFils(txn.capturedFils, fee));
@@ -586,7 +628,7 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
         const schemeLineParams: Array<{ transactionId: string; amountFils: Fils; lineSequence: number }> = [];
 
         for (const txn of settledTxns) {
-          const fee = applyRateFils(txn.capturedFils, fixture.mdrBps);
+          const fee = applyRateFils(txn.capturedFils, seedMdrBpsAt(fixture)(txn.occurredAt));
           const net = subtractFils(txn.capturedFils, fee);
           grossFils = addFils(grossFils, txn.capturedFils);
           feeFils = addFils(feeFils, fee);
@@ -637,7 +679,10 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
         // seed-only payload.
         const firstCaptured = transactions.find((t) => t.status === "captured");
         if (firstCaptured) {
-          const firstCapturedFeeFils = applyRateFils(firstCaptured.capturedFils, fixture.mdrBps);
+          const firstCapturedFeeFils = applyRateFils(
+            firstCaptured.capturedFils,
+            seedMdrBpsAt(fixture)(firstCaptured.occurredAt),
+          );
           await enqueueEvent(client, {
             eventType: "transaction.captured",
             aggregateType: "transaction",
@@ -694,7 +739,7 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
       const marchFixtures = generateMarchReconciliationFixtures({
         merchantId: alphaInserted.merchantId,
         merchantKey: "alpha-retail",
-        mdrBps: alphaFixture.mdrBps,
+        mdrBpsAt: seedMdrBpsAt(alphaFixture),
       });
 
       for (const txn of marchFixtures.transactions) {
@@ -784,14 +829,9 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
       if (!betaDigitalId) {
         throw new Error("seed: beta-digital fixture is required for the fee_schedules fixture");
       }
-      const feeScheduleCutover = shiftDate(SEED_BASE_DATE, 5); // 2026-09-06T12:00:00Z
-      await client.query(
-        `INSERT INTO fee_schedules (merchant_id, mdr_bps, effective_from) VALUES
-           ($1, 180, '2026-01-01T00:00:00Z'),
-           ($1, 165, $2)`,
-        [betaDigitalId, feeScheduleCutover.toISOString()],
-      );
-      feeScheduleCount += 2;
+      // Rows: SEED_FEE_SCHEDULES["beta-digital"] (180 from 2026-01-01, 165
+      // from 2026-09-06T12:00:00Z), which the seeded fees are computed from.
+      feeScheduleCount += await insertSeedFeeSchedules(client, betaDigitalId, "beta-digital");
 
       // A second merchant carries fee_schedules rows whose insertion order
       // (created_at) doesn't match their effective order (effective_from) —
@@ -807,13 +847,9 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
       if (!alphaRetailId) {
         throw new Error("seed: alpha-retail fixture is required for the fee_schedules fixture");
       }
-      await client.query(
-        `INSERT INTO fee_schedules (merchant_id, mdr_bps, effective_from, created_at) VALUES
-           ($1, 225, '2026-08-01T00:00:00Z', '2026-08-01T00:00:00Z'),
-           ($1, 245, '2026-03-01T00:00:00Z', '2026-08-15T00:00:00Z')`,
-        [alphaRetailId],
-      );
-      feeScheduleCount += 2;
+      // Rows: SEED_FEE_SCHEDULES["alpha-retail"] (225 from 2026-08-01, and
+      // the 245 from 2026-03-01 entered 2026-08-15).
+      feeScheduleCount += await insertSeedFeeSchedules(client, alphaRetailId, "alpha-retail");
 
       // Re-establish the single zero row TRUNCATE just removed.
       await client.query(`INSERT INTO platform_stats (id, total_processed_fils) VALUES (1, 0)`);
@@ -880,6 +916,7 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
   // (recordKycReview opens its own transaction via the pool).
   let kycReviewCount = 0;
   let apiKeyCount = 0;
+  const issuedApiKeys: SeedSummary["issuedApiKeys"] = [];
   for (const merchant of insertedMerchants) {
     await recordKycReview(pool, {
       merchantId: merchant.merchantId,
@@ -896,8 +933,8 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
     });
     apiKeyCount += 1;
     // Dev/test convenience only: the raw key is never stored, so this is
-    // the only place it's ever visible. Fine to print for seed data.
-    console.log(`seed: issued API key for ${merchant.displayName}: ${issued.rawKey}`);
+    // the only place it's ever visible. index.ts prints it.
+    issuedApiKeys.push({ merchantDisplayName: merchant.displayName, rawKey: issued.rawKey });
   }
 
   return {
@@ -918,6 +955,7 @@ export async function generate(pool: Pool): Promise<SeedSummary> {
     apiKeyCount,
     adminUserCount,
     ledgerChecksum,
+    issuedApiKeys,
   };
 }
 

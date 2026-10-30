@@ -182,3 +182,59 @@ test("a merchant support user can't refund", async () => {
   const res = await refund(m.merchantId, { cookie, "idempotency-key": randomUUID() }, { transactionId: txn });
   assert.equal(res.statusCode, 403, res.body);
 });
+
+const inject = (method: "POST", url: string, rawKey: string, payload: object) =>
+  app.inject({ method, url, headers: { authorization: `Bearer ${rawKey}`, "idempotency-key": randomUUID() }, payload });
+
+async function partiallyCapturedTransaction(rawKey: string, amountFils: number, captureFils: number): Promise<string> {
+  const auth = await inject("POST", "/v1/transactions", rawKey, { amountFils, card: VALID_CARD, reference: "partial" });
+  assert.equal(auth.statusCode, 201, auth.body);
+  const id = (auth.json() as { id: string }).id;
+  const cap = await inject("POST", `/v1/transactions/${id}/capture`, rawKey, { amountFils: captureFils });
+  assert.equal(cap.statusCode, 200, cap.body);
+  return id;
+}
+
+test("capturing the rest after a refund keeps the status in line with the refunded amount", async () => {
+  // docs/bugs/006: capture worked the status out from captured vs authorized
+  // only, so a refunded part was forgotten and the row said 'captured'.
+  const m = await createApprovedMerchantWithApiKey("recapture-after-refund");
+  const txn = await partiallyCapturedTransaction(m.rawKey, 10_000, 4_000);
+  const refunded = await refund(m.merchantId, { authorization: `Bearer ${m.rawKey}`, "idempotency-key": randomUUID() }, { transactionId: txn });
+  assert.equal(refunded.statusCode, 200, refunded.body);
+
+  const rest = await inject("POST", `/v1/transactions/${txn}/capture`, m.rawKey, {});
+  assert.equal(rest.statusCode, 200, rest.body);
+  assert.equal((rest.json() as { status: string }).status, "partially_refunded");
+  const row = await pool.query<{ status: string }>(`SELECT status FROM transactions WHERE id = $1`, [txn]);
+  assert.equal(row.rows[0]!.status, "partially_refunded");
+  // Fully captured, so the hold is released and the event is a full capture.
+  const hold = await pool.query<{ status: string }>(`SELECT status FROM holds WHERE transaction_id = $1`, [txn]);
+  assert.equal(hold.rows[0]!.status, "released");
+  const events = await pool.query<{ event_type: string }>(
+    `SELECT event_type FROM transaction_events WHERE transaction_id = $1 AND event_type LIKE '%captured' ORDER BY occurred_at, id`,
+    [txn],
+  );
+  assert.deepEqual(events.rows.map((r) => r.event_type).sort(), ["captured", "partially_captured"]);
+});
+
+test("a refund moves the cached payable balance with the ledger (docs/bugs/014)", async () => {
+  const m = await createApprovedMerchantWithApiKey("refund-cache");
+  const txn = await capturedTransaction(m.rawKey, 10_000);
+  const res = await refund(m.merchantId, { authorization: `Bearer ${m.rawKey}`, "idempotency-key": randomUUID() }, {
+    transactionId: txn,
+    amountFils: 4_000,
+  });
+  assert.equal(res.statusCode, 200, res.body);
+
+  const ledger = await pool.query<{ net: string }>(
+    `SELECT COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount_fils ELSE -amount_fils END), 0)::text AS net
+       FROM ledger_entries WHERE merchant_id = $1 AND account_id = 'merchant_payable'`,
+    [m.merchantId],
+  );
+  const cache = await pool.query<{ v: string }>(
+    `SELECT cached_payable_fils::text AS v FROM merchant_balances WHERE merchant_id = $1`,
+    [m.merchantId],
+  );
+  assert.equal(Number(cache.rows[0]!.v), Number(ledger.rows[0]!.net));
+});

@@ -5,6 +5,7 @@ import { ZERO_FILS, addFils, compareFils, subtractFils, toFils, type Fils } from
 import { enqueueEvent } from "@filspay/events";
 import { withTransaction } from "../db/withTransaction.js";
 import type { AcquirerSimulator } from "../acquirer/types.js";
+import { nextStatusAfterRefund } from "./refundState.js";
 import { claimIdempotencyKey, completeIdempotencyKey, failIdempotencyKey, hashRequest } from "./idempotency.js";
 import { recordTransactionEvent } from "../transactions/events.js";
 import { serializeTransaction, type TransactionRow } from "../transactions/serialize.js";
@@ -70,6 +71,9 @@ interface LockedTransactionRow {
   amount_fils: string | number;
   captured_fils: string | number;
   acquirer_reference: string;
+  refunded_fils: string | number;
+  /** The authorization's hold has lapsed (docs/bugs/005). */
+  authorization_expired: boolean;
 }
 
 /**
@@ -105,7 +109,10 @@ export async function captureTransactionWithClient(
   acquirer: AcquirerSimulator,
   input: CaptureInput,
 ): Promise<CaptureResult> {
-  const requestHash = hashRequest({ amountFils: input.amountFils ?? null });
+  // The key is scoped per merchant, not per transaction, so the transaction
+  // id is part of the request: the same key on another transaction is a
+  // reused key (422), not a replay of the first capture. docs/bugs/002.
+  const requestHash = hashRequest({ transactionId: input.transactionId, amountFils: input.amountFils ?? null });
 
   const claim = await claimIdempotencyKey(client, {
     merchantId: input.merchantId,
@@ -132,10 +139,18 @@ export async function captureTransactionWithClient(
   // so ownership can never be satisfied by a value the caller controls
   // independently of how they authenticated.
   const lockResult = await client.query<LockedTransactionRow>(
-    `SELECT id, merchant_id, status, amount_fils, captured_fils, acquirer_reference
-       FROM transactions
+    // authorization_expired: the hold authorize placed (7 days, the scheme
+    // rule for card-not-present) has passed. expire_holds deletes lapsed
+    // holds, so with no hold row left the 7 days are counted from the
+    // authorization itself. Judged on the database clock.
+    `SELECT id, merchant_id, status, amount_fils, captured_fils, acquirer_reference, refunded_fils,
+            COALESCE(
+              (SELECT max(h.expires_at) FROM holds h WHERE h.transaction_id = t.id),
+              t.occurred_at + interval '7 days'
+            ) <= now() AS authorization_expired
+       FROM transactions t
       WHERE id = $1 AND merchant_id = $2
-      FOR UPDATE`,
+      FOR UPDATE OF t`,
     [input.transactionId, input.merchantId],
   );
   const txn = lockResult.rows[0];
@@ -153,6 +168,14 @@ export async function captureTransactionWithClient(
     return { statusCode: 409, body };
   }
 
+  // A lapsed authorization is no longer the cardholder's promise to pay; the
+  // scheme would refuse the capture. It used to be captured anyway.
+  if (txn.authorization_expired) {
+    const body = { error: "authorization_expired", status: txn.status };
+    await completeIdempotencyKey(client, claim.row.id, { statusCode: 409, body });
+    return { statusCode: 409, body };
+  }
+
   // — YA: authorised vs captured. finance says "amount" and means both.
   const amountAuthorized = toFils(Number(txn.amount_fils));
   const capturedSoFar = toFils(Number(txn.captured_fils));
@@ -165,8 +188,10 @@ export async function captureTransactionWithClient(
     return { statusCode: 422, body };
   }
 
-  const merchantResult = await client.query<{ mdr_bps: number; negotiated_discount_bps: number }>(
-    `SELECT mdr_bps, negotiated_discount_bps FROM merchants WHERE id = $1`,
+  // now() rides along on this read so the capture instant costs no extra
+  // round trip (see the fee rate below).
+  const merchantResult = await client.query<{ mdr_bps: number; negotiated_discount_bps: number; now: Date }>(
+    `SELECT mdr_bps, negotiated_discount_bps, now() AS now FROM merchants WHERE id = $1`,
     [input.merchantId],
   );
   const merchant = merchantResult.rows[0];
@@ -179,7 +204,14 @@ export async function captureTransactionWithClient(
   // applies yet — the ordinary case for every merchant that has never had
   // a negotiated rate change recorded. Resolved at the instant of capture,
   // inside the same locked transaction that computes and journals the fee.
-  const effectiveMdrBps = await getEffectiveMdrBps(client, input.merchantId, new Date(), merchant.mdr_bps);
+  //
+  // "The instant of capture" is the database's now(): the capture event and
+  // its ledger legs are dated with it (column DEFAULT now(), the start of
+  // this transaction), and settlement prices the event at that occurred_at.
+  // The API server's own clock runs later (lock waits, the acquirer call),
+  // so a schedule starting in between gave capture and settlement different
+  // rates and left a residue. docs/bugs/015.
+  const effectiveMdrBps = await getEffectiveMdrBps(client, input.merchantId, merchant.now, merchant.mdr_bps);
   const volumeTierBonusBps = await getVolumeTierBonusBps(client);
 
   // Call the acquirer — awaited here, with the row lock from above still
@@ -223,7 +255,15 @@ export async function captureTransactionWithClient(
     ),
   );
   const newCapturedFils = addFils(capturedSoFar, requestedAmount);
-  const newStatus = compareFils(newCapturedFils, amountAuthorized) === 0 ? "captured" : "partially_captured";
+  // Derived from all the money columns, refunds included: capturing the rest
+  // of a partly captured order whose first part was refunded must not
+  // forget that refund and say 'captured'. docs/bugs/006.
+  const fullyCaptured = compareFils(newCapturedFils, amountAuthorized) === 0;
+  const newStatus = nextStatusAfterRefund({
+    amountFils: amountAuthorized,
+    capturedFils: newCapturedFils,
+    refundedTotalFils: toFils(Number(txn.refunded_fils)),
+  });
 
   const updateResult = await client.query<TransactionRow>(
     `UPDATE transactions SET status = $2, captured_fils = $3 WHERE id = $1 RETURNING *`,
@@ -255,7 +295,7 @@ export async function captureTransactionWithClient(
   await applyPayableCacheDelta(client, input.merchantId, requestedAmount - feeFils);
 
   // Hold lifecycle: released exactly when nothing remains outstanding.
-  if (newStatus === "captured") {
+  if (fullyCaptured) {
     await client.query(`UPDATE holds SET status = 'released' WHERE transaction_id = $1 AND status = 'active'`, [
       txn.id,
     ]);
@@ -276,7 +316,7 @@ export async function captureTransactionWithClient(
 
   await recordTransactionEvent(client, {
     transactionId: txn.id,
-    eventType: newStatus === "captured" ? "captured" : "partially_captured",
+    eventType: fullyCaptured ? "captured" : "partially_captured",
     amountFils: requestedAmount,
     actor: input.actor,
     metadata: { feeFils, negotiatedDiscountBps: merchant.negotiated_discount_bps, chargedMdrBps: Math.max(0, effectiveMdrBps - volumeTierBonusBps), acquirerReference: acquirerResult.acquirerReference },

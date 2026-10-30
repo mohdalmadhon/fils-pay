@@ -5,6 +5,7 @@ import {
   getCurrentFeeScheduleForDisplay,
   type CurrentFeeScheduleDisplay,
 } from "../fees/currentFeeScheduleDisplay.js";
+import { decodeKeysetCursor } from "../lib/keysetCursor.js";
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100; // matches the dashboard page size — MK
@@ -42,27 +43,6 @@ function toSummary(row: MerchantRow): AdminMerchantSummary {
     testMode: row.test_mode,
     createdAt: row.created_at,
   };
-}
-
-interface DecodedCursor {
-  createdAt: string;
-  id: string;
-}
-
-function decodeCursor(cursor: string | null | undefined): DecodedCursor | null {
-  if (!cursor) return null;
-  let decoded: string;
-  try {
-    decoded = Buffer.from(cursor, "base64url").toString("utf8");
-  } catch {
-    return null;
-  }
-  const separatorIndex = decoded.indexOf("|");
-  if (separatorIndex === -1) return null;
-  const createdAt = decoded.slice(0, separatorIndex);
-  const id = decoded.slice(separatorIndex + 1);
-  if (!createdAt || !id) return null;
-  return { createdAt, id };
 }
 
 /**
@@ -109,7 +89,7 @@ export async function listMerchantsForAdmin(
   const q = filters.q && filters.q.trim() !== "" ? filters.q.trim() : null;
   const statusArray =
     filters.onboardingStatus && filters.onboardingStatus.length > 0 ? filters.onboardingStatus : null;
-  const decodedCursor = decodeCursor(filters.cursor);
+  const decodedCursor = decodeKeysetCursor(filters.cursor);
   // The exact-id arm compares as text so arbitrary free text never reaches a
   // uuid cast; narrowing to UUID-shaped input first keeps the predicate
   // honest about what it means (an exact id match, not a text coincidence).

@@ -1,5 +1,7 @@
 import type { Pool } from "pg";
 import { serializePaymentLink, type PaymentLinkDto, type PaymentLinkRow } from "./serialize.js";
+import { isTimestampText } from "../lib/cursorParts.js";
+import { canonicalUuid } from "../lib/uuid.js";
 
 export interface ListPaymentLinksFilters {
   merchantId: string;
@@ -34,8 +36,13 @@ function decodeCursor(cursor: string | null | undefined): DecodedCursor | null {
   if (separatorIndex === -1) return null;
   const createdAt = decoded.slice(0, separatorIndex);
   const id = decoded.slice(separatorIndex + 1);
-  if (!createdAt || !id) return null;
-  return { createdAt, id };
+  // A tampered cursor must restart from the first page, not reach SQL:
+  // a bad timestamp or id used to fail the ::timestamptz / ::uuid cast
+  // and come back as a 500. docs/bugs/011.
+  if (!createdAt || !isTimestampText(createdAt)) return null;
+  const canonicalId = canonicalUuid(id);
+  if (!canonicalId) return null;
+  return { createdAt, id: canonicalId };
 }
 
 /**

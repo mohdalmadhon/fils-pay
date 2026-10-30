@@ -73,3 +73,33 @@ test("export-summary requires merchant auth", async () => {
   assert.equal(ok.statusCode, 200, ok.body);
   assert.deepEqual(ok.json(), { totalDays: 0, grossFils: 0 });
 });
+
+test("transactions report: a filter that isn't a valid object is a 400, not a 500", async () => {
+  const m = await merchantWithKey("bad-filter");
+  const bad = [
+    "null",
+    "[]",
+    "5",
+    JSON.stringify({ from: "garbage" }),
+    JSON.stringify({ to: "2026-02-30" }),
+    JSON.stringify({ from: "2026-01-01T25:00:00Z" }),
+    JSON.stringify({ status: "nope" }),
+    JSON.stringify({ status: 5 }),
+  ];
+  for (const filter of bad) {
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/reporting/transactions?filter=${encodeURIComponent(filter)}`,
+      headers: m.headers,
+    });
+    assert.equal(res.statusCode, 400, `${filter}: ${res.body}`);
+    assert.equal(res.json().error, "invalid_filter");
+  }
+
+  const twice = await app.inject({ method: "GET", url: "/v1/reporting/transactions?filter=%7B%7D&filter=%7B%7D", headers: m.headers });
+  assert.equal(twice.statusCode, 400, twice.body);
+
+  const good = JSON.stringify({ status: "captured", from: "2026-06-01", to: "2026-07-01T00:00:00+03:00" });
+  const ok = await app.inject({ method: "GET", url: `/v1/reporting/transactions?filter=${encodeURIComponent(good)}`, headers: m.headers });
+  assert.equal(ok.statusCode, 200, ok.body);
+});

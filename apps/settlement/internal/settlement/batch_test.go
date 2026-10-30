@@ -2,6 +2,7 @@ package settlement
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strconv"
 	"strings"
@@ -167,14 +168,14 @@ func TestCloseBatch_EligibleEventSelection(t *testing.T) {
 	businessDate := time.Date(2026, 3, 15, 0, 0, 0, 0, time.UTC)
 	start, _ := BusinessDayWindow(businessDate)
 	insideWindow := start.Add(2 * time.Hour)
-	beforeWindow := start.Add(-2 * time.Hour) // previous business day
+	beforeWindow := start.Add(-2 * time.Hour) // previous business day, never batched
 	afterWindow := start.AddDate(0, 0, 1).Add(2 * time.Hour)
 
-	// One eligible event inside the window...
+	// One event inside the window, and one from the previous business day
+	// that no batch has claimed yet: both belong in this batch...
 	_, feeInside := insertCaptureEvent(t, pool, merchantID, mdrBps, 4750, insideWindow)
-	// ...and two events that must NOT be picked up: one on the previous
-	// business day, one on the next.
-	insertCaptureEvent(t, pool, merchantID, mdrBps, 9999, beforeWindow)
+	_, feeBefore := insertCaptureEvent(t, pool, merchantID, mdrBps, 9999, beforeWindow)
+	// ...and one on the next business day that must NOT be picked up.
 	insertCaptureEvent(t, pool, merchantID, mdrBps, 8888, afterWindow)
 
 	result, err := CloseBatch(context.Background(), pool, merchantID, businessDate)
@@ -182,14 +183,77 @@ func TestCloseBatch_EligibleEventSelection(t *testing.T) {
 		t.Fatalf("CloseBatch: %v", err)
 	}
 
-	if result.GrossFils != 4750 {
-		t.Errorf("GrossFils = %d, want 4750 (out-of-window events must be excluded)", result.GrossFils)
+	if result.GrossFils != 4750+9999 {
+		t.Errorf("GrossFils = %d, want %d (unbatched earlier events are swept in, later ones excluded)", result.GrossFils, 4750+9999)
 	}
-	if result.FeeFils != feeInside {
-		t.Errorf("FeeFils = %d, want %d", result.FeeFils, feeInside)
+	if result.FeeFils != feeInside+feeBefore {
+		t.Errorf("FeeFils = %d, want %d", result.FeeFils, feeInside+feeBefore)
 	}
-	if result.EventCount != 1 {
-		t.Errorf("EventCount = %d, want 1", result.EventCount)
+	if result.EventCount != 2 {
+		t.Errorf("EventCount = %d, want 2", result.EventCount)
+	}
+}
+
+// A capture whose transaction commits after its own day's batch has closed
+// must land in the next day's batch, not be left out forever.
+func TestCloseBatch_SweepsLateCaptureIntoNextBatch(t *testing.T) {
+	pool := mustPool(t)
+	const mdrBps = 250
+	merchantID := insertActiveMerchant(t, pool, mdrBps)
+
+	day1 := time.Date(2026, 3, 19, 0, 0, 0, 0, time.UTC)
+	day2 := day1.AddDate(0, 0, 1)
+	start1, _ := BusinessDayWindow(day1)
+
+	first, err := CloseBatch(context.Background(), pool, merchantID, day1)
+	if err != nil {
+		t.Fatalf("CloseBatch(day1): %v", err)
+	}
+	if first.GrossFils != 0 {
+		t.Fatalf("day1 GrossFils = %d, want 0", first.GrossFils)
+	}
+
+	// Committed after day1's batch closed, but happened during day1.
+	insertCaptureEvent(t, pool, merchantID, mdrBps, 6000, start1.Add(23*time.Hour))
+
+	second, err := CloseBatch(context.Background(), pool, merchantID, day2)
+	if err != nil {
+		t.Fatalf("CloseBatch(day2): %v", err)
+	}
+	if second.GrossFils != 6000 || second.EventCount != 1 {
+		t.Errorf("day2 batch = gross %d, %d event(s); want 6000, 1 (the late day1 capture)", second.GrossFils, second.EventCount)
+	}
+	unbatched := countRows(t, pool, `
+		SELECT count(*) FROM transaction_events te JOIN transactions t ON t.id = te.transaction_id
+		 WHERE t.merchant_id = $1 AND te.settlement_batch_id IS NULL`, merchantID)
+	if unbatched != 0 {
+		t.Errorf("%d capture event(s) left unbatched, want 0", unbatched)
+	}
+}
+
+// Closing today's (or a future) business day would freeze it while it is
+// still taking captures. Both CloseBatch and RunDailyBatch refuse, before
+// any batch row exists.
+func TestCloseBatch_RejectsTodayAndFutureBusinessDates(t *testing.T) {
+	pool := mustPool(t)
+	merchantID := insertActiveMerchant(t, pool, 250)
+	today := BusinessDateAt(time.Now())
+
+	for _, date := range []time.Time{today, today.AddDate(0, 0, 1)} {
+		if _, err := CloseBatch(context.Background(), pool, merchantID, date); !errors.Is(err, ErrBusinessDayNotOver) {
+			t.Errorf("CloseBatch(%s) err = %v, want ErrBusinessDayNotOver", date.Format("2006-01-02"), err)
+		}
+		if _, err := RunDailyBatch(context.Background(), pool, date, &merchantID); !errors.Is(err, ErrBusinessDayNotOver) {
+			t.Errorf("RunDailyBatch(%s) err = %v, want ErrBusinessDayNotOver", date.Format("2006-01-02"), err)
+		}
+	}
+	if n := countRows(t, pool, `SELECT count(*) FROM settlement_batches WHERE merchant_id = $1`, merchantID); n != 0 {
+		t.Errorf("%d settlement_batches row(s) created, want 0", n)
+	}
+
+	// Yesterday is a finished business day and closes normally.
+	if _, err := CloseBatch(context.Background(), pool, merchantID, today.AddDate(0, 0, -1)); err != nil {
+		t.Errorf("CloseBatch(yesterday): %v", err)
 	}
 }
 

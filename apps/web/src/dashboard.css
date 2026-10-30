@@ -729,6 +729,15 @@
   background-size: 16px;
 }
 
+.dash-impersonation {
+  margin: 0 0 var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--c-ink);
+  background: var(--c-warn-soft);
+  border: 1px solid color-mix(in srgb, var(--c-warn) 40%, transparent);
+  border-radius: var(--r-3);
+}
+
 .dash-error {
   background-color: var(--c-danger-soft);
   border-color: color-mix(in srgb, var(--c-danger) 30%, transparent);
@@ -875,19 +884,6 @@
   background: var(--c-accent);
   transform-origin: left;
   animation: fp-grow 600ms var(--ease) both;
-}
-
-.dash-progress-bar {
-  height: 6px;
-  margin: 0 0 var(--sp-4);
-  overflow: hidden;
-  background: var(--c-surface-3);
-  border-radius: 1px;
-}
-
-.dash-progress-fill {
-  height: 100%;
-  background: var(--c-accent);
 }
 
 @keyframes fp-grow {

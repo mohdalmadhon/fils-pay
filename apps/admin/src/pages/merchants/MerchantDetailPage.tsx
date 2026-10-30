@@ -9,18 +9,13 @@ import { startImpersonation } from "../../api/impersonation.js";
 import { describeError, WEB_BASE_URL } from "../../api/client.js";
 import { useAdminAuth } from "../../auth/AdminAuthContext.js";
 import { RequireRole } from "../../auth/RequireRole.js";
+import { bahrainToday } from "../../bahrainDate.js";
+import { openInNewTab } from "../../utils/openTab.js";
+import { feeReversalLabel } from "./feeReversalLabel.js";
 import type { AdminMerchantDetail, CreditReasonCode, RotatedApiKey } from "../../types.js";
 
 function bhd(fils: number): string {
   return `${formatBhd(toFils(fils, { allowNegative: true }))} BHD`;
-}
-
-// browser local date not bahrain, fine for bahrain staff — am
-function todayIso(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
-    now.getDate(),
-  ).padStart(2, "0")}`;
 }
 
 export function MerchantDetailPage() {
@@ -47,7 +42,7 @@ export function MerchantDetailPage() {
   const [creditReason, setCreditReason] = useState<CreditReasonCode>("goodwill");
   const [creditMemo, setCreditMemo] = useState("");
   const [creditReverseFee, setCreditReverseFee] = useState(false);
-  const [creditEffectiveDate, setCreditEffectiveDate] = useState(todayIso());
+  const [creditEffectiveDate, setCreditEffectiveDate] = useState(() => bahrainToday());
 
   const [adjustDeltaFils, setAdjustDeltaFils] = useState("");
   const [adjustReason, setAdjustReason] = useState("");
@@ -202,6 +197,7 @@ export function MerchantDetailPage() {
     setActionError(null);
     setNotice(null);
     try {
+      setImpersonationUrl(null);
       const grant = await startImpersonation(id);
       rememberImpersonation({ ...grant, merchantDisplayName: detail.merchant.displayName });
       // The grant rides an httpOnly cookie set for apps/api's domain, which
@@ -210,8 +206,7 @@ export function MerchantDetailPage() {
       // Opened in a second tab on purpose: this tab keeps showing the
       // impersonation banner and its exit action, which is the whole point
       // of the banner existing.
-      const opened = window.open(WEB_BASE_URL, "_blank", "noopener");
-      if (!opened) setImpersonationUrl(WEB_BASE_URL);
+      if (!openInNewTab(WEB_BASE_URL)) setImpersonationUrl(WEB_BASE_URL);
     } catch (err) {
       setActionError(describeError(err));
     } finally {
@@ -404,7 +399,7 @@ export function MerchantDetailPage() {
               checked={creditReverseFee}
               onChange={(e) => setCreditReverseFee(e.target.checked)}
             />{" "}
-            Also reverse the MDR on this amount ({(merchant.mdrBps / 100).toFixed(2)}%)
+            {feeReversalLabel(detail)}
           </label>
           <label>
             Memo (optional)

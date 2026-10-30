@@ -2,8 +2,10 @@ import type { FastifyInstance } from "fastify";
 import { requireAdminRole, requireAdminSession } from "../adminAuth/middleware.js";
 import {
   applyAdjustmentImport,
+  approveAdjustmentImport,
   getAdjustmentImportRows,
   listAdjustmentImports,
+  rejectAdjustmentImport,
 } from "../admin/adjustmentImport.js";
 import { parseAdjustmentCsv } from "../admin/adjustmentCsvParsing.js";
 import { UUID_RE } from "../admin/merchants.js";
@@ -31,11 +33,12 @@ interface ListQuery {
 /** Registered with prefix '/v1/admin/adjustment-imports'. */
 export async function adminAdjustmentImportRoutes(app: FastifyInstance): Promise<void> {
   /**
-   * Upload and apply a CSV of manual balance adjustments. Applied
-   * synchronously on upload: there is no staging table and no dry-run step,
-   * because an adjustment CSV is assembled and checked in the spreadsheet
-   * it came from, and a second confirmation screen inside the console would
-   * only re-ask a question finance already answered.
+   * Upload a CSV of manual balance adjustments. One that moves at most 50 BD
+   * in total (absolute amounts) is applied at once: 201, status 'applied'.
+   * One that moves more is stored but posts nothing until a second finance
+   * or super_admin approves it (POST /:id/approve): 202, status
+   * 'pending_approval'. The same two-person rule as a single credit; it used
+   * to post any amount at once (docs/bugs/053).
    *
    * finance/super_admin only — every row posts real money.
    *
@@ -87,9 +90,33 @@ export async function adminAdjustmentImportRoutes(app: FastifyInstance): Promise
         rows,
       });
 
-      reply.code(201).send(result);
+      reply.code(result.status === "pending_approval" ? 202 : 201).send(result);
     },
   );
+
+  /** The second admin's decision on a pending import. finance/super_admin,
+   *  and never the admin who uploaded it (409 self_approval_forbidden). */
+  for (const decision of ["approve", "reject"] as const) {
+    app.post<{ Params: ImportIdParams; Body: { note?: unknown } }>(
+      `/:id/${decision}`,
+      { preHandler: [requireAdminSession, requireAdminRole("finance", "super_admin")] },
+      async (request) => {
+        const adminAuth = request.adminAuth;
+        if (!adminAuth) throw new UnauthorizedError("unauthenticated");
+        if (!UUID_RE.test(request.params.id)) {
+          throw new NotFoundError("adjustment_import_not_found");
+        }
+        const note = request.body?.note;
+        if (note !== undefined && (typeof note !== "string" || note.length > 500)) {
+          throw new BadRequestError("invalid_request", "note, if given, must be a string of at most 500 characters");
+        }
+        const approver = { adminUserId: adminAuth.adminUserId, displayName: "" };
+        return decision === "approve"
+          ? approveAdjustmentImport(app.db, { importId: request.params.id, approver })
+          : rejectAdjustmentImport(app.db, { importId: request.params.id, approver, note });
+      },
+    );
+  }
 
   /** History of past imports. Any admin role — a read. */
   app.get<{ Querystring: ListQuery }>(

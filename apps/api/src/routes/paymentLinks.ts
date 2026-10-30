@@ -10,6 +10,8 @@ import { payPaymentLink } from "../paymentLinks/pay.js";
 import { cancelPaymentLink } from "../paymentLinks/cancel.js";
 import { listPaymentLinks } from "../paymentLinks/query.js";
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../lib/errors.js";
+import { parseCardInput } from "../lib/paymentInput.js";
+import { canonicalUuid } from "../lib/uuid.js";
 import type { SimulatedCardInput } from "../acquirer/types.js";
 import { parseLimitParam } from "../lib/queryParams.js";
 
@@ -103,8 +105,14 @@ export async function paymentLinkMerchantRoutes(app: FastifyInstance): Promise<v
     { preHandler: [requireMerchantAuth, requireMerchantRole("owner", "finance")] },
     async (request, reply) => {
       assertOwnMerchant(request);
+      // A non-UUID can't name a link: 404, not a ::uuid cast error (500).
+      // docs/bugs/012.
+      const linkId = canonicalUuid(request.params.id);
+      if (!linkId) {
+        throw new NotFoundError("payment_link_not_found");
+      }
       const result = await cancelPaymentLink(app.db, {
-        id: request.params.id,
+        id: linkId,
         merchantId: request.merchantAuth!.merchantId,
       });
       if (result.outcome === "canceled") {
@@ -156,10 +164,7 @@ export async function paymentLinkPublicRoutes(app: FastifyInstance): Promise<voi
 
   app.post<{ Params: TokenParams; Body: PayPaymentLinkBody }>("/:token/pay", async (request, reply) => {
     const idempotencyKey = getIdempotencyKey(request);
-    const { card } = request.body ?? {};
-    if (!card) {
-      throw new BadRequestError("invalid_request", "card is required");
-    }
+    const card = parseCardInput(request.body?.card);
 
     const result = await payPaymentLink(
       app.db,

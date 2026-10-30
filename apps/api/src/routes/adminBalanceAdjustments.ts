@@ -26,7 +26,9 @@ function assertUuidParam(value: string, code: string): void {
 function parseBalanceAdjustmentBody(body: unknown): { deltaFils: Fils; reason: string } {
   const source = (body ?? {}) as { deltaFils?: unknown; reason?: unknown };
 
-  if (typeof source.deltaFils !== "number" || !Number.isInteger(source.deltaFils)) {
+  // isSafeInteger, not isInteger: 1e20 is an "integer" to JS, but toFils
+  // refuses it (and it is past exact float range), which used to be a 500.
+  if (typeof source.deltaFils !== "number" || !Number.isSafeInteger(source.deltaFils)) {
     throw new BadRequestError("invalid_request", "deltaFils is required and must be an integer number of fils");
   }
   if (source.deltaFils === 0) {

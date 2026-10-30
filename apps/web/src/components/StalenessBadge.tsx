@@ -1,3 +1,5 @@
+import { stalenessText } from "./stalenessText.js";
+
 /**
  * Renders the `readModelAsOf`/`live` pair every analytics response carries.
  * Staleness in this platform is a disclosed property, not a
@@ -32,7 +34,7 @@ export function StalenessBadge({
   }
   return (
     <span className="dash-badge dash-badge-stale">
-      Data as of {new Date(readModelAsOf).toLocaleTimeString()}
+      {stalenessText(readModelAsOf)}
     </span>
   );
 }

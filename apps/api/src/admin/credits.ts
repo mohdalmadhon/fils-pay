@@ -10,6 +10,7 @@ import { ConflictError, NotFoundError } from "../lib/errors.js";
 import { assertDistinctApprover } from "./creditApproval.js";
 import { creditRequiresSecondApprover } from "./creditThreshold.js";
 import { assertCreditDateNotFuture, parseCreditRequestInput, type CreditReasonCode } from "./creditRequestValidation.js";
+import { decodeKeysetCursor } from "../lib/keysetCursor.js";
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
@@ -205,7 +206,12 @@ async function postCreditToLedger(client: PoolClient, credit: PostableCredit): P
 
 /**
  * Creates a credit request and posts it immediately when it is under the threshold.
- * Requires finance or super_admin; a support caller gets a 403 from here.
+ * Any admin role may call it (docs/ADMIN.md: support may issue small credits);
+ * only approve and reject are limited to finance and super_admin.
+ *
+ * The threshold covers what one operator has credited one merchant in the
+ * current Bahrain business day, not just this request, so splitting a large
+ * credit into small ones does not skip the second approver.
  */
 export async function createCreditRequest(
   pool: Pool,
@@ -234,8 +240,27 @@ export async function createCreditRequest(
     }
     // FH: threshold compares base + reversal, so a 50.000 BD credit with a fee reversal needs a second approver
     // MK: no — base only. fee reversal is mechanical. intended.
+    // Credits this operator already posted alone today count toward the
+    // threshold. Ones a second person approved don't: they were checked.
+    // Serialize credits from this operator to this merchant, so two requests
+    // sent at once can't both read the same "already posted today" total.
+    await client.query(`SELECT pg_advisory_xact_lock(hashtext('credit_request'), hashtext($1 || ':' || $2))`, [
+      input.adminUserId,
+      input.merchantId,
+    ]);
+    const postedToday = await client.query<{ total: string }>(
+      `SELECT COALESCE(SUM(base_amount_fils), 0)::text AS total
+         FROM credit_requests
+        WHERE requested_by_admin_user_id = $1
+          AND merchant_id = $2
+          AND status = 'posted'
+          AND requires_approval = false
+          AND posted_at >= date_trunc('day', now() AT TIME ZONE 'Asia/Bahrain') AT TIME ZONE 'Asia/Bahrain'`,
+      [input.adminUserId, input.merchantId],
+    );
+    const alreadyPostedTodayFils = toFils(Number(postedToday.rows[0]!.total));
     const requiresApproval = creditRequiresSecondApprover({
-      baseAmountFils: draft.baseAmountFils,
+      baseAmountFils: addFils(alreadyPostedTodayFils, draft.baseAmountFils),
       feeReversalFils,
     });
 
@@ -411,28 +436,6 @@ export async function rejectCreditRequest(
   });
 }
 
-interface DecodedCursor {
-  createdAt: string;
-  id: string;
-}
-
-/** Returns null for any malformed cursor instead of throwing, so a bad cursor restarts at page one. */
-function decodeCursor(cursor: string | null | undefined): DecodedCursor | null {
-  if (!cursor) return null;
-  let decoded: string;
-  try {
-    decoded = Buffer.from(cursor, "base64url").toString("utf8");
-  } catch {
-    return null;
-  }
-  const separatorIndex = decoded.indexOf("|");
-  if (separatorIndex === -1) return null;
-  const createdAt = decoded.slice(0, separatorIndex);
-  const id = decoded.slice(separatorIndex + 1);
-  if (!createdAt || !id) return null;
-  return { createdAt, id };
-}
-
 /** Encoded from Postgres's own text rendering of `created_at`, never from
  *  `Date.toISOString()` — see `CREDIT_REQUEST_SELECT`. */
 function encodeCursor(createdAtText: string, id: string): string {
@@ -445,7 +448,7 @@ export async function listCreditRequests(
   input: { status?: string; merchantId?: string; limit?: number; cursor?: string | null },
 ): Promise<{ items: CreditRequestRecord[]; nextCursor: string | null }> {
   const limit = Math.min(MAX_LIMIT, Math.max(1, input.limit ?? DEFAULT_LIMIT));
-  const decodedCursor = decodeCursor(input.cursor);
+  const decodedCursor = decodeKeysetCursor(input.cursor);
 
   const result = await pool.query<CreditRequestRow>(
     `${CREDIT_REQUEST_SELECT}

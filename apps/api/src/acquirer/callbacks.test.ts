@@ -115,3 +115,19 @@ test("withCallbackRetry stops at the first success and returns its result", asyn
   assert.equal(result, "applied");
   assert.equal(attempts, 2);
 });
+
+test("withCallbackRetry does not retry an AppError such as 404 (docs/bugs/013)", async () => {
+  let attempts = 0;
+  await assert.rejects(
+    () =>
+      withCallbackRetry(
+        async () => {
+          attempts += 1;
+          throw new NotFoundError("transaction_not_found");
+        },
+        { maxAttempts: 3, delayMs: 1 },
+      ),
+    /transaction_not_found/,
+  );
+  assert.equal(attempts, 1);
+});

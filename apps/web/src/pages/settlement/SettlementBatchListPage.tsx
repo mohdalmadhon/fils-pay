@@ -6,6 +6,7 @@ import { Pagination } from "../../components/Pagination.js";
 import { bhd, dateTime } from "../../format.js";
 import type { SettlementBatchDto, SettlementBatchStatus } from "../../types.js";
 import { EmptyState, ErrorBanner, Loading, statusLabel } from "../../components/ui.js";
+import { useRequestSequence } from "../../utils/requestSequence.js";
 
 const STATUSES: SettlementBatchStatus[] = ["open", "closed", "paid"];
 const PAGE_SIZE = 25;
@@ -29,8 +30,12 @@ export function SettlementBatchListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const requests = useRequestSequence();
   const load = useCallback(
     async (cursor: string | null) => {
+      const isCurrent = requests.begin();
+      // A first-page load is a new filter: forget the old "Load more" cursor.
+      if (!cursor) setNextCursor(null);
       setLoading(true);
       setError(null);
       try {
@@ -41,12 +46,13 @@ export function SettlementBatchListPage() {
           limit: PAGE_SIZE,
           cursor: cursor ?? undefined,
         });
+        if (!isCurrent()) return;
         setBatches((previous) => (cursor ? [...previous, ...result.batches] : result.batches));
         setNextCursor(result.nextCursor);
       } catch (err) {
-        setError(describeError(err));
+        if (isCurrent()) setError(describeError(err));
       } finally {
-        setLoading(false);
+        if (isCurrent()) setLoading(false);
       }
     },
     [from, to, statuses],

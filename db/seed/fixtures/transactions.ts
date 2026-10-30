@@ -68,7 +68,9 @@ const STATUS_POOL: readonly TransactionStatus[] = [
 export function generateTransactionsForMerchant(params: {
   merchantId: string;
   merchantKey: string;
-  mdrBps: number;
+  /** The merchant's rate (bps) in effect at an instant: fee_schedules,
+   *  else merchants.mdr_bps (generate.ts, seedMdrBpsAt). */
+  mdrBpsAt: (at: Date) => number;
   count: number;
   rng: SeededRng;
   baseDate: Date;
@@ -77,7 +79,7 @@ export function generateTransactionsForMerchant(params: {
    *  relies on. */
   dayRange?: readonly [number, number];
 }): GenerateTransactionsResult {
-  const { merchantId, merchantKey, mdrBps, count, rng, baseDate, dayRange = [0, 29] as const } = params;
+  const { merchantId, merchantKey, mdrBpsAt, count, rng, baseDate, dayRange = [0, 29] as const } = params;
   const [minDaysBack, maxDaysBack] = dayRange;
 
   const transactions: GeneratedTransaction[] = [];
@@ -118,7 +120,7 @@ export function generateTransactionsForMerchant(params: {
     transactions.push({ id, merchantId, status, amountFils, capturedFils, reference, acquirerReference, occurredAt });
 
     if (capturedFils > 0) {
-      ledgerGroups.push(buildCaptureLedgerGroup({ transactionId: id, merchantId, mdrBps, capturedFils, occurredAt, reference, rng }));
+      ledgerGroups.push(buildCaptureLedgerGroup({ transactionId: id, merchantId, mdrBpsAt, capturedFils, occurredAt, reference, rng }));
     }
   }
 
@@ -142,7 +144,9 @@ export function generateTransactionsForMerchant(params: {
 export function generatePeakDay(params: {
   merchantId: string;
   merchantKey: string;
-  mdrBps: number;
+  /** The merchant's rate (bps) in effect at an instant: fee_schedules,
+   *  else merchants.mdr_bps (generate.ts, seedMdrBpsAt). */
+  mdrBpsAt: (at: Date) => number;
   count: number;
   minAmountFils: number;
   maxAmountFils: number;
@@ -150,7 +154,7 @@ export function generatePeakDay(params: {
   daySequence: number;
   rng: SeededRng;
 }): GenerateTransactionsResult {
-  const { merchantId, merchantKey, mdrBps, count, minAmountFils, maxAmountFils, dateStr, daySequence, rng } = params;
+  const { merchantId, merchantKey, mdrBpsAt, count, minAmountFils, maxAmountFils, dateStr, daySequence, rng } = params;
 
   const transactions: GeneratedTransaction[] = [];
   const ledgerGroups: LedgerGroup[] = [];
@@ -174,7 +178,7 @@ export function generatePeakDay(params: {
       occurredAt,
     });
     ledgerGroups.push(
-      buildCaptureLedgerGroup({ transactionId: id, merchantId, mdrBps, capturedFils: amountFils, occurredAt, reference, rng }),
+      buildCaptureLedgerGroup({ transactionId: id, merchantId, mdrBpsAt, capturedFils: amountFils, occurredAt, reference, rng }),
     );
   }
 
@@ -222,13 +226,15 @@ export interface GenerateMarketplaceOrdersResult extends GenerateTransactionsRes
 export function generateMarketplaceOrdersForMerchant(params: {
   merchantId: string;
   merchantKey: string;
-  mdrBps: number;
+  /** The merchant's rate (bps) in effect at an instant: fee_schedules,
+   *  else merchants.mdr_bps (generate.ts, seedMdrBpsAt). */
+  mdrBpsAt: (at: Date) => number;
   discountBps: number;
   businessDayCount: number;
   rng: SeededRng;
   baseDate: Date;
 }): GenerateMarketplaceOrdersResult {
-  const { merchantId, merchantKey, mdrBps, discountBps, businessDayCount, rng, baseDate } = params;
+  const { merchantId, merchantKey, mdrBpsAt, discountBps, businessDayCount, rng, baseDate } = params;
 
   const transactions: GeneratedTransaction[] = [];
   const ledgerGroups: LedgerGroup[] = [];
@@ -262,7 +268,7 @@ export function generateMarketplaceOrdersForMerchant(params: {
       // off that fee — the exact pair of postings capture.ts and
       // discountAdjustment.ts leave behind, folded into one balanced group
       // the same way every other seeded capture is.
-      const feeBeforeDiscount = applyRateFils(amountFils, mdrBps);
+      const feeBeforeDiscount = applyRateFils(amountFils, mdrBpsAt(occurredAt));
       const feeFils = subtractFils(feeBeforeDiscount, applyRateFils(feeBeforeDiscount, discountBps));
       const merchantNet = subtractFils(amountFils, feeFils);
 
@@ -362,9 +368,11 @@ export interface GenerateMultiCaptureResult extends GenerateTransactionsResult {
 export function generateInstalmentCaptures(params: {
   merchantId: string;
   merchantKey: string;
-  mdrBps: number;
+  /** The merchant's rate (bps) in effect at an instant: fee_schedules,
+   *  else merchants.mdr_bps (generate.ts, seedMdrBpsAt). */
+  mdrBpsAt: (at: Date) => number;
 }): GenerateMultiCaptureResult {
-  const { merchantId, merchantKey, mdrBps } = params;
+  const { merchantId, merchantKey, mdrBpsAt } = params;
 
   const transactions: GeneratedTransaction[] = [];
   const ledgerGroups: LedgerGroup[] = [];
@@ -403,7 +411,7 @@ export function generateInstalmentCaptures(params: {
       const capturedFils = toFils(instalment);
       // The fee is charged on the instalment actually captured, never on
       // the running total — the same per-call rule capture.ts applies.
-      const feeFils = applyRateFils(capturedFils, mdrBps);
+      const feeFils = applyRateFils(capturedFils, mdrBpsAt(occurredAt));
       const merchantNet = subtractFils(capturedFils, feeFils);
 
       const legs: LedgerLeg[] = [
@@ -442,15 +450,17 @@ export function generateInstalmentCaptures(params: {
 export function buildCaptureLedgerGroup(args: {
   transactionId: string;
   merchantId: string;
-  mdrBps: number;
+  /** The merchant's rate (bps) in effect at an instant: fee_schedules,
+   *  else merchants.mdr_bps (generate.ts, seedMdrBpsAt). */
+  mdrBpsAt: (at: Date) => number;
   capturedFils: Fils;
   occurredAt: Date;
   reference: string;
   rng: SeededRng;
 }): LedgerGroup {
-  const { transactionId, merchantId, mdrBps, capturedFils, occurredAt, reference, rng } = args;
+  const { transactionId, merchantId, mdrBpsAt, capturedFils, occurredAt, reference, rng } = args;
 
-  const fee = applyRateFils(capturedFils, mdrBps);
+  const fee = applyRateFils(capturedFils, mdrBpsAt(occurredAt));
   const merchantNet = subtractFils(capturedFils, fee);
 
   const legs: LedgerLeg[] = [

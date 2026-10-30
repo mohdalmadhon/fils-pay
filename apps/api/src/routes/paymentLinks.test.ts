@@ -368,3 +368,42 @@ test(
     assert.equal(finalLink.rows[0]!.transaction_id, txnId);
   },
 );
+
+test("paying with a malformed card is a 400 and leaves the link payable (docs/bugs/008)", async () => {
+  const { rawKey, merchantId } = await createApprovedMerchantWithApiKey("bad-card");
+  const link = await createLink(rawKey, merchantId, { amountFils: 4_750 });
+  const bad = await pay(link.token, {} as typeof APPROVED_CARD);
+  assert.equal(bad.statusCode, 400, bad.body);
+  const read = await getPublicLink(link.token);
+  assert.equal(read.json().status, "active");
+  const good = await pay(link.token, APPROVED_CARD);
+  assert.equal(good.statusCode, 200, good.body);
+});
+
+test("a payment link for 0 fils is a 400 invalid_amount, not a 500 (docs/bugs/009)", async () => {
+  const { rawKey, merchantId } = await createApprovedMerchantWithApiKey("zero-link");
+  const res = await app.inject({
+    method: "POST",
+    url: `/v1/merchants/${merchantId}/payment-links`,
+    headers: authHeader(rawKey),
+    payload: { amountFils: 0, expiresAt: new Date(Date.now() + 3_600_000).toISOString() },
+  });
+  assert.equal(res.statusCode, 400, res.body);
+  assert.equal(res.json().error, "invalid_amount");
+});
+
+test("retrying a successful payment with the same Idempotency-Key replays the 200 (docs/bugs/016)", async () => {
+  const { rawKey, merchantId } = await createApprovedMerchantWithApiKey("pay-replay");
+  const link = await createLink(rawKey, merchantId, { amountFils: 3_000 });
+  const key = randomUUID();
+  const first = await pay(link.token, APPROVED_CARD, key);
+  assert.equal(first.statusCode, 200, first.body);
+
+  const retry = await pay(link.token, APPROVED_CARD, key);
+  assert.equal(retry.statusCode, 200, retry.body);
+  assert.deepEqual(retry.json(), first.json());
+
+  // A different key is a different buyer: still refused.
+  const other = await pay(link.token, APPROVED_CARD);
+  assert.equal(other.statusCode, 409, other.body);
+});

@@ -7,6 +7,7 @@ import { bhd, dash, dateTime, dayStartIso } from "../../format.js";
 import { classNames, pluralize, truncateMiddle } from "../../utils/helpers.js";
 import type { TransactionDto, TransactionStatus } from "../../types.js";
 import { EmptyState, ErrorBanner, Loading, statusLabel } from "../../components/ui.js";
+import { useRequestSequence } from "../../utils/requestSequence.js";
 
 const STATUSES: TransactionStatus[] = [
   "authorized",
@@ -26,7 +27,7 @@ const SEARCH_DEBOUNCE_MS = 300;
  * query param — nothing fetches an unfiltered page and narrows it in the
  * browser, which would both lie about the result count and break pagination.
  */
-// YA: from/to are UTC day starts, see dayStartIso
+// from/to are Bahrain business-day starts, see dayStartIso
 export function TransactionListPage() {
   const [statuses, setStatuses] = useState<TransactionStatus[]>([]);
   const [from, setFrom] = useState("");
@@ -46,8 +47,12 @@ export function TransactionListPage() {
     return () => window.clearTimeout(timer);
   }, [searchInput]);
 
+  const requests = useRequestSequence();
   const load = useCallback(
     async (cursor: string | null) => {
+      const isCurrent = requests.begin();
+      // A first-page load is a new filter: forget the old "Load more" cursor.
+      if (!cursor) setNextCursor(null);
       setLoading(true);
       setError(null);
       try {
@@ -59,14 +64,15 @@ export function TransactionListPage() {
           limit: PAGE_SIZE,
           cursor: cursor ?? undefined,
         });
+        if (!isCurrent()) return;
         setTransactions((previous) =>
           cursor ? [...previous, ...result.transactions] : result.transactions,
         );
         setNextCursor(result.nextCursor);
       } catch (err) {
-        setError(describeError(err));
+        if (isCurrent()) setError(describeError(err));
       } finally {
-        setLoading(false);
+        if (isCurrent()) setLoading(false);
       }
     },
     [statuses, from, to, search],

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { logout as logoutRequest, me as fetchMe } from "../api/dashboardAuth.js";
+import { onSessionEnded } from "../api/sessionEvents.js";
 import type { DashboardMe } from "../types.js";
 
 export type DashboardAuthStatus = "loading" | "authenticated" | "anonymous";
@@ -48,9 +49,8 @@ export function writeLastMerchantId(merchantId: string): void {
  * exists so the UI can show the right screen, not so it can decide what is
  * allowed.
  *
- * Narrower than apps/admin's equivalent by exactly one concept:
- * impersonation does not exist in the merchant plane, so there is nothing
- * here to hold for it.
+ * `/v1/auth/me` also answers for an admin's "view as merchant" grant; then
+ * `me.impersonation` is set and `me.email` is null.
  */
 // memory leak here — me() refetched every render? heap grows on overview — am
 // FH: the effect runs once afaict. heap growth is probably the overview page
@@ -75,6 +75,19 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Any API call that answers 401 unauthenticated means the session has
+  // expired or was revoked. Drop to anonymous so the guard sends the user to
+  // the login page (with the current page as `from`) and the login page
+  // doesn't bounce them back.
+  useEffect(
+    () =>
+      onSessionEnded(() => {
+        setMe(null);
+        setStatus("anonymous");
+      }),
+    [],
+  );
 
   const signOut = useCallback(async () => {
     try {

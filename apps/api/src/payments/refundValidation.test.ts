@@ -108,3 +108,19 @@ test("a transaction that captured nothing is not refundable even in a refundable
   );
   assert.deepEqual(result, { ok: false, code: "transaction_not_refundable", status: "captured" });
 });
+
+test("refunding 'the rest' of a partial capture already fully refunded is not refundable (409), not a bad amount", () => {
+  // docs/bugs/007: it stays 'partially_captured' (headroom kept open), so it
+  // passed the status check and the default amount of 0 came back as
+  // refund_amount_invalid.
+  const t: RefundableTransaction = {
+    id: randomUUID(),
+    merchantId: randomUUID(),
+    status: "partially_captured",
+    capturedFils: toFils(4_000),
+    refundableFils: toFils(0),
+  };
+  assert.deepEqual(validateRefundRequest(t), { ok: false, code: "transaction_not_refundable", status: "partially_captured" });
+  // With an explicit amount the answer stays "exceeds, ceiling 0".
+  assert.deepEqual(validateRefundRequest(t, toFils(100)), { ok: false, code: "refund_exceeds_refundable", refundableFils: 0 });
+});

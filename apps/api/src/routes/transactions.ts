@@ -1,5 +1,4 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { toFils } from "@filspay/money";
 import { requireApiKey } from "../apiKeys/verify.js";
 import { requireMerchantAuth, requireMerchantRole, requireMerchantWriterActor } from "../auth/requireMerchantAuth.js";
 import { authorizeTransaction, type AuthorizeInput } from "../payments/authorize.js";
@@ -10,7 +9,9 @@ import { getTransactionById, listTransactions } from "../transactions/query.js";
 import { listTransactionEvents } from "../transactions/events.js";
 import { BadRequestError, NotFoundError } from "../lib/errors.js";
 import type { SimulatedCardInput } from "../acquirer/types.js";
-import { parseLimitParam } from "../lib/queryParams.js";
+import { parseInstantParam, parseLimitParam } from "../lib/queryParams.js";
+import { parseCardInput, parsePositiveFils } from "../lib/paymentInput.js";
+import { canonicalUuid } from "../lib/uuid.js";
 
 interface AuthorizeBody {
   amountFils?: number;
@@ -57,6 +58,15 @@ function getIdempotencyKey(request: FastifyRequest): string {
   return key;
 }
 
+/** `:id` as a canonical UUID. Anything else can't name a transaction, so
+ *  it is a 404 like any other unknown id, instead of reaching the ::uuid
+ *  cast in SQL and coming back as a 500. docs/bugs/012. */
+function transactionIdParam(raw: string): string {
+  const id = canonicalUuid(raw);
+  if (!id) throw new NotFoundError("transaction_not_found");
+  return id;
+}
+
 /**
  * Registered with prefix '/v1/transactions'. Endpoint auth: authorize is
  * API-key-only (a server-to-server "charge a
@@ -76,8 +86,8 @@ export async function transactionRoutes(app: FastifyInstance): Promise<void> {
 
       const input: AuthorizeInput = {
         merchantId: request.apiKeyAuth!.merchantId,
-        amountFils: toFils(amountFils),
-        card,
+        amountFils: parsePositiveFils(amountFils, "amountFils"),
+        card: parseCardInput(card),
         reference,
         idempotencyKey,
         actor: { type: "merchant_api_key", id: request.apiKeyAuth!.apiKeyId },
@@ -99,9 +109,9 @@ export async function transactionRoutes(app: FastifyInstance): Promise<void> {
       const { amountFils } = request.body ?? {};
 
       const result = await captureTransaction(app.db, app.acquirer, {
-        transactionId: request.params.id,
+        transactionId: transactionIdParam(request.params.id),
         merchantId: request.merchantAuth!.merchantId,
-        amountFils: amountFils !== undefined ? toFils(amountFils) : undefined,
+        amountFils: amountFils !== undefined ? parsePositiveFils(amountFils, "amountFils") : undefined,
         idempotencyKey,
         actor: requireMerchantWriterActor(request.merchantAuth!),
       });
@@ -118,7 +128,7 @@ export async function transactionRoutes(app: FastifyInstance): Promise<void> {
     { preHandler: [requireMerchantAuth, requireMerchantRole("owner", "finance")] },
     async (request, reply) => {
       const result = await voidTransaction(app.db, {
-        transactionId: request.params.id,
+        transactionId: transactionIdParam(request.params.id),
         merchantId: request.merchantAuth!.merchantId,
         actor: requireMerchantWriterActor(request.merchantAuth!),
       });
@@ -137,8 +147,8 @@ export async function transactionRoutes(app: FastifyInstance): Promise<void> {
       return listTransactions(app.db, {
         merchantId: request.merchantAuth!.merchantId,
         status,
-        from: q.from ? new Date(q.from) : undefined,
-        to: q.to ? new Date(q.to) : undefined,
+        from: parseInstantParam(q.from, "from"),
+        to: parseInstantParam(q.to, "to"),
         search: q.search,
         limit,
         cursor: q.cursor ?? null,
@@ -155,8 +165,8 @@ export async function transactionRoutes(app: FastifyInstance): Promise<void> {
 
       const csv = await buildTransactionsExportCsv(app.db, {
         merchantId: request.merchantAuth!.merchantId,
-        from: q.from ? new Date(q.from) : undefined,
-        to: q.to ? new Date(q.to) : undefined,
+        from: parseInstantParam(q.from, "from"),
+        to: parseInstantParam(q.to, "to"),
         status,
       });
 
@@ -173,7 +183,7 @@ export async function transactionRoutes(app: FastifyInstance): Promise<void> {
     async (request) => {
       const txn = await getTransactionById(app.db, {
         merchantId: request.merchantAuth!.merchantId,
-        transactionId: request.params.id,
+        transactionId: transactionIdParam(request.params.id),
       });
       if (!txn) {
         throw new NotFoundError("transaction_not_found");
@@ -190,13 +200,13 @@ export async function transactionRoutes(app: FastifyInstance): Promise<void> {
       // (404 if the parent transaction isn't found/owned).
       const txn = await getTransactionById(app.db, {
         merchantId: request.merchantAuth!.merchantId,
-        transactionId: request.params.id,
+        transactionId: transactionIdParam(request.params.id),
       });
       if (!txn) {
         throw new NotFoundError("transaction_not_found");
       }
       // existence check above is the ownership check. correct — FH
-      return listTransactionEvents(app.db, request.params.id);
+      return listTransactionEvents(app.db, txn.id);
     },
   );
 }

@@ -1,7 +1,8 @@
-import { parseLimitParam } from "../lib/queryParams.js";
+import { parseBusinessDateParam, parseInstantParam, parseLimitParam } from "../lib/queryParams.js";
 import type { FastifyInstance } from "fastify";
 import { requireMerchantAuth, requireMerchantRole } from "../auth/requireMerchantAuth.js";
 import { NotFoundError, BadRequestError } from "../lib/errors.js";
+import { canonicalUuid } from "../lib/uuid.js";
 import {
   getReconciliationReport,
   getSettlementBatch,
@@ -35,6 +36,14 @@ interface ReconciliationQuery {
  * merchantId from the path/query. Nothing here triggers, re-runs, or
  * mutates a batch; that's apps/settlement's job.
  */
+/** `:id` as a canonical UUID, else a 404 (it used to reach the ::uuid cast:
+ *  a 500). docs/bugs/012. */
+function batchIdParam(raw: string): string {
+  const id = canonicalUuid(raw);
+  if (!id) throw new NotFoundError("settlement_batch_not_found");
+  return id;
+}
+
 export async function settlementRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Querystring: ListBatchesQuery }>(
     "/batches",
@@ -46,8 +55,8 @@ export async function settlementRoutes(app: FastifyInstance): Promise<void> {
 
       return listSettlementBatches(app.db, {
         merchantId: request.merchantAuth!.merchantId,
-        from: q.from ? new Date(q.from) : undefined,
-        to: q.to ? new Date(q.to) : undefined,
+        from: parseInstantParam(q.from, "from"),
+        to: parseInstantParam(q.to, "to"),
         status,
         limit,
         cursor: q.cursor ?? null,
@@ -61,10 +70,11 @@ export async function settlementRoutes(app: FastifyInstance): Promise<void> {
     "/reconciliation",
     { preHandler: [requireMerchantAuth, requireMerchantRole("owner", "finance")] },
     async (request) => {
-      const { from, to } = request.query;
-      if (!from || !to) {
+      if (!request.query.from || !request.query.to) {
         throw new BadRequestError("invalid_request", "from and to (YYYY-MM-DD) are required");
       }
+      const from = parseBusinessDateParam(request.query.from, "from");
+      const to = parseBusinessDateParam(request.query.to, "to");
 
       return getReconciliationReport(app.db, {
         merchantId: request.merchantAuth!.merchantId,
@@ -79,10 +89,11 @@ export async function settlementRoutes(app: FastifyInstance): Promise<void> {
     "/summary",
     { preHandler: [requireMerchantAuth, requireMerchantRole("owner", "finance")] },
     async (request) => {
-      const { from, to } = request.query;
-      if (!from || !to) {
+      if (!request.query.from || !request.query.to) {
         throw new BadRequestError("invalid_request", "from and to (YYYY-MM-DD) are required");
       }
+      const from = parseBusinessDateParam(request.query.from, "from");
+      const to = parseBusinessDateParam(request.query.to, "to");
 
       return getSettlementSummary(app.db, {
         merchantId: request.merchantAuth!.merchantId,
@@ -98,7 +109,7 @@ export async function settlementRoutes(app: FastifyInstance): Promise<void> {
     async (request) => {
       const batch = await getSettlementBatch(app.db, {
         merchantId: request.merchantAuth!.merchantId,
-        batchId: request.params.id,
+        batchId: batchIdParam(request.params.id),
       });
       if (!batch) {
         throw new NotFoundError("settlement_batch_not_found");
@@ -116,12 +127,12 @@ export async function settlementRoutes(app: FastifyInstance): Promise<void> {
       // transactions.
       const batch = await getSettlementBatch(app.db, {
         merchantId: request.merchantAuth!.merchantId,
-        batchId: request.params.id,
+        batchId: batchIdParam(request.params.id),
       });
       if (!batch) {
         throw new NotFoundError("settlement_batch_not_found");
       }
-      const transactions = await listBatchTransactions(app.db, request.params.id);
+      const transactions = await listBatchTransactions(app.db, batch.id);
       return { transactions };
     },
   );

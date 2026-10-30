@@ -88,10 +88,19 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	// The run is due runDelay minutes after Bahrain midnight, and the next
+	// midnight resets it, so 1440 or more means nothing is ever due.
+	if runDelay < 0 || runDelay >= 24*60 {
+		return Config{}, fmt.Errorf("config: SETTLEMENT_DAEMON_RUN_DELAY_MINUTES must be between 0 and 1439, got %d", runDelay)
+	}
 
 	pollIntervalSeconds, err := parseIntEnv("SETTLEMENT_DAEMON_POLL_INTERVAL_SECONDS", 60)
 	if err != nil {
 		return Config{}, err
+	}
+	// time.NewTicker panics on an interval of zero or less.
+	if pollIntervalSeconds <= 0 {
+		return Config{}, fmt.Errorf("config: SETTLEMENT_DAEMON_POLL_INTERVAL_SECONDS must be at least 1, got %d", pollIntervalSeconds)
 	}
 
 	internalPort, err := parseIntEnv("SETTLEMENT_INTERNAL_PORT", 8091)

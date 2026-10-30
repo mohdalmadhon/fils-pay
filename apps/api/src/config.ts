@@ -196,11 +196,25 @@ function parseWebhookAllowPrivateHosts(value: string | undefined, nodeEnv: Confi
 /** The OTP echo-back (devOtpCode in the login response, and the code in the
  *  log) is off unless OTP_DEV_EXPOSE=true is set explicitly, and is refused
  *  in production. It used to default to on whenever NODE_ENV was not
- *  exactly "production", which included the hosted box. */
-function parseOtpDevExpose(value: string | undefined, nodeEnv: Config["nodeEnv"]): boolean {
+ *  exactly "production", which included the hosted box.
+ *
+ *  One exception, for the hosted demo: sign-in codes have no delivery
+ *  channel yet (no email), so nobody could sign in there. With a second,
+ *  separately named switch, OTP_SHOW_IN_PRODUCTION=true (exactly), it is
+ *  allowed in production, and the api warns at every boot. While it is on,
+ *  the second factor protects nothing: the password alone signs in, so the
+ *  demo's passwords must not be public (ops/remote-deploy.sh replaces the
+ *  seeded ones). docs/deploy.md. */
+function parseOtpDevExpose(
+  value: string | undefined,
+  nodeEnv: Config["nodeEnv"],
+  showInProduction: string | undefined,
+): boolean {
   const on = parseBoolEnv(value, false);
-  if (on && nodeEnv === "production") {
-    throw new Error("loadConfig: OTP_DEV_EXPOSE must not be set when NODE_ENV=production");
+  if (on && nodeEnv === "production" && showInProduction !== "true") {
+    throw new Error(
+      "loadConfig: OTP_DEV_EXPOSE must not be set when NODE_ENV=production (unless OTP_SHOW_IN_PRODUCTION=true: hosted demo only)",
+    );
   }
   return on;
 }
@@ -314,7 +328,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     otpTtlMinutes: parseIntEnv(env.OTP_TTL_MINUTES, 5),
     otpCodeLength: parseIntEnv(env.OTP_CODE_LENGTH, 6),
     otpMaxAttempts: parseIntEnv(env.OTP_MAX_ATTEMPTS, 5),
-    otpDevExpose: parseOtpDevExpose(env.OTP_DEV_EXPOSE, nodeEnv),
+    otpDevExpose: parseOtpDevExpose(env.OTP_DEV_EXPOSE, nodeEnv, env.OTP_SHOW_IN_PRODUCTION),
     otpDemoDisplay: parseBoolEnv(env.OTP_DEMO_DISPLAY, false),
     otpLogFile: env.OTP_LOG_FILE || undefined,
     loginMaxFailures: parseIntEnv(env.LOGIN_MAX_FAILURES, 10),

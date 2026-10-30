@@ -9,6 +9,7 @@ import {
 } from "../onboarding/kyc.js";
 import { BadRequestError, ForbiddenError } from "../lib/errors.js";
 import { contentDisposition } from "../lib/contentDisposition.js";
+import { assertUuidParam } from "../lib/uuid.js";
 
 /** Accepted document_type values. commercial_registration must be a PDF; others may be PDF/JPEG/PNG. */
 const ALLOWED_DOCUMENT_TYPES: readonly KycDocumentType[] = [
@@ -94,6 +95,7 @@ export async function kycRoutes(app: FastifyInstance): Promise<void> {
     { preHandler: [requireSession, requireRole("owner", "finance")] },
     async (request, reply) => {
       assertOwnMerchant(request);
+      assertUuidParam(request.params.documentId, "kyc_document_not_found");
       const file = await getKycDocumentFile(
         app.db,
         app.config,
@@ -111,6 +113,7 @@ export async function kycRoutes(app: FastifyInstance): Promise<void> {
     { preHandler: [requireSession, requireRole("owner", "finance")] },
     async (request, reply) => {
       assertOwnMerchant(request);
+      assertUuidParam(request.params.documentId, "kyc_thumbnail_not_found");
       const file = await getKycThumbnailFile(
         app.db,
         app.config,

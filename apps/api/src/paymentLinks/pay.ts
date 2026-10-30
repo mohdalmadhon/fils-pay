@@ -107,6 +107,11 @@ export async function payPaymentLink(
 
   const claimedRow = claimResult.rows[0];
   if (!claimedRow) {
+    // The buyer's own retry of a payment that already went through (a lost
+    // response, a double click) carries the same Idempotency-Key and must get
+    // the same 200, not 409 already_paid. docs/bugs/016.
+    const replay = await replayPaidAttempt(pool, input.token, input.idempotencyKey);
+    if (replay) return replay;
     return classifyClaimFailure(pool, input.token);
   }
 
@@ -120,6 +125,11 @@ export async function payPaymentLink(
   // Step 2 — authorize.
   // am: keys include link.id so two links can never collide on idempotency. good
   const authorizeKey = `paylink:${link.id}:${input.idempotencyKey}:authorize`;
+  // Anything that throws from here on (a malformed card, a reused key, an
+  // acquirer or database error) must hand the link back first, or it stays
+  // 'reserved' until the timeout and blocks every real buyer (and the
+  // merchant's cancel) — and anyone could keep it blocked with one bad
+  // request a minute. docs/bugs/003.
   const authResult = await authorizeTransaction(pool, acquirer, {
     merchantId: link.merchantId,
     amountFils: link.amountFils,
@@ -129,7 +139,7 @@ export async function payPaymentLink(
     // No merchant session/API key initiated this — a customer did, via
     // the public link.
     actor: { type: "system" },
-  });
+  }).catch(releaseThenRethrow(pool, link.id, reservationToken));
 
   if (authResult.statusCode !== 201) {
     await releaseReservation(pool, link.id, reservationToken);
@@ -202,23 +212,26 @@ export async function payPaymentLink(
       [link.id, txnId],
     );
     return { kind: "paid" as const, paidAt: finalized.rows[0]!.paid_at };
+  }).catch(async (err: unknown) => {
+    // The capture transaction rolled back, so nothing was captured: release
+    // the hold on the card as well as the link. docs/bugs/004.
+    await voidAuthorization(pool, txnId, link);
+    return releaseThenRethrow(pool, link.id, reservationToken)(err);
   });
 
   if (outcome.kind === "lost") {
     // Nothing was captured, so the cardholder was not charged. Release the
     // hold on their card instead of leaving the authorization open.
-    await voidTransaction(pool, {
-      transactionId: txnId,
-      merchantId: link.merchantId,
-      actor: { type: "system", id: link.id },
-    }).catch((err: unknown) => {
-      console.error(`payPaymentLink: could not void superseded authorization ${txnId} for link ${link.id}`, err);
-    });
+    await voidAuthorization(pool, txnId, link);
     const explained = await classifyClaimFailure(pool, input.token);
     return { statusCode: 409, body: { stage: "capture", ...(explained.body as Record<string, unknown>) } };
   }
 
   if (outcome.kind === "capture_failed") {
+    // Same as "lost": the capture was refused, so the buyer was not charged,
+    // but the authorization would hold their funds for 7 days, and every
+    // retry (a fresh key per click) would add another. docs/bugs/004.
+    await voidAuthorization(pool, txnId, link);
     return {
       statusCode: outcome.result.statusCode,
       body: { stage: "capture", ...(outcome.result.body as Record<string, unknown>) },
@@ -233,6 +246,63 @@ export async function payPaymentLink(
       amountFils: link.amountFils,
       paidAt: outcome.paidAt.toISOString(),
     },
+  };
+}
+
+/**
+ * The 200 a paid link gave the attempt that paid it, if this request is that
+ * attempt again: same link, same Idempotency-Key, and the authorization saved
+ * under that key is the very transaction the link was paid with.
+ */
+async function replayPaidAttempt(
+  pool: Pool,
+  token: string,
+  idempotencyKey: string,
+): Promise<PayPaymentLinkResult | null> {
+  const result = await pool.query<{ transaction_id: string; amount_fils: string | number; paid_at: Date }>(
+    `SELECT pl.transaction_id, pl.amount_fils, pl.paid_at
+       FROM payment_links pl
+       JOIN idempotency_keys ik
+         ON ik.merchant_id = pl.merchant_id
+        AND ik.endpoint = 'transactions.authorize'
+        AND ik.key = 'paylink:' || pl.id || ':' || $2 || ':authorize'
+      WHERE pl.token = $1 AND pl.status = 'paid'
+        AND ik.response_body->>'id' = pl.transaction_id::text`,
+    [token, idempotencyKey],
+  );
+  const row = result.rows[0];
+  if (!row) return null;
+  return {
+    statusCode: 200,
+    body: {
+      status: "paid",
+      transactionId: row.transaction_id,
+      amountFils: toFils(Number(row.amount_fils)),
+      paidAt: row.paid_at.toISOString(),
+    },
+  };
+}
+
+/** Void an authorization this attempt will not capture. Best effort: a
+ *  failure is logged, and the hold still expires on its own. */
+async function voidAuthorization(pool: Pool, txnId: string, link: { id: string; merchantId: string }): Promise<void> {
+  await voidTransaction(pool, {
+    transactionId: txnId,
+    merchantId: link.merchantId,
+    actor: { type: "system", id: link.id },
+  }).catch((err: unknown) => {
+    console.error(`payPaymentLink: could not void uncaptured authorization ${txnId} for link ${link.id}`, err);
+  });
+}
+
+/** A `.catch` handler: release this attempt's reservation, then rethrow the
+ *  original error. A failure to release is logged, never thrown over it. */
+function releaseThenRethrow(pool: Pool, linkId: string, reservationToken: string) {
+  return async (err: unknown): Promise<never> => {
+    await releaseReservation(pool, linkId, reservationToken).catch((releaseErr: unknown) => {
+      console.error(`payPaymentLink: could not release reservation on link ${linkId}`, releaseErr);
+    });
+    throw err;
   };
 }
 

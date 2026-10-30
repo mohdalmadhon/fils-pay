@@ -2,6 +2,7 @@ import { parseLimitParam } from "../lib/queryParams.js";
 import type { FastifyInstance } from "fastify";
 import { requireMerchantAuth } from "../auth/requireMerchantAuth.js";
 import { BadRequestError } from "../lib/errors.js";
+import { isIsoCalendarDate } from "../lib/calendarDate.js";
 import {
   clampTopLinksLimit,
   getPayoutTrends,
@@ -19,11 +20,9 @@ interface TopLinksQuery extends DateRangeQuery {
   limit?: string;
 }
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-/** Strict YYYY-MM-DD that also round-trips through Date (rejects 2026-02-30). */
-function isValidDateString(value: string): boolean {
-  return DATE_RE.test(value) && !Number.isNaN(Date.parse(value));
+/** Strict YYYY-MM-DD naming a real day (rejects 2026-02-30). */
+function isValidDateString(value: unknown): value is string {
+  return isIsoCalendarDate(value);
 }
 
 function pad2(n: number): string {

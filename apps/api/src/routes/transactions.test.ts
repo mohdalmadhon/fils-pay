@@ -215,8 +215,48 @@ test("capture with a reused idempotency key and identical body replays without a
   assert.ok(Number(countAfterFirst.rows[0]!.c) > 0);
 });
 
-// FH: should also cover same key + same body on a DIFFERENT transaction -> 422 (API.md). Claude says
-// that case can't happen because keys are per transaction
+// Keys are scoped per merchant, not per transaction, so the same key and
+// body on a different transaction must be refused too. docs/bugs/002.
+test("capture with a reused idempotency key on a DIFFERENT transaction is rejected, not replayed", async () => {
+  const { rawKey } = await createApprovedMerchantWithApiKey("idempotent-other-txn");
+  const first = await authorize(rawKey, 5_000);
+  const second = await authorize(rawKey, 5_000);
+  const key = randomUUID();
+
+  const ok = await capture(rawKey, first.id, {}, key);
+  assert.equal(ok.statusCode, 200, ok.body);
+
+  const reused = await capture(rawKey, second.id, {}, key);
+  assert.equal(reused.statusCode, 422, reused.body);
+  assert.equal(reused.json().error, "idempotency_key_reused");
+
+  const row = await pool.query<{ status: string }>(`SELECT status FROM transactions WHERE id = $1`, [second.id]);
+  assert.equal(row.rows[0]!.status, "authorized");
+});
+
+test("an authorization past its 7-day hold can no longer be captured", async () => {
+  // docs/bugs/005: capture only checked the status, so a stale authorization
+  // (hold expired and swept by expire_holds) was still captured.
+  const { rawKey } = await createApprovedMerchantWithApiKey("expired-auth");
+  const txn = await authorize(rawKey, 5_000);
+  await pool.query(
+    `UPDATE holds SET expires_at = now() - interval '1 day' WHERE transaction_id = $1`,
+    [txn.id],
+  );
+  await pool.query(`UPDATE transactions SET occurred_at = now() - interval '8 days', created_at = now() - interval '8 days' WHERE id = $1`, [txn.id]);
+  await pool.query(`DELETE FROM holds WHERE transaction_id = $1 AND status = 'active' AND expires_at < now()`, [txn.id]);
+
+  const res = await capture(rawKey, txn.id);
+  assert.equal(res.statusCode, 409, res.body);
+  assert.equal(res.json().error, "authorization_expired");
+  const row = await pool.query<{ status: string; captured_fils: string }>(
+    `SELECT status, captured_fils FROM transactions WHERE id = $1`,
+    [txn.id],
+  );
+  assert.equal(row.rows[0]!.status, "authorized");
+  assert.equal(Number(row.rows[0]!.captured_fils), 0);
+});
+
 test("capture with a reused idempotency key but a different body is rejected as a conflict", async () => {
   const { rawKey } = await createApprovedMerchantWithApiKey("idempotent-conflict");
   const txn = await authorize(rawKey, 8_000);
@@ -298,4 +338,75 @@ test("POST /v1/refunds returns 501 not_implemented", async () => {
   });
   assert.equal(res.statusCode, 501, res.body);
   assert.equal(res.json().error, "not_implemented");
+});
+
+test("malformed amounts and cards are a 400, not a 500 (docs/bugs/008)", async () => {
+  const { rawKey } = await createApprovedMerchantWithApiKey("bad-input");
+  const authorizeWith = (payload: object) =>
+    app.inject({
+      method: "POST",
+      url: "/v1/transactions",
+      headers: { ...authHeader(rawKey), "idempotency-key": randomUUID() },
+      payload,
+    });
+  const card = { pan: "4242424242424242", expiryMonth: 12, expiryYear: 2030, cvv: "123" };
+  for (const amountFils of [0, -1, 1.5, "100"]) {
+    const res = await authorizeWith({ amountFils, card });
+    assert.equal(res.statusCode, 400, `amountFils ${JSON.stringify(amountFils)}: ${res.body}`);
+  }
+  for (const bad of [{}, { ...card, pan: 4242 }, { ...card, expiryMonth: 13 }, { ...card, cvv: 123 }]) {
+    const res = await authorizeWith({ amountFils: 1_000, card: bad });
+    assert.equal(res.statusCode, 400, `card ${JSON.stringify(bad)}: ${res.body}`);
+  }
+
+  const txn = await authorize(rawKey, 5_000);
+  for (const amountFils of [0, -1, 1.5, "100"]) {
+    const res = await capture(rawKey, txn.id, { amountFils } as unknown as { amountFils: number });
+    assert.equal(res.statusCode, 400, `capture amountFils ${JSON.stringify(amountFils)}: ${res.body}`);
+  }
+});
+
+test("an invalid date filter on the list and export is a 400, not a 500 (docs/bugs/010)", async () => {
+  const { rawKey } = await createApprovedMerchantWithApiKey("bad-dates");
+  for (const url of [
+    "/v1/transactions?from=garbage",
+    "/v1/transactions?to=2026-13-45T00:00:00Z",
+    "/v1/transactions?from=a&from=b",
+    "/v1/transactions/export?from=garbage",
+  ]) {
+    const res = await app.inject({ method: "GET", url, headers: authHeader(rawKey) });
+    assert.equal(res.statusCode, 400, `${url}: ${res.body}`);
+    assert.equal(res.json().error, "invalid_date");
+  }
+});
+
+test("a tampered list cursor restarts from the first page instead of a 500 (docs/bugs/011)", async () => {
+  const { rawKey, merchantId } = await createApprovedMerchantWithApiKey("bad-cursor");
+  await authorize(rawKey, 1_000);
+  const cursor = Buffer.from("x|y", "utf8").toString("base64url");
+  for (const url of [
+    `/v1/transactions?cursor=${cursor}`,
+    `/v1/settlement/batches?cursor=${cursor}`,
+    `/v1/merchants/${merchantId}/payment-links?cursor=${cursor}`,
+  ]) {
+    const res = await app.inject({ method: "GET", url, headers: authHeader(rawKey) });
+    assert.equal(res.statusCode, 200, `${url}: ${res.body}`);
+  }
+});
+
+test("a malformed id in the path is a 404, not a 500 (docs/bugs/012)", async () => {
+  const { rawKey, merchantId } = await createApprovedMerchantWithApiKey("bad-ids");
+  const headers = { ...authHeader(rawKey), "idempotency-key": randomUUID() };
+  for (const [method, url] of [
+    ["GET", "/v1/transactions/not-a-uuid"],
+    ["GET", "/v1/transactions/not-a-uuid/events"],
+    ["POST", "/v1/transactions/not-a-uuid/capture"],
+    ["POST", "/v1/transactions/not-a-uuid/void"],
+    ["GET", "/v1/settlement/batches/not-a-uuid"],
+    ["GET", "/v1/settlement/batches/not-a-uuid/transactions"],
+    ["DELETE", `/v1/merchants/${merchantId}/payment-links/not-a-uuid`],
+  ] as const) {
+    const res = await app.inject({ method, url, headers, ...(method === "POST" ? { payload: {} } : {}) });
+    assert.equal(res.statusCode, 404, `${method} ${url}: ${res.body}`);
+  }
 });

@@ -36,6 +36,16 @@ export function validateRefundRequest(
   }
 
   const refundable = refundableAmount(txn);
+  // Nothing left to return and no amount given ("refund the rest"). A
+  // partial capture whose captured part was all refunded keeps
+  // 'partially_captured' (refundState.ts), so the status check above lets it
+  // through, and the default amount of 0 used to come back as "bad amount"
+  // (422 refund_amount_invalid) although the caller sent no amount. It gets
+  // the same answer as a 'refunded' one. An explicit amount still gets
+  // refund_exceeds_refundable with the ceiling of 0. docs/bugs/007.
+  if (requestedAmountFils === undefined && compareFils(refundable, ZERO_FILS) <= 0) {
+    return { ok: false, code: "transaction_not_refundable", status: txn.status };
+  }
   const requested = requestedAmountFils ?? refundable;
 
   if (compareFils(requested, ZERO_FILS) <= 0) {

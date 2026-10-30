@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { logout as logoutRequest, me as fetchMe } from "../api/auth.js";
+import { onSessionEnded } from "../api/sessionEvents.js";
 import {
   clearActiveImpersonation,
   endImpersonation,
@@ -61,6 +62,19 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Any admin API call that answers 401 unauthenticated means the session
+  // has expired or was revoked. Drop to anonymous so the guard sends the
+  // operator to the login page (keeping the current page as `from`) and the
+  // login page doesn't bounce them back.
+  useEffect(
+    () =>
+      onSessionEnded(() => {
+        setAdmin(null);
+        setStatus("anonymous");
+      }),
+    [],
+  );
 
   // An impersonation grant has a short, server-enforced lifetime
   // (config.impersonationTtlMinutes, default 15). Re-read the local record

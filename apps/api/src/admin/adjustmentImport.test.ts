@@ -251,3 +251,25 @@ test("getAdjustmentImportRows returns an empty list for an unknown import", asyn
   const rows = await getAdjustmentImportRows(pool, randomUUID());
   assert.deepEqual(rows, []);
 });
+
+test("totalPostedFils sums the absolute row amounts, in the result and the audit row", async () => {
+  const adminUserId = await createAdminUser();
+  const merchantId = await createMerchant();
+
+  const result = await applyAdjustmentImport(pool, {
+    adminUserId,
+    originalFilename: "plus-minus.csv",
+    rows: [
+      { merchantId, amount: "5.000" },
+      { merchantId, amount: "-5.000" },
+      { merchantId, amount: "-0.250" },
+    ],
+  });
+  assert.equal(result.totalPostedFils, 10_250);
+
+  const audit = await pool.query<{ metadata: { totalPostedFils: number } }>(
+    `SELECT metadata FROM admin_audit_log WHERE action = 'adjustment_import_applied' AND target_id = $1`,
+    [result.importId],
+  );
+  assert.equal(audit.rows[0]!.metadata.totalPostedFils, 10_250);
+});

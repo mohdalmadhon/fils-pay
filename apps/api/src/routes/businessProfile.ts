@@ -3,6 +3,7 @@ import { requireRole, requireSession } from "../auth/middleware.js";
 import { createMerchantWithOwner, type SignupInput } from "../onboarding/signup.js";
 import { reserveSignup } from "../onboarding/signupLimits.js";
 import { getBusinessProfile, updateBusinessProfile, type BusinessProfilePatch } from "../onboarding/businessProfile.js";
+import { normalizeEmail, validateBusinessProfileFields } from "../onboarding/profileValidation.js";
 import { BadRequestError, ForbiddenError } from "../lib/errors.js";
 
 interface MerchantIdParams {
@@ -25,21 +26,19 @@ export async function businessProfileRoutes(app: FastifyInstance): Promise<void>
     if (!body.businessProfile || !body.owner) {
       throw new BadRequestError("invalid_request", "businessProfile and owner are required");
     }
-    const bp = body.businessProfile;
+    if (typeof body.businessProfile !== "object" || typeof body.owner !== "object") {
+      throw new BadRequestError("invalid_request", "businessProfile and owner must be objects");
+    }
+    // Validate everything first. The signup slot is only reserved for a
+    // request that could succeed, so a typo doesn't use up the quota.
+    const businessProfile = validateBusinessProfileFields(body.businessProfile as unknown as Record<string, unknown>, {
+      partial: false,
+    }) as unknown as SignupInput["businessProfile"];
     const owner = body.owner;
-    if (
-      !bp.legalName ||
-      !bp.registrationNumber ||
-      !bp.businessType ||
-      !bp.contactEmail ||
-      !bp.contactPhone ||
-      !bp.addressLine1 ||
-      !bp.city ||
-      !owner.email ||
-      !owner.password
-    ) {
+    if (!owner.password) {
       throw new BadRequestError("invalid_request", "missing required business profile or owner fields");
     }
+    const ownerEmail = normalizeEmail(owner.email, "owner.email");
 
     // 12+ characters (length beats composition rules), and at most 256 so a
     // huge body can't make argon2 hash megabytes. It accepted anything,
@@ -47,8 +46,9 @@ export async function businessProfileRoutes(app: FastifyInstance): Promise<void>
     if (typeof owner.password !== "string" || owner.password.length < 12 || owner.password.length > 256) {
       throw new BadRequestError("weak_password", "the password must be 12 to 256 characters");
     }
-    await reserveSignup(app.db, app.config, String(owner.email), request.ip);
-    const result = await createMerchantWithOwner(app.db, app.config, body as SignupInput);
+    const input: SignupInput = { businessProfile, owner: { email: ownerEmail, password: owner.password } };
+    await reserveSignup(app.db, app.config, ownerEmail, request.ip);
+    const result = await createMerchantWithOwner(app.db, app.config, input);
     reply.code(201).send({
       merchantId: result.merchantId,
       ownerUserId: result.ownerUserId,

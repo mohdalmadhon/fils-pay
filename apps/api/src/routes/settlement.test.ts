@@ -149,10 +149,13 @@ function addOneCalendarDay(dateStr: string): string {
 
 /**
  * Replicates apps/settlement's CloseBatch then PayoutBatch directly in SQL: selects unbatched
- * captured/partially_captured transaction_events for merchantId within
- * businessDate's Asia/Bahrain window, recomputes fee PER EVENT (via the
+ * captured/partially_captured transaction_events for merchantId that
+ * happened before the end of businessDate's Asia/Bahrain window (no lower
+ * bound, so a late capture from an earlier day is swept in, as CloseBatch
+ * does), recomputes fee PER EVENT (via the
  * same `applyRateFils` capture.ts and CloseBatch both use) then sums,
- * freezes the batch, marks events batched, writes truncated
+ * claims refunds and subtracts them from the net payout, freezes the
+ * batch, marks events batched, writes truncated
  * scheme_export_lines, and posts the payout ledger legs.
  */
 async function closeAndPayoutBatch(
@@ -201,9 +204,9 @@ async function closeAndPayoutBatch(
       WHERE t.merchant_id = $1
         AND te.event_type IN ('captured', 'partially_captured')
         AND te.settlement_batch_id IS NULL
-        AND te.occurred_at >= $2 AND te.occurred_at < $3
+        AND te.occurred_at < $2
       ORDER BY te.transaction_id, te.occurred_at`,
-    [merchantId, start, end],
+    [merchantId, end],
   );
 
   const grossByTxn = new Map<string, number>();
@@ -227,7 +230,24 @@ async function closeAndPayoutBatch(
     batchFee += feeFils;
     eventIds.push(row.id);
   }
-  const netPayout = batchGross - batchFee;
+  // CloseBatch also claims the merchant's unbatched succeeded refunds before
+  // the window end, oldest first, skipping any that would push the net below
+  // zero (carried forward), and pays out that much less.
+  const refundsResult = await pool.query<{ id: string; net_fils: string }>(
+    `SELECT id, amount_fils - fee_reversed_fils AS net_fils
+       FROM refunds
+      WHERE merchant_id = $1 AND status = 'succeeded' AND settlement_batch_id IS NULL AND occurred_at < $2
+      ORDER BY occurred_at, id`,
+    [merchantId, end],
+  );
+  let netPayout = batchGross - batchFee;
+  const claimedRefundIds: string[] = [];
+  for (const row of refundsResult.rows) {
+    const refundNet = Number(row.net_fils);
+    if (refundNet > netPayout) continue;
+    netPayout -= refundNet;
+    claimedRefundIds.push(row.id);
+  }
 
   await pool.query(
     `UPDATE settlement_batches
@@ -241,6 +261,10 @@ async function closeAndPayoutBatch(
       eventIds,
       batchId,
     ]);
+  }
+
+  if (claimedRefundIds.length > 0) {
+    await pool.query(`UPDATE refunds SET settlement_batch_id = $2 WHERE id = ANY($1::uuid[])`, [claimedRefundIds, batchId]);
   }
 
   for (let i = 0; i < orderedTxnIds.length; i++) {
@@ -488,6 +512,36 @@ test("GET /v1/settlement/reconciliation with an unbatched capture reports it as 
   assert.equal(report.explained, true);
 });
 
+test("GET /v1/settlement/reconciliation explains an unbatched refund as pending, not as a gap", async () => {
+  const { merchantId, rawKey } = await createApprovedMerchantWithApiKey("reconciliation-refund", 250);
+  const txn = await authorize(rawKey, 10_000);
+  await capture(rawKey, txn.id);
+  const refundRes = await app.inject({
+    method: "POST",
+    url: `/v1/merchants/${merchantId}/refunds`,
+    headers: { ...authHeader(rawKey), "idempotency-key": randomUUID() },
+    payload: { transactionId: txn.id, amountFils: 4_000 },
+  });
+  assert.equal(refundRes.statusCode, 200, refundRes.body);
+  const refundRow = await pool.query<{ amount_fils: string; fee_reversed_fils: string }>(
+    `SELECT amount_fils, fee_reversed_fils FROM refunds WHERE transaction_id = $1`,
+    [txn.id],
+  );
+  const refundNet = Number(refundRow.rows[0]!.amount_fils) - Number(refundRow.rows[0]!.fee_reversed_fils);
+
+  const businessDate = todayBahrainDateString();
+  const res = await app.inject({
+    method: "GET",
+    url: `/v1/settlement/reconciliation?from=${businessDate}&to=${addOneCalendarDay(businessDate)}`,
+    headers: authHeader(rawKey),
+  });
+  assert.equal(res.statusCode, 200, res.body);
+  const report = res.json() as { pendingUnbatchedFils: number; gapFils: number; explained: boolean };
+  assert.equal(report.pendingUnbatchedFils, 10_000 - Number(applyRateFils(toFils(10_000), 250)) - refundNet);
+  assert.equal(report.gapFils, 0);
+  assert.equal(report.explained, true);
+});
+
 test("GET /v1/settlement/reconciliation prices a pending capture at the merchant's negotiated schedule", async () => {
   // merchants.mdr_bps = 250 is only the fallback; the schedule says 225 bps
   // since yesterday, and capture charges 225. Pending must use 225 too.
@@ -558,6 +612,26 @@ test("GET /v1/settlement/summary sums captured amounts for transactions with a s
   assert.equal(body.totalCapturedFils, 10_000 + 3_333);
 });
 
+test("GET /v1/settlement/summary counts a payment captured in parts once, at what was captured", async () => {
+  // docs/bugs/001: the summary summed the transaction's running total once
+  // per capture event, so 4,000 + 6,000 was reported as 20,000.
+  const { rawKey } = await createApprovedMerchantWithApiKey("summary-multi-capture", 250);
+  const txn = await authorize(rawKey, 10_000);
+  await capture(rawKey, txn.id, { amountFils: 4_000 });
+  await capture(rawKey, txn.id, { amountFils: 6_000 });
+
+  const businessDate = todayBahrainDateString();
+  const res = await app.inject({
+    method: "GET",
+    url: `/v1/settlement/summary?from=${businessDate}&to=${addOneCalendarDay(businessDate)}`,
+    headers: authHeader(rawKey),
+  });
+  assert.equal(res.statusCode, 200, res.body);
+  const body = res.json() as { transactionCount: number; totalCapturedFils: number };
+  assert.equal(body.transactionCount, 1);
+  assert.equal(body.totalCapturedFils, 10_000);
+});
+
 test("GET /v1/settlement/summary is forbidden for a 'support' session role", async () => {
   const { merchantId } = await createApprovedMerchantWithApiKey("summary-role");
   const supportToken = await createSessionWithRole(merchantId, "support");
@@ -604,4 +678,18 @@ test("GET /v1/settlement/reconciliation succeeds for a 'finance' session role", 
     headers: cookieHeader(financeToken),
   });
   assert.equal(res.statusCode, 200, res.body);
+});
+
+test("impossible or malformed dates on settlement reports are a 400, not a 500 (docs/bugs/010)", async () => {
+  const { rawKey } = await createApprovedMerchantWithApiKey("bad-settlement-dates");
+  for (const url of [
+    "/v1/settlement/reconciliation?from=2026-13-01&to=2026-14-01",
+    "/v1/settlement/reconciliation?from=2026-02-30&to=2026-03-01",
+    "/v1/settlement/summary?from=garbage&to=2026-03-01",
+    "/v1/settlement/batches?from=garbage",
+  ]) {
+    const res = await app.inject({ method: "GET", url, headers: authHeader(rawKey) });
+    assert.equal(res.statusCode, 400, `${url}: ${res.body}`);
+    assert.equal(res.json().error, "invalid_date");
+  }
 });

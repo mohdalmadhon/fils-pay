@@ -1,3 +1,5 @@
+import { NotFoundError } from "./errors.js";
+
 const CANONICAL_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** A UUID in its one canonical spelling (lower-case, hyphenated), or null.
@@ -6,4 +8,12 @@ const CANONICAL_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f
  *  consistent, and keeps non-UUIDs out of queries (a 400, not a 500). */
 export function canonicalUuid(raw: unknown): string | null {
   return typeof raw === "string" && CANONICAL_UUID.test(raw) ? raw.toLowerCase() : null;
+}
+
+/** A path id that isn't UUID-shaped can't name any row, so it is a 404
+ *  (`code`) rather than a 500 from a failed `::uuid` cast in a query. */
+export function assertUuidParam(value: unknown, code: string): void {
+  if (canonicalUuid(value) === null) {
+    throw new NotFoundError(code);
+  }
 }
