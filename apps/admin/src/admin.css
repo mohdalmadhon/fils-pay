@@ -45,10 +45,10 @@
 }
 
 :root[data-costume="halloween"] .admin-sidebar {
-  background: #100a0d;
-  --c-surface: #1e1418;
-  --c-surface-3: #2d1f27;
-  --c-line: #3a2730;
+  background: #0a0612;
+  --c-surface: #150f21;
+  --c-surface-3: #231a35;
+  --c-line: #33264d;
 }
 
 .admin-shell:has(.impersonation-banner) .admin-sidebar {
@@ -392,8 +392,8 @@ a.admin-button-primary:hover {
 :root[data-costume="halloween"] .admin-form button[type="submit"],
 :root[data-costume="halloween"] .admin-button-primary {
   background-image: var(--hw-gradient);
-  border-color: transparent;
-  box-shadow: 0 6px 20px -8px rgba(255, 180, 162, 0.7);
+  border-color: #05030a;
+  box-shadow: var(--hw-pixel-shadow);
 }
 
 .admin-button-quiet {
@@ -781,10 +781,12 @@ input[type="radio"] {
 }
 
 :root[data-costume="halloween"] .admin-login-aside {
-  background-color: #100a0d;
+  /* A pixel grid on the night sky, with an orange margin rule. */
+  background-color: #0a0612;
   background-image:
-    linear-gradient(90deg, transparent 63px, rgba(255, 180, 162, 0.5) 63px, rgba(255, 180, 162, 0.5) 64px, transparent 64px),
-    repeating-linear-gradient(180deg, transparent 0 31px, rgba(255, 205, 178, 0.05) 31px 32px);
+    linear-gradient(90deg, transparent 62px, rgba(255, 122, 26, 0.55) 62px, rgba(255, 122, 26, 0.55) 64px, transparent 64px),
+    repeating-linear-gradient(90deg, transparent 0 15px, rgba(180, 92, 240, 0.06) 15px 16px),
+    repeating-linear-gradient(180deg, transparent 0 15px, rgba(180, 92, 240, 0.06) 15px 16px);
 }
 
 .admin-login-aside .fp-wordmark {

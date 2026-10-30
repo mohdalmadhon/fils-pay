@@ -127,42 +127,57 @@
   --shadow-pop: 0 18px 44px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
-/* Halloween costume: night falls and the palette turns to peach and rose.
- * Set from the pumpkin button (components/kit/Halloween.tsx). */
+/* Halloween costume: a pixel-art Halloween night. Pumpkin orange, witch
+ * purple and slime green on a purple-black sky; square pixel corners, hard
+ * pixel shadows and a pixel font for headings. Set from the pumpkin button
+ * (components/kit/Halloween.tsx). Every text colour here is at least
+ * 4.5:1 on every surface (npm run e2e:a11y audits the costume). */
 :root[data-costume="halloween"] {
   color-scheme: dark;
-  --hw-peach: #ffcdb2;
-  --hw-salmon: #ffb4a2;
-  --hw-rose: #e5989b;
-  --hw-mauve: #b5828c;
-  --c-bg: #150d11;
-  --c-surface: #1e1418;
-  --c-surface-2: #241820;
-  --c-surface-3: #2d1f27;
-  --c-line: #3a2730;
-  --c-line-2: #543943;
-  --c-ink: #ffe9de;
-  --c-ink-2: #f2c9bb;
-  --c-ink-3: #b5828c;
-  --c-ink-4: #8a6670;
-  --c-primary: #ffb4a2;
-  --c-primary-hover: #ffcdb2;
-  --c-on-primary: #2a1418;
-  --c-accent: #ffb4a2;
-  --c-accent-ink: #ffcdb2;
-  --c-accent-soft: rgba(255, 180, 162, 0.12);
-  --c-good: #a9dcbf;
-  --c-good-soft: rgba(169, 220, 191, 0.1);
-  --c-warn: #ffcdb2;
-  --c-warn-soft: rgba(255, 205, 178, 0.12);
-  --c-danger: #e5989b;
-  --c-danger-soft: rgba(229, 152, 155, 0.16);
-  --c-neutral-soft: rgba(181, 130, 140, 0.16);
-  --c-focus: rgba(255, 180, 162, 0.5);
-  --c-scrim: rgba(10, 5, 8, 0.6);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
-  --shadow-pop: 0 20px 50px -14px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 205, 178, 0.08);
-  --hw-gradient: linear-gradient(120deg, #ffcdb2 0%, #ffb4a2 38%, #e5989b 72%, #b5828c 100%);
+  --hw-pumpkin: #ff7a1a;
+  --hw-pumpkin-light: #ffa24c;
+  --hw-candy: #ffd23f;
+  --hw-witch: #b45cf0;
+  --hw-witch-deep: #4b2470;
+  --hw-slime: #8fe36b;
+  --hw-bone: #f7efe0;
+  --hw-night: #0c0814;
+  --font-pixel: "Pixelify Sans", ui-monospace, monospace;
+  --c-bg: #0c0814;
+  --c-surface: #150f21;
+  --c-surface-2: #1b1429;
+  --c-surface-3: #231a35;
+  --c-line: #33264d;
+  --c-line-2: #4b3870;
+  --c-ink: #f7efe0;
+  --c-ink-2: #dccbf2;
+  --c-ink-3: #a894c9;
+  --c-ink-4: #75669a;
+  --c-primary: #ff7a1a;
+  --c-primary-hover: #ffa24c;
+  --c-on-primary: #1a0d05;
+  --c-accent: #ff7a1a;
+  --c-accent-ink: #ffa24c;
+  --c-accent-soft: rgba(255, 122, 26, 0.14);
+  --c-good: #8fe36b;
+  --c-good-soft: rgba(143, 227, 107, 0.12);
+  --c-warn: #ffd23f;
+  --c-warn-soft: rgba(255, 210, 63, 0.12);
+  --c-danger: #ff5c6c;
+  --c-danger-soft: rgba(255, 92, 108, 0.15);
+  --c-neutral-soft: rgba(168, 148, 201, 0.15);
+  --c-focus: rgba(255, 122, 26, 0.6);
+  --c-scrim: rgba(6, 3, 10, 0.7);
+  /* Pixel look: no rounded corners, hard offset shadows. */
+  --r-1: 0;
+  --r-2: 0;
+  --r-3: 0;
+  --r-4: 0;
+  --shadow-sm: 2px 2px 0 #05030a;
+  --shadow-pop: 4px 4px 0 #05030a, 0 0 0 2px var(--c-line-2);
+  --hw-pixel-shadow: 3px 3px 0 #05030a;
+  /* Two-tone, hard stop: a pixel highlight on orange buttons. */
+  --hw-gradient: linear-gradient(180deg, #ffa24c 0 50%, #ff7a1a 50% 100%);
 }
 
 /* Base -------------------------------------------------------------------- */
@@ -961,13 +976,13 @@ button.fp-nav-search:hover {
 
 .fp-hw-toggle[aria-pressed="true"],
 .fp-hw-toggle[aria-pressed="true"]:hover {
-  border-color: var(--hw-salmon);
+  border-color: var(--hw-pumpkin);
   background: radial-gradient(circle at 50% 60%, #3a2026, var(--c-surface) 70%);
-  box-shadow: 0 0 0 1px rgba(255, 180, 162, 0.25), 0 10px 30px -6px rgba(255, 180, 162, 0.45);
+  box-shadow: 0 0 0 1px rgba(255, 122, 26, 0.25), 0 10px 30px -6px rgba(255, 122, 26, 0.45);
 }
 
 .fp-hw-toggle[aria-pressed="true"] .fp-hw-face {
-  fill: #ffcdb2;
+  fill: #ffd23f;
   animation: fp-flicker 2.4s ease-in-out infinite;
 }
 
@@ -1012,25 +1027,27 @@ button.fp-nav-search:hover {
   transform: translate(0, -50%);
 }
 
-/* In costume, headings and the name pick up the peach-to-rose gradient. */
+/* In costume, headings and the name are set in a pixel font, pumpkin
+ * orange with a hard purple pixel shadow. */
 :root[data-costume="halloween"] h1,
 :root[data-costume="halloween"] .fp-wordmark {
-  background: var(--hw-gradient);
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: fp-hw-sheen 8s ease-in-out infinite alternate;
+  font-family: var(--font-pixel);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--hw-pumpkin-light);
+  text-shadow: 2px 2px 0 var(--hw-witch-deep);
 }
 
 :root[data-costume="halloween"] .fp-wordmark > span:not([class]) {
-  color: transparent;
+  color: var(--hw-witch);
+  text-shadow: 2px 2px 0 #05030a;
 }
 
-@keyframes fp-hw-sheen {
-  to {
-    background-position: 100% 0;
-  }
+:root[data-costume="halloween"] h2,
+:root[data-costume="halloween"] h3 {
+  font-family: var(--font-pixel);
+  font-weight: 500;
+  letter-spacing: 0.01em;
 }
 
 /* The night layer: cobwebs, a lantern that follows the pointer, bats, a
@@ -1046,7 +1063,7 @@ button.fp-nav-search:hover {
 .fp-hw-lantern {
   position: absolute;
   inset: 0;
-  background: radial-gradient(280px circle at var(--hx, 50%) var(--hy, 40%), rgba(255, 180, 162, 0.1), transparent 70%);
+  background: radial-gradient(280px circle at var(--hx, 50%) var(--hy, 40%), rgba(255, 122, 26, 0.1), transparent 70%);
 }
 
 .fp-hw-vignette {
@@ -1060,7 +1077,7 @@ button.fp-nav-search:hover {
   top: 0;
   width: 170px;
   height: 170px;
-  color: var(--hw-peach);
+  color: var(--hw-bone);
   opacity: 0.3;
 }
 
@@ -1080,8 +1097,8 @@ button.fp-nav-search:hover {
   width: 72px;
   height: 72px;
   border-radius: 50%;
-  background: radial-gradient(circle at 38% 36%, #fff3ea, #ffcdb2 45%, #e5989b 100%);
-  box-shadow: 0 0 60px 10px rgba(255, 180, 162, 0.22);
+  background: radial-gradient(circle at 38% 36%, #fff3ea, #ffd23f 45%, #ff7a1a 100%);
+  box-shadow: 0 0 60px 10px rgba(255, 122, 26, 0.22);
   opacity: 0.9;
 }
 
@@ -1104,7 +1121,7 @@ button.fp-nav-search:hover {
   height: 24px;
   color: #0c0609;
   will-change: transform;
-  filter: drop-shadow(0 0 6px rgba(255, 180, 162, 0.45));
+  filter: drop-shadow(0 0 6px rgba(255, 122, 26, 0.45));
 }
 
 .fp-hw-bat svg {
@@ -1137,7 +1154,7 @@ button.fp-nav-search:hover {
 @keyframes fp-poof {
   to {
     opacity: 0;
-    filter: blur(8px) drop-shadow(0 0 14px #ffb4a2);
+    filter: blur(8px) drop-shadow(0 0 14px #ff7a1a);
   }
 }
 
@@ -1153,7 +1170,7 @@ button.fp-nav-search:hover {
   left: 16.5px;
   top: 0;
   width: 1px;
-  background: linear-gradient(rgba(255, 205, 178, 0.2), var(--hw-peach));
+  background: linear-gradient(rgba(247, 239, 224, 0.2), var(--hw-bone));
 }
 
 .fp-hw-spider-body {
@@ -1166,7 +1183,7 @@ button.fp-nav-search:hover {
   pointer-events: auto;
   cursor: grab;
   touch-action: none;
-  filter: drop-shadow(0 0 6px rgba(255, 180, 162, 0.55));
+  filter: drop-shadow(0 0 6px rgba(255, 122, 26, 0.55));
 }
 
 .fp-hw-spider-body svg {
@@ -1187,7 +1204,7 @@ button.fp-nav-search:hover {
   width: 44px;
   height: 52px;
   will-change: transform;
-  filter: drop-shadow(0 8px 16px rgba(255, 180, 162, 0.35));
+  filter: drop-shadow(0 8px 16px rgba(255, 122, 26, 0.35));
 }
 
 .fp-hw-ghost svg {
@@ -1218,8 +1235,8 @@ button.fp-nav-search:hover {
   font-size: var(--text-xs);
   font-weight: 600;
   white-space: nowrap;
-  color: #2a1418;
-  background: var(--hw-peach);
+  color: #1a0d05;
+  background: var(--hw-bone);
   border-radius: var(--r-2);
   transform: translateX(-50%);
   animation: fp-boo 1100ms var(--ease) forwards;
@@ -1251,9 +1268,9 @@ button.fp-nav-search:hover {
   padding: 3px 10px;
   font-size: var(--text-xs);
   font-weight: 500;
-  color: var(--hw-peach);
+  color: var(--hw-bone);
   background: rgba(30, 20, 24, 0.8);
-  border: 1px solid rgba(255, 205, 178, 0.25);
+  border: 1px solid rgba(247, 239, 224, 0.25);
   border-radius: 999px;
   transform: translateX(-50%);
   animation: fp-fade var(--dur) var(--ease);
