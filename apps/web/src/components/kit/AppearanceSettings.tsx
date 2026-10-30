@@ -10,9 +10,9 @@ import { useCostume } from "./Halloween.js";
 
 /** Each design's own colours, for its preview (light mode). */
 const PREVIEW: Record<Design, { page: string; side: string; band: string; pill: string; art: [string, string, string] }> = {
-  orchid: { page: "#ece8f4", side: "#1d1430", band: "#2a1650", pill: "#c6f04a", art: ["#c6f04a", "#e0479e", "#a98bff"] },
-  lagoon: { page: "#e6f0f0", side: "#0e2a2e", band: "#0e3b3f", pill: "#ff7a59", art: ["#ff7a59", "#5fd3c6", "#ffd59a"] },
-  saffron: { page: "#f3ebdd", side: "#2a1708", band: "#3a1d0a", pill: "#f2a51a", art: ["#f2a51a", "#e2617a", "#8a9a3b"] },
+  orchid: { page: "#e9ddff", side: "#ffffff", band: "#a98bff", pill: "#c6f04a", art: ["#c6f04a", "#ff5fa2", "#7c4dff"] },
+  lagoon: { page: "#bff0e4", side: "#fffef9", band: "#39d6c0", pill: "#ff7a59", art: ["#ff7a59", "#ffd23f", "#00706b"] },
+  saffron: { page: "#ffe39a", side: "#fffaf0", band: "#ff6b35", pill: "#ff6b35", art: ["#ffb400", "#e2617a", "#1f1206"] },
 };
 
 const MODES: ReadonlyArray<{ id: Mode; label: string }> = [

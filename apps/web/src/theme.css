@@ -3,9 +3,14 @@
  * Three designs share every component, chosen in Settings (data-design on
  * <html>), each with a light and a dark mode (data-theme="night"):
  *
- *   Carnival (default)  indigo with sun, rose and mint; bold geometric art
- *   Blush               soft pink and sand; black pill buttons; big numbers
- *   Slate               calm slate blue with coral actions; line art
+ *   Orchid (default)  lilac page, violet links, lime actions, pink art
+ *   Lagoon            mint page, teal links, coral actions; square corners
+ *   Saffron           butter page, rust links, tomato actions; round corners
+ *
+ * All three are neo-brutalist: cards, fields and buttons are outlined in
+ * the design's ink (--c-border, 2px) and cast a hard, unblurred shadow
+ * (--c-shadow-hard), buttons are one flat loud colour and lift on hover,
+ * and labels and buttons are set in a monospace face.
  *
  * Plus the Halloween costume (data-costume), which dresses any of them.
  * Layout (data-layout="topbar") and spacing (data-density="compact") are
@@ -56,9 +61,14 @@
   --r-2: 6px;
   --r-3: 8px;
   --r-4: 12px;
-  --shadow-xs: 0 1px 1px rgba(60, 45, 20, 0.05);
-  --shadow-sm: 0 1px 2px rgba(60, 45, 20, 0.08), 0 1px 1px rgba(60, 45, 20, 0.04);
-  --shadow-pop: 0 16px 40px -12px rgba(60, 45, 20, 0.3), 0 2px 6px rgba(60, 45, 20, 0.08);
+  /* Brutalist edges: a thick ink outline and a hard, unblurred shadow
+   * offset down and right, in three sizes. The colours come from each
+   * design (--c-border, --c-shadow-hard). */
+  --border-w: 2px;
+  --edge: var(--border-w) solid var(--c-border);
+  --shadow-xs: 2px 2px 0 var(--c-shadow-hard);
+  --shadow-sm: 4px 4px 0 var(--c-shadow-hard);
+  --shadow-pop: 8px 8px 0 var(--c-shadow-hard);
   --ring: 0 0 0 3px var(--c-focus);
 
   /* Motion */
@@ -75,87 +85,95 @@
 }
 
 /* Orchid -----------------------------------------------------------------
- * The default. Violet ink and actions with lime highlights and magenta in
- * its art; a soft lilac page in light, and in dark a deep violet-black,
- * dark but never flat grey. Pill buttons with a violet-to-magenta action
- * gradient. Liter, the display face from Orbit, at its one weight. */
+ * The default. A bright lilac page with white cards outlined in violet-
+ * black ink, violet links, lime buttons and a lilac band; pink, violet and
+ * yellow in its art. In dark, a violet-black page with pale outlines and
+ * violet shadows; the lime and lilac stay loud. Liter, the display face
+ * from Orbit, at its one weight. */
 :root,
 :root[data-design="orchid"] {
   color-scheme: light;
   --font-display: "Liter", "Geist", system-ui, sans-serif;
   --display-tracking: -0.015em;
   --display-weight: 400;
-  --c-bg: #ece8f4;
-  --c-surface: #f7f5fb;
-  --c-surface-2: #f1eef7;
-  --c-surface-3: #e4def0;
-  --c-ink: #1d1430;
-  --c-ink-2: #43385a;
-  --c-ink-3: #5c5274;
-  --c-primary: #6236c9;
-  --c-primary-hover: #5229b2;
+  --c-bg: #e9ddff;
+  --c-surface: #ffffff;
+  --c-surface-2: #f7f2ff;
+  --c-surface-3: #efe6ff;
+  --c-ink: #160f26;
+  --c-ink-2: #3b3057;
+  --c-ink-3: #54497a;
+  --c-ink-4: #8f84ad;
+  --c-line: #ddd0f5;
+  --c-line-2: #c3b2e6;
+  --c-primary: #5b2bd6;
+  --c-primary-hover: #4a1fbb;
   --c-on-primary: #ffffff;
-  --c-accent-ink: #4f6400;
-  --c-accent-soft: #ecf7c8;
-  --c-good: #16704a;
+  --c-action: #c6f04a;
+  --c-on-action: #160f26;
+  --c-border: #160f26;
+  --c-shadow-hard: #160f26;
+  --c-accent: #ff5fa2;
+  --c-accent-ink: #4a6100;
+  --c-accent-soft: #ecf8c6;
+  --c-good: #14704a;
   --c-good-soft: #d8f0e3;
-  --c-warn: #835400;
+  --c-warn: #7f5100;
   --c-warn-soft: #f7e8c8;
-  --c-danger: #b4234f;
-  --c-danger-soft: #f8dce6;
-  --c-neutral-soft: #e6e0f1;
-  --c-line: #ddd6ea;
-  --c-line-2: #c4b9d9;
-  --c-ink-4: #9a90b0;
-  --c-accent: #c6f04a;
-  --c-input: #e4def0;
-  --c-focus: rgba(98, 54, 201, 0.35);
-  --c-scrim: rgba(29, 20, 48, 0.45);
-  --action-from: #6236c9;
-  --action-to: #b02a78;
-  --gradient-action: linear-gradient(120deg, var(--action-from), var(--action-to));
+  --c-danger: #b21f4c;
+  --c-danger-soft: #fbdbe6;
+  --c-neutral-soft: #ece3fb;
+  --c-input: #ffffff;
+  --c-focus: rgba(91, 43, 214, 0.35);
+  --c-scrim: rgba(22, 15, 38, 0.5);
   --art-1: #c6f04a;
-  --art-2: #e0479e;
-  --art-3: #a98bff;
-  --art-4: #cdb8ff;
-  --art-5: #6236c9;
-  --side-bg: #1d1430;
-  --side-surface: #291e42;
-  --side-surface-3: #33264f;
-  --side-ink: #f3effb;
-  --side-ink-2: #d5cbea;
-  --side-ink-3: #b9addb;
+  --art-2: #ff5fa2;
+  --art-3: #7c4dff;
+  --art-4: #ffd23f;
+  --art-5: #160f26;
+  --side-bg: #ffffff;
+  --side-surface: #f7f2ff;
+  --side-surface-3: #efe6ff;
+  --side-ink: #160f26;
+  --side-ink-2: #3b3057;
+  --side-ink-3: #54497a;
   --side-active-bg: #c6f04a;
-  --side-active-ink: #1d1430;
-  --hero-bg: #2a1650;
-  --hero-ink: #f7f5fb;
-  --hero-ink-2: #d5cbea;
+  --side-active-ink: #160f26;
+  --hero-bg: #a98bff;
+  --hero-ink: #160f26;
+  --hero-ink-2: #2a1f45;
   --hero-action-bg: #c6f04a;
-  --hero-action-ink: #1d1430;
-  --side-line: color-mix(in srgb, #f3effb 14%, transparent);
+  --hero-action-ink: #160f26;
+  --side-line: #160f26;
   --r-1: 6px;
-  --r-2: 10px;
-  --r-3: 16px;
-  --r-4: 22px;
-  --r-button: 999px;
-  --shadow-xs: 0 1px 1px rgba(29, 20, 48, 0.05);
-  --shadow-sm: 0 2px 8px -2px rgba(29, 20, 48, 0.12);
-  --shadow-pop: 0 20px 50px -18px rgba(29, 20, 48, 0.4), 0 2px 6px rgba(29, 20, 48, 0.08);
+  --r-2: 8px;
+  --r-3: 12px;
+  --r-4: 14px;
+  --r-button: 10px;
+  --r-input: 8px;
 }
 
 :root:not([data-design])[data-theme="night"],
 :root[data-design="orchid"][data-theme="night"] {
   color-scheme: dark;
-  --c-bg: #0f0b18;
-  --c-surface: #171226;
-  --c-surface-2: #1c162e;
-  --c-surface-3: #241c3a;
-  --c-ink: #f3effb;
-  --c-ink-2: #cfc6e6;
-  --c-ink-3: #a89dc6;
-  --c-primary: #a98bff;
-  --c-primary-hover: #bba3ff;
-  --c-on-primary: #140c26;
+  --c-bg: #0f0a1a;
+  --c-surface: #1a1329;
+  --c-surface-2: #1f172f;
+  --c-surface-3: #271d3b;
+  --c-ink: #f4f0ff;
+  --c-ink-2: #d2c8ec;
+  --c-ink-3: #ab9fcc;
+  --c-ink-4: #716793;
+  --c-line: #2e2447;
+  --c-line-2: #41355f;
+  --c-primary: #b59cff;
+  --c-primary-hover: #c6b2ff;
+  --c-on-primary: #120a22;
+  --c-action: #c6f04a;
+  --c-on-action: #120a22;
+  --c-border: #d2c8ec;
+  --c-shadow-hard: #7c4dff;
+  --c-accent: #ff5fa2;
   --c-accent-ink: #d4f56e;
   --c-accent-soft: #232a17;
   --c-good: #5ee0a0;
@@ -164,117 +182,115 @@
   --c-warn-soft: #2a2210;
   --c-danger: #ff7a9c;
   --c-danger-soft: #2e1220;
-  --c-neutral-soft: #241c3a;
-  --c-line: #2c2345;
-  --c-line-2: #3d3260;
-  --c-ink-4: #6f6590;
-  --c-accent: #c6f04a;
-  --c-input: #1c162e;
-  --c-focus: rgba(169, 139, 255, 0.5);
-  --c-scrim: rgba(29, 20, 48, 0.7);
-  --action-from: #a98bff;
-  --action-to: #f07ab8;
-  --gradient-action: linear-gradient(120deg, var(--action-from), var(--action-to));
-  --art-5: #f3effb;
-  --side-bg: #0a0711;
-  --side-surface: #151021;
-  --side-surface-3: #1e172e;
-  --side-ink: #f3effb;
-  --side-ink-2: #cfc6e6;
-  --side-ink-3: #a89dc6;
+  --c-neutral-soft: #271d3b;
+  --c-input: #1a1329;
+  --c-focus: rgba(181, 156, 255, 0.5);
+  --c-scrim: rgba(22, 15, 38, 0.75);
+  --art-5: #f4f0ff;
+  --side-bg: #140e21;
+  --side-surface: #1f172f;
+  --side-surface-3: #271d3b;
+  --side-ink: #f4f0ff;
+  --side-ink-2: #d2c8ec;
+  --side-ink-3: #ab9fcc;
   --side-active-bg: #c6f04a;
-  --side-active-ink: #140c26;
-  --hero-bg: #21123f;
-  --hero-ink: #f7f5fb;
-  --hero-ink-2: #d5cbea;
+  --side-active-ink: #120a22;
+  --hero-bg: #a98bff;
+  --hero-ink: #120a22;
+  --hero-ink-2: #271a45;
   --hero-action-bg: #c6f04a;
-  --hero-action-ink: #140c26;
-  --side-line: color-mix(in srgb, #f3effb 14%, transparent);
-  --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.5);
-  --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.6);
-  --shadow-pop: 0 24px 60px -18px rgba(0, 0, 0, 0.85), 0 0 0 1px color-mix(in srgb, #f3effb 7%, transparent);
+  --hero-action-ink: #120a22;
+  --side-line: #f4f0ff;
 }
 
 /* Saffron ----------------------------------------------------------------
- * Warm as a spice market: espresso ink, burnt-saffron actions and marigold
- * for the band's action and its art, on a parchment page in light; in dark
- * a deep espresso-black (#140f0a) with marigold buttons. The roundest of
- * the three. Bricolage Grotesque for display type. */
+ * Warm as a spice market: a butter-yellow page, cream cards outlined in
+ * espresso, rust links, tomato buttons and a tomato band with an espresso
+ * action. In dark, an espresso-black page with sand outlines and burnt-
+ * orange shadows. The roundest of the three, with pill buttons.
+ * Bricolage Grotesque for display type. */
 :root[data-design="saffron"] {
   color-scheme: light;
   --font-display: "Bricolage Grotesque Variable", "Geist", system-ui, sans-serif;
   --display-tracking: -0.03em;
   --display-weight: 750;
-  --c-bg: #f3ebdd;
-  --c-surface: #fbf6ee;
-  --c-surface-2: #f6efe3;
-  --c-surface-3: #ebdfcb;
-  --c-ink: #2a1708;
-  --c-ink-2: #503820;
-  --c-ink-3: #685035;
-  --c-primary: #a83f0c;
-  --c-primary-hover: #8f350a;
+  --c-bg: #ffe39a;
+  --c-surface: #fffaf0;
+  --c-surface-2: #fff4de;
+  --c-surface-3: #ffeccb;
+  --c-ink: #1f1206;
+  --c-ink-2: #46301a;
+  --c-ink-3: #5e452b;
+  --c-ink-4: #a8916f;
+  --c-line: #f0dcb5;
+  --c-line-2: #ddc08c;
+  --c-primary: #a8370a;
+  --c-primary-hover: #8c2d07;
   --c-on-primary: #fff8ef;
-  --c-accent-ink: #7d4500;
-  --c-accent-soft: #fbe5b8;
-  --c-good: #2c6b24;
+  --c-action: #ff6b35;
+  --c-on-action: #1f1206;
+  --c-border: #1f1206;
+  --c-shadow-hard: #1f1206;
+  --c-accent: #ffb400;
+  --c-accent-ink: #7a4400;
+  --c-accent-soft: #ffe8b0;
+  --c-good: #2a6a22;
   --c-good-soft: #e0efd4;
-  --c-warn: #7d4c00;
+  --c-warn: #7a4a00;
   --c-warn-soft: #f8e2b4;
   --c-danger: #a8243a;
   --c-danger-soft: #f8dadd;
-  --c-neutral-soft: #ece1cf;
-  --c-line: #e3d5bd;
-  --c-line-2: #cdb995;
-  --c-ink-4: #a8916f;
-  --c-accent: #f2a51a;
-  --c-input: #ebdfcb;
-  --c-focus: rgba(168, 63, 12, 0.3);
-  --c-scrim: rgba(42, 23, 8, 0.45);
-  --action-from: #a83f0c;
-  --action-to: #b84a0d;
-  --gradient-action: linear-gradient(120deg, var(--action-from), var(--action-to));
-  --art-1: #f2a51a;
-  --art-2: #e2617a;
-  --art-3: #8a9a3b;
-  --art-4: #fbe5b8;
-  --art-5: #2a1708;
-  --side-bg: #2a1708;
-  --side-surface: #3a2410;
-  --side-surface-3: #462d16;
-  --side-ink: #fbf2e4;
-  --side-ink-2: #e6d2b4;
-  --side-ink-3: #cfb48e;
-  --side-active-bg: #f2a51a;
-  --side-active-ink: #2a1708;
-  --hero-bg: #3a1d0a;
-  --hero-ink: #fbf6ee;
-  --hero-ink-2: #e6d2b4;
-  --hero-action-bg: #f2a51a;
-  --hero-action-ink: #2a1708;
-  --side-line: color-mix(in srgb, #fbf2e4 14%, transparent);
-  --r-1: 8px;
-  --r-2: 12px;
+  --c-neutral-soft: #f6e6c8;
+  --c-input: #fffaf0;
+  --c-focus: rgba(168, 55, 10, 0.3);
+  --c-scrim: rgba(31, 18, 6, 0.5);
+  --art-1: #ffb400;
+  --art-2: #ff6b35;
+  --art-3: #e2617a;
+  --art-4: #8a9a3b;
+  --art-5: #1f1206;
+  --side-bg: #fffaf0;
+  --side-surface: #fff4de;
+  --side-surface-3: #ffeccb;
+  --side-ink: #1f1206;
+  --side-ink-2: #46301a;
+  --side-ink-3: #5e452b;
+  --side-active-bg: #ff6b35;
+  --side-active-ink: #1f1206;
+  --hero-bg: #ff6b35;
+  --hero-ink: #1f1206;
+  --hero-ink-2: #3a1d08;
+  --hero-action-bg: #1f1206;
+  --hero-action-ink: #fffaf0;
+  --side-line: #1f1206;
+  --r-1: 10px;
+  --r-2: 14px;
   --r-3: 18px;
-  --r-4: 26px;
+  --r-4: 24px;
   --r-button: 999px;
-  --shadow-xs: 0 1px 1px rgba(42, 23, 8, 0.05);
-  --shadow-sm: 0 2px 8px -2px rgba(42, 23, 8, 0.12);
-  --shadow-pop: 0 20px 50px -18px rgba(42, 23, 8, 0.4), 0 2px 6px rgba(42, 23, 8, 0.08);
+  --r-input: 12px;
 }
 
 :root[data-design="saffron"][data-theme="night"] {
   color-scheme: dark;
-  --c-bg: #140f0a;
-  --c-surface: #1d1710;
-  --c-surface-2: #231c13;
-  --c-surface-3: #2d2418;
-  --c-ink: #f8efe1;
-  --c-ink-2: #dccab0;
-  --c-ink-3: #b9a284;
-  --c-primary: #f2a51a;
-  --c-primary-hover: #f6b941;
-  --c-on-primary: #1d1208;
+  --c-bg: #150e07;
+  --c-surface: #20170d;
+  --c-surface-2: #261c11;
+  --c-surface-3: #302416;
+  --c-ink: #fbf1e1;
+  --c-ink-2: #e0cdb0;
+  --c-ink-3: #bba486;
+  --c-ink-4: #7d6a52;
+  --c-line: #382b1c;
+  --c-line-2: #4d3d2a;
+  --c-primary: #ffb400;
+  --c-primary-hover: #ffc533;
+  --c-on-primary: #1f1206;
+  --c-action: #ff6b35;
+  --c-on-action: #150e07;
+  --c-border: #e0cdb0;
+  --c-shadow-hard: #c4500f;
+  --c-accent: #ffb400;
   --c-accent-ink: #f6c15a;
   --c-accent-soft: #2e2312;
   --c-good: #8fd99a;
@@ -283,117 +299,114 @@
   --c-warn-soft: #2d2412;
   --c-danger: #ff8f80;
   --c-danger-soft: #33191a;
-  --c-neutral-soft: #2d2418;
-  --c-line: #362b1d;
-  --c-line-2: #4b3d2a;
-  --c-ink-4: #7d6a52;
-  --c-accent: #f2a51a;
-  --c-input: #231c13;
-  --c-focus: rgba(242, 165, 26, 0.5);
-  --c-scrim: rgba(42, 23, 8, 0.7);
-  --action-from: #f2a51a;
-  --action-to: #f6c15a;
-  --gradient-action: linear-gradient(120deg, var(--action-from), var(--action-to));
-  --art-5: #f8efe1;
-  --side-bg: #0d0906;
-  --side-surface: #18120c;
-  --side-surface-3: #211a11;
-  --side-ink: #f8efe1;
-  --side-ink-2: #dccab0;
-  --side-ink-3: #b9a284;
-  --side-active-bg: #f2a51a;
-  --side-active-ink: #1d1208;
-  --hero-bg: #2a1608;
-  --hero-ink: #fbf6ee;
-  --hero-ink-2: #e6d2b4;
-  --hero-action-bg: #f2a51a;
-  --hero-action-ink: #1d1208;
-  --side-line: color-mix(in srgb, #f8efe1 14%, transparent);
-  --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.5);
-  --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.6);
-  --shadow-pop: 0 24px 60px -18px rgba(0, 0, 0, 0.85), 0 0 0 1px color-mix(in srgb, #f8efe1 7%, transparent);
+  --c-neutral-soft: #302416;
+  --c-input: #20170d;
+  --c-focus: rgba(255, 180, 0, 0.5);
+  --c-scrim: rgba(31, 18, 6, 0.75);
+  --art-5: #fbf1e1;
+  --side-bg: #1a1209;
+  --side-surface: #261c11;
+  --side-surface-3: #302416;
+  --side-ink: #fbf1e1;
+  --side-ink-2: #e0cdb0;
+  --side-ink-3: #bba486;
+  --side-active-bg: #ff6b35;
+  --side-active-ink: #150e07;
+  --hero-bg: #ff6b35;
+  --hero-ink: #150e07;
+  --hero-ink-2: #3a1d08;
+  --hero-action-bg: #150e07;
+  --hero-action-ink: #fbf1e1;
+  --side-line: #fbf1e1;
 }
 
 /* Lagoon -----------------------------------------------------------------
- * Teal like the Gulf shallows, with coral for the band's action and its
- * art: a pale sea-glass page in light, and in dark a deep teal-black
- * (#06171a). Tighter corners and squarer buttons than the other two.
- * Unbounded for display type. */
+ * The Gulf shallows: a mint page, off-white cards outlined in deep sea
+ * ink, teal links, coral buttons and an aqua band. In dark, a teal-black
+ * page with sea-glass outlines and teal shadows. Square corners, the most
+ * brutalist of the three. Unbounded for display type. */
 :root[data-design="lagoon"] {
   color-scheme: light;
   --font-display: "Unbounded Variable", "Geist", system-ui, sans-serif;
   --display-tracking: -0.01em;
   --display-weight: 600;
-  --c-bg: #e6f0f0;
-  --c-surface: #f5fafa;
-  --c-surface-2: #edf5f5;
-  --c-surface-3: #dbe8e9;
-  --c-ink: #0e2a2e;
-  --c-ink-2: #2d4c50;
-  --c-ink-3: #476468;
-  --c-primary: #0a6f6d;
-  --c-primary-hover: #085d5b;
+  --c-bg: #bff0e4;
+  --c-surface: #fffef9;
+  --c-surface-2: #f2fbf8;
+  --c-surface-3: #e3f6f0;
+  --c-ink: #071c1f;
+  --c-ink-2: #234247;
+  --c-ink-3: #3a5a5f;
+  --c-ink-4: #7a9a96;
+  --c-line: #cbe6df;
+  --c-line-2: #a6cdc4;
+  --c-primary: #00706b;
+  --c-primary-hover: #005c58;
   --c-on-primary: #ffffff;
-  --c-accent-ink: #a33a1d;
-  --c-accent-soft: #ffe2d8;
-  --c-good: #12704a;
+  --c-action: #ff7a59;
+  --c-on-action: #071c1f;
+  --c-border: #071c1f;
+  --c-shadow-hard: #071c1f;
+  --c-accent: #ffd23f;
+  --c-accent-ink: #8a3a1c;
+  --c-accent-soft: #ffe4d9;
+  --c-good: #11704a;
   --c-good-soft: #d6f0e2;
-  --c-warn: #7f5300;
+  --c-warn: #7a5000;
   --c-warn-soft: #f6e8c6;
   --c-danger: #b0263a;
   --c-danger-soft: #f9dde0;
-  --c-neutral-soft: #dde9ea;
-  --c-line: #cfe0e1;
-  --c-line-2: #afc8ca;
-  --c-ink-4: #86a0a3;
-  --c-accent: #ff7a59;
-  --c-input: #dbe8e9;
-  --c-focus: rgba(10, 111, 109, 0.35);
-  --c-scrim: rgba(14, 42, 46, 0.45);
-  --action-from: #0a6f6d;
-  --action-to: #0b6a85;
-  --gradient-action: linear-gradient(120deg, var(--action-from), var(--action-to));
+  --c-neutral-soft: #dff3ed;
+  --c-input: #fffef9;
+  --c-focus: rgba(0, 112, 107, 0.35);
+  --c-scrim: rgba(7, 28, 31, 0.5);
   --art-1: #ff7a59;
-  --art-2: #5fd3c6;
-  --art-3: #0a6f6d;
-  --art-4: #ffd59a;
-  --art-5: #0e2a2e;
-  --side-bg: #0e2a2e;
-  --side-surface: #15393e;
-  --side-surface-3: #1c444a;
-  --side-ink: #e8f6f5;
-  --side-ink-2: #c2dcdb;
-  --side-ink-3: #a6c6c5;
-  --side-active-bg: #5fd3c6;
-  --side-active-ink: #0e2a2e;
-  --hero-bg: #0e3b3f;
-  --hero-ink: #f5fafa;
-  --hero-ink-2: #c2dcdb;
+  --art-2: #39d6c0;
+  --art-3: #00706b;
+  --art-4: #ffd23f;
+  --art-5: #071c1f;
+  --side-bg: #fffef9;
+  --side-surface: #f2fbf8;
+  --side-surface-3: #e3f6f0;
+  --side-ink: #071c1f;
+  --side-ink-2: #234247;
+  --side-ink-3: #3a5a5f;
+  --side-active-bg: #ff7a59;
+  --side-active-ink: #071c1f;
+  --hero-bg: #39d6c0;
+  --hero-ink: #071c1f;
+  --hero-ink-2: #163a3d;
   --hero-action-bg: #ff7a59;
-  --hero-action-ink: #0e2a2e;
-  --side-line: color-mix(in srgb, #e8f6f5 14%, transparent);
-  --r-1: 4px;
-  --r-2: 8px;
-  --r-3: 12px;
-  --r-4: 16px;
-  --r-button: 10px;
-  --shadow-xs: 0 1px 1px rgba(14, 42, 46, 0.05);
-  --shadow-sm: 0 2px 8px -2px rgba(14, 42, 46, 0.12);
-  --shadow-pop: 0 20px 50px -18px rgba(14, 42, 46, 0.4), 0 2px 6px rgba(14, 42, 46, 0.08);
+  --hero-action-ink: #071c1f;
+  --side-line: #071c1f;
+  --r-1: 0px;
+  --r-2: 2px;
+  --r-3: 4px;
+  --r-4: 6px;
+  --r-button: 4px;
+  --r-input: 0px;
 }
 
 :root[data-design="lagoon"][data-theme="night"] {
   color-scheme: dark;
-  --c-bg: #06171a;
-  --c-surface: #0c2226;
-  --c-surface-2: #10292e;
-  --c-surface-3: #163338;
-  --c-ink: #e8f6f5;
-  --c-ink-2: #bcd9d8;
-  --c-ink-3: #93b6b5;
-  --c-primary: #5fd3c6;
-  --c-primary-hover: #7fe0d5;
-  --c-on-primary: #06171a;
+  --c-bg: #041416;
+  --c-surface: #0b2023;
+  --c-surface-2: #0f272b;
+  --c-surface-3: #153135;
+  --c-ink: #e6f7f4;
+  --c-ink-2: #b8d8d5;
+  --c-ink-3: #8fb3b0;
+  --c-ink-4: #5c8080;
+  --c-line: #1a3a3f;
+  --c-line-2: #285156;
+  --c-primary: #5fe0d0;
+  --c-primary-hover: #85eadd;
+  --c-on-primary: #041416;
+  --c-action: #ff7a59;
+  --c-on-action: #041416;
+  --c-border: #b8d8d5;
+  --c-shadow-hard: #00a99d;
+  --c-accent: #ffd23f;
   --c-accent-ink: #ffa58c;
   --c-accent-soft: #2a1f1c;
   --c-good: #5fe0a0;
@@ -402,35 +415,25 @@
   --c-warn-soft: #2b2a17;
   --c-danger: #ff8a7a;
   --c-danger-soft: #331a1c;
-  --c-neutral-soft: #163338;
-  --c-line: #1b3a3f;
-  --c-line-2: #285156;
-  --c-ink-4: #5c8080;
-  --c-accent: #ff7a59;
-  --c-input: #10292e;
-  --c-focus: rgba(95, 211, 198, 0.5);
-  --c-scrim: rgba(14, 42, 46, 0.7);
-  --action-from: #5fd3c6;
-  --action-to: #9ce8de;
-  --gradient-action: linear-gradient(120deg, var(--action-from), var(--action-to));
-  --art-5: #e8f6f5;
-  --side-bg: #041013;
-  --side-surface: #0a1e22;
-  --side-surface-3: #10282c;
-  --side-ink: #e8f6f5;
-  --side-ink-2: #bcd9d8;
-  --side-ink-3: #93b6b5;
-  --side-active-bg: #5fd3c6;
-  --side-active-ink: #06171a;
-  --hero-bg: #0b2f33;
-  --hero-ink: #f5fafa;
-  --hero-ink-2: #bcd9d8;
+  --c-neutral-soft: #153135;
+  --c-input: #0b2023;
+  --c-focus: rgba(95, 224, 208, 0.5);
+  --c-scrim: rgba(7, 28, 31, 0.75);
+  --art-5: #e6f7f4;
+  --side-bg: #071a1d;
+  --side-surface: #0f272b;
+  --side-surface-3: #153135;
+  --side-ink: #e6f7f4;
+  --side-ink-2: #b8d8d5;
+  --side-ink-3: #8fb3b0;
+  --side-active-bg: #ff7a59;
+  --side-active-ink: #041416;
+  --hero-bg: #39d6c0;
+  --hero-ink: #041416;
+  --hero-ink-2: #0f3236;
   --hero-action-bg: #ff7a59;
-  --hero-action-ink: #06171a;
-  --side-line: color-mix(in srgb, #e8f6f5 14%, transparent);
-  --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.5);
-  --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.6);
-  --shadow-pop: 0 24px 60px -18px rgba(0, 0, 0, 0.85), 0 0 0 1px color-mix(in srgb, #e8f6f5 7%, transparent);
+  --hero-action-ink: #041416;
+  --side-line: #e6f7f4;
 }
 
 /* Compact spacing (Settings): a tighter grid and shorter controls, for
@@ -476,6 +479,10 @@
   --c-primary: #ff7a1a;
   --c-primary-hover: #ffa24c;
   --c-on-primary: #1a0d05;
+  --c-action: #ff7a1a;
+  --c-on-action: #1a0d05;
+  --c-border: #a894c9;
+  --c-shadow-hard: #4b2470;
   --c-accent: #ff7a1a;
   --c-accent-ink: #ffa24c;
   --c-accent-soft: rgba(255, 122, 26, 0.14);
@@ -934,35 +941,40 @@ h1 {
   padding-top: var(--sp-8);
 }
 
-/* The card picture on checkout, in each design's colours. */
+/* The card picture on checkout, in each design's colours: flat fills
+ * with a few hard shapes at the right edge, so the card's text stays
+ * clear. */
 :root[data-design="orchid"]:not([data-costume="halloween"]) .checkout-card,
 :root:not([data-design]):not([data-costume="halloween"]) .checkout-card {
   color: #ffffff;
-  /* Shapes kept to the right edge, softened, so the card's text stays clear. */
   background:
-    radial-gradient(circle at 104% 50%, rgba(224, 71, 158, 0.8) 0 54px, transparent 55px),
-    radial-gradient(circle at 80% 112%, rgba(198, 240, 74, 0.75) 0 34px, transparent 35px),
-    radial-gradient(circle at 70% -10%, rgba(169, 139, 255, 0.7) 0 30px, transparent 31px),
-    linear-gradient(135deg, #3b1f7a, #6236c9);
+    radial-gradient(circle at 104% 50%, #ff5fa2 0 54px, transparent 55px),
+    radial-gradient(circle at 80% 112%, #c6f04a 0 34px, transparent 35px),
+    #7c4dff;
 }
 
 :root[data-design="saffron"]:not([data-costume="halloween"]) .checkout-card {
-  color: #2a1708;
+  color: #1f1206;
   background:
-    radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.5), transparent 55%),
-    linear-gradient(135deg, #f8cf6a, #f2a51a 55%, #d98a0b);
+    radial-gradient(circle at 106% 40%, #ff6b35 0 56px, transparent 57px),
+    radial-gradient(circle at 78% 118%, #fffaf0 0 30px, transparent 31px),
+    #ffb400;
 }
 
 :root[data-design="saffron"]:not([data-costume="halloween"]) :is(.checkout-card-brand, .checkout-card-bottom) {
-  color: rgba(42, 23, 8, 0.78);
+  color: #1f1206;
 }
 
 :root[data-design="lagoon"]:not([data-costume="halloween"]) .checkout-card {
-  color: #e8f6f5;
+  color: #071c1f;
   background:
-    linear-gradient(180deg, transparent 62%, #ff7a59 62% 66%, transparent 66%),
-    radial-gradient(circle, rgba(95, 211, 198, 0.35) 0 2px, transparent 2.5px) 0 0 / 14px 14px,
-    linear-gradient(150deg, #0e3b3f, #0a2427);
+    linear-gradient(180deg, transparent 62%, #ff7a59 62% 68%, transparent 68%),
+    radial-gradient(circle, rgba(7, 28, 31, 0.28) 0 2px, transparent 2.5px) 0 0 / 14px 14px,
+    #39d6c0;
+}
+
+:root[data-design="lagoon"]:not([data-costume="halloween"]) :is(.checkout-card-brand, .checkout-card-bottom) {
+  color: #071c1f;
 }
 
 /* Empty, error and not-found scenes: the line drawing's accent takes the
@@ -1393,9 +1405,8 @@ h1 {
 }
 
 /* Buttons and tabs (after Orbit) ----------------------------------------
- * The primary action on every form and page is a 44px pill filled with the
- * design's action gradient (--action-from to --action-to; its text is
- * contrast-tested against both ends). Settings' light/dark choice is a row
+ * The primary action on every form and page is a 44px button filled with
+ * the design's flat action colour (--c-action, with --c-on-action text). Settings' light/dark choice is a row
  * of underline tabs, and filter checkboxes are filled toggle pills. */
 :root:not([data-costume="halloween"]) :is(
     .dash-form button[type="submit"],
@@ -1409,11 +1420,11 @@ h1 {
   height: auto;
   padding-inline: 22px;
   font-weight: 700;
-  color: var(--c-on-primary);
-  background: var(--gradient-action);
+  color: var(--c-on-action);
+  background: var(--c-action);
   border: 0;
   border-radius: var(--r-button);
-  box-shadow: 0 8px 20px -10px var(--action-to);
+  box-shadow: var(--shadow-xs);
   transition: filter 0.2s ease, transform 0.2s ease;
 }
 
@@ -1425,8 +1436,8 @@ h1 {
     .admin-button-primary,
     .checkout-form button[type="submit"]
   ):hover {
-  color: var(--c-on-primary);
-  background: var(--gradient-action);
+  color: var(--c-on-action);
+  background: var(--c-action);
   filter: brightness(1.08);
 }
 

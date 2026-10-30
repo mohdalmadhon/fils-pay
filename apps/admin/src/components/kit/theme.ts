@@ -29,9 +29,9 @@ export interface Appearance {
 }
 
 export const DESIGNS: ReadonlyArray<{ id: Design; name: string; description: string }> = [
-  { id: "orchid", name: "Orchid", description: "Violet with lime and magenta, and bold shapes." },
-  { id: "lagoon", name: "Lagoon", description: "Teal like the Gulf shallows, with coral actions." },
-  { id: "saffron", name: "Saffron", description: "Marigold and espresso, warm as a spice market." },
+  { id: "orchid", name: "Orchid", description: "Lilac and lime, outlined in ink, with bold shapes." },
+  { id: "lagoon", name: "Lagoon", description: "Mint and coral like the Gulf shallows, with square corners." },
+  { id: "saffron", name: "Saffron", description: "Butter yellow and tomato, warm as a spice market." },
 ];
 
 export const DEFAULT_APPEARANCE: Appearance = { design: "orchid", mode: "system", layout: "sidebar", density: "comfortable" };
