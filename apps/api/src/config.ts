@@ -29,6 +29,8 @@ export interface Config {
   otpCodeLength: number;
   otpMaxAttempts: number;
   otpDevExpose: boolean;
+  /** Optional operator-only OTP delivery file; never returned by the API. */
+  otpLogFile?: string;
   /** Failed password/OTP attempts per account within the window before
    *  login answers 429 (auth/throttle.ts). */
   loginMaxFailures: number;
@@ -311,6 +313,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     otpCodeLength: parseIntEnv(env.OTP_CODE_LENGTH, 6),
     otpMaxAttempts: parseIntEnv(env.OTP_MAX_ATTEMPTS, 5),
     otpDevExpose: parseOtpDevExpose(env.OTP_DEV_EXPOSE, nodeEnv),
+    otpLogFile: env.OTP_LOG_FILE || undefined,
     loginMaxFailures: parseIntEnv(env.LOGIN_MAX_FAILURES, 10),
     // Off unless set: behind a proxy without TRUST_PROXY every client shares
     // one address, and a per-IP limit would lock everyone out at once.

@@ -85,7 +85,7 @@ Compose builds two images from the repo root:
 
 | Image | Used by | Notes |
 |---|---|---|
-| `ops/Dockerfile.node` | migrate, seed, api, reporting | Node 22; runs TypeScript with tsx; non-root `node` user; KYC uploads in the `filspay_kyc` volume |
+| `ops/Dockerfile.node` | migrate, seed, api, reporting | Node 22; compiled API/reporting, tsx migration/seed; non-root `node` user; KYC uploads in the `filspay_kyc` volume |
 | `ops/Dockerfile.go` | settlement | static binary on distroless, non-root; `GO_VERSION` build arg (default 1.24) |
 
 ```bash
@@ -106,6 +106,7 @@ docker compose -f ops/docker-compose.yml up
 | api, settlement | `SETTLEMENT_INTERNAL_TOKEN` | **required**, same value on both; from your shell or `ops/.env`. There is no `dev-token` fallback. |
 | api | `ACQUIRER_CALLBACK_SIGNING_SECRET`, `NODE_ENV` | `.env.docker`, loaded with `env_file:` |
 | api | `OTP_DEV_EXPOSE` | off unless set to `true`; refused when `NODE_ENV=production` |
+| api | `OTP_LOG_FILE` | optional private server file for temporary operator OTP delivery; see `docs/fixes/operator-otp-file.md` |
 | settlement | `DATABASE_URL` | `environment:` |
 | reporting | `DATABASE_URL` | `environment:`; runs `worker` by default |
 

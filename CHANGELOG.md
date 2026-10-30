@@ -10,6 +10,9 @@ Hackathon work, 2026-10-29 to 2026-10-30. Not yet deployed. Every fix has a
 write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
 
 ### Added
+- Optional private-file OTP delivery for hosted merchant/admin login while
+  email/SMS delivery is unavailable. Production responses and ordinary logs
+  retain their redaction; see `docs/fixes/operator-otp-file.md`.
 - New interface for the merchant dashboard, checkout and Ops console ("Ledger"
   design system): Ctrl+K command palette, light and night themes, and a
   Halloween costume toggle (`docs/design/README.md`).

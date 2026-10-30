@@ -345,6 +345,10 @@ running. Docker deployment/resource enforcement remains unverified here.
 
 ## Publication
 
+The following describes the original publication. Both capacity commits have
+since been fast-forwarded and pushed to main. The initial hosted deployment is
+recorded in [the deployment report](../deployments/2026-10-30-ip-server.md).
+
 During this work remote main was force-reset from `11919ca` to `ad0ab10`.
 That remote state is preserved. The prior capacity fixes and this follow-up
 are published together on **capacity-improvements**, rather than silently

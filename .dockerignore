@@ -4,6 +4,8 @@
 **/node_modules
 **/dist
 /build/node
+/private-otp
+/private-credentials
 **/*.tsbuildinfo
 data
 apps/settlement/settlement

@@ -16,3 +16,6 @@ e2e-artifacts/
 scripts/out/
 # Compiled Node services (npm run build:node).
 /build/node/
+# Hosted operator secrets and temporary OTP delivery must never enter Git.
+/private-otp/
+/private-credentials/
