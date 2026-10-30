@@ -31,3 +31,33 @@ jobs:
         run: |
           npx --workspace apps/web vite build
           npx --workspace apps/admin vite build
+
+  test:
+    name: Tests (TypeScript, against Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: filspay_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s
+          --health-timeout 3s --health-retries 30
+    env:
+      DATABASE_URL: postgres://postgres:ci@localhost:5432/filspay_ci
+      # The fixed test key the test files use too; not a secret.
+      WEBHOOK_SECRET_ENCRYPTION_KEY: Y1ZTGTcYbe30GZJebys9w7T3OYZNKewuOH3SUCEdRQk=
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Migrate an empty database (every migration must apply)
+        run: npm run migrate
+      - run: npm run seed
+      # Workspaces in sequence: they share one database.
+      - run: npm test
