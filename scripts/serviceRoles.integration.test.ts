@@ -110,6 +110,8 @@ test("each service role can do its job and nothing more", { timeout: 180_000, sk
     // reporting: reads the outbox, writes rollups, touches nothing else.
     await allowed("reporting", `SELECT * FROM outbox_events LIMIT 1`);
     await allowed("reporting", `TRUNCATE merchant_daily_volume`);
+    await allowed("reporting", `SELECT * FROM reporting_processed_events LIMIT 1`);
+    await allowed("reporting", `DELETE FROM reporting_processed_events WHERE consumer_name = 'none'`);
     await denied("reporting", `SELECT * FROM merchant_users`);
     await denied("reporting", `SELECT * FROM api_keys`);
     await denied("reporting", `INSERT INTO ledger_entries (entry_group_id) VALUES (gen_random_uuid())`);
