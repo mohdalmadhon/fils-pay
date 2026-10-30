@@ -123,10 +123,21 @@ export interface MerchantWriterActor {
  * An API-key write attributes to the key. A cookie-authenticated write
  * attributes to the session actor the cookie resolved, carrying that actor's
  * id — cookie-borne merchant requests share one persisted actor kind.
+ *
+ * Write routes that record an actor call this, so it is also a last line of defence for
+ * "view as merchant": an impersonation grant may only write when it carries
+ * the owner role (a super_admin, per ADMIN.md). A view-only grant that
+ * reaches a write route because a role gate was forgotten (capture and void
+ * had none) is refused here with 403 instead of writing.
+ *
+ * Known gap: a super_admin's impersonated write is still persisted as
+ * `merchant_session` with the grant id, because the attribution columns only
+ * allow the two kinds above. See docs/cyper/05-capture-void-roles.md.
  */
-// impersonation writes get recorded as merchant_session here — audit cant tell admin from merchant? — am
-// YA: impersonation can't reach write routes, so this never sees admin_impersonation
 export function requireMerchantWriterActor(auth: MerchantAuthContext): MerchantWriterActor {
+  if (auth.actorType === "admin_impersonation" && auth.role !== "owner") {
+    throw new ForbiddenError("impersonation_read_only");
+  }
   if (auth.actorType === "merchant_api_key") {
     return { type: "merchant_api_key", id: auth.actorId };
   }
