@@ -689,6 +689,186 @@ h1 {
     radial-gradient(circle at 48% 56%, color-mix(in srgb, var(--art-4) 60%, transparent) 0 44px, transparent 44.5px);
 }
 
+/* Settings: Appearance (kit/AppearanceSettings.tsx) --------------------- */
+
+.fp-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  max-width: 54rem;
+}
+
+.fp-settings-group {
+  margin: 0;
+  padding: var(--sp-5) var(--sp-6) var(--sp-6);
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-4);
+}
+
+.fp-settings-group legend {
+  float: left;
+  width: 100%;
+  margin-bottom: var(--sp-3);
+  padding: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: var(--display-weight, 600);
+  letter-spacing: var(--display-tracking, -0.02em);
+  color: var(--c-ink);
+}
+
+.fp-settings-group legend + * {
+  clear: both;
+}
+
+.fp-settings-hint {
+  clear: both;
+  margin: 0 0 var(--sp-4);
+  font-size: var(--text-sm);
+  color: var(--c-ink-3);
+}
+
+.fp-settings-cards {
+  clear: both;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-4);
+}
+
+.fp-settings-cards-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 34rem;
+}
+
+/* A choice card: the radio is visually hidden but stays focusable; the
+ * card shows the focus ring and the chosen state. */
+.fp-settings-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-3);
+  background: var(--c-surface-2);
+  border: 2px solid var(--c-line);
+  border-radius: var(--r-3);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+
+.fp-settings-card:hover {
+  border-color: var(--c-line-2);
+}
+
+.fp-settings-card input,
+.fp-settings-segment input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.fp-settings-card:has(input:checked) {
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 3px var(--c-focus);
+}
+
+.fp-settings-card:has(input:focus-visible),
+.fp-settings-segment label:has(input:focus-visible) {
+  outline: 2px solid var(--c-primary);
+  outline-offset: 2px;
+}
+
+.fp-settings-preview {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-bottom: var(--sp-2);
+  border-radius: var(--r-2);
+}
+
+.fp-settings-preview-wire .wire-page { fill: var(--c-surface-3); }
+.fp-settings-preview-wire .wire-bar { fill: var(--c-primary); opacity: 0.85; }
+.fp-settings-preview-wire .wire-block { fill: var(--c-surface); }
+
+.fp-settings-card-name {
+  display: block;
+  font-weight: 600;
+  color: var(--c-ink);
+}
+
+.fp-settings-card-text {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--c-ink-3);
+}
+
+/* Light / Dark / Match my device, as a segmented control of radios. */
+.fp-settings-segment {
+  clear: both;
+  max-width: 30rem;
+}
+
+.fp-settings-segment label {
+  position: relative;
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 var(--sp-3);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--c-ink-3);
+  border-radius: var(--r-button);
+  cursor: pointer;
+}
+
+.fp-settings-segment label:has(input:checked) {
+  color: var(--c-on-primary);
+  background: var(--c-primary);
+}
+
+.fp-settings-options {
+  clear: both;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+
+.fp-settings-option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  min-width: 15rem;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-3);
+  cursor: pointer;
+}
+
+.fp-settings-option input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--c-primary);
+}
+
+.fp-settings-saved {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--c-ink-3);
+}
+
+@media (max-width: 760px) {
+  .fp-settings-cards,
+  .fp-settings-cards-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Page backdrops. Carnival and Slate get a dot grid in the top corner
  * (from the brief's images 2 and 3); Blush a blush-to-peach wash. */
 :is(:root[data-design="carnival"], :root:not([data-design]), :root[data-design="slate"]):not([data-costume="halloween"]) body::before {
