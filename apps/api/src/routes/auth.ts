@@ -56,6 +56,11 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (!rawMerchantId || !email || !password) {
       throw new BadRequestError("invalid_request", "merchantId, email and password are required");
     }
+    // The body is client JSON: { "email": 5 } would crash the throttle's
+    // email.trim() (and argon2 on a non-string password) with a 500.
+    if (typeof email !== "string" || typeof password !== "string") {
+      throw new BadRequestError("invalid_request", "email and password must be strings");
+    }
     // One spelling per merchant, so the failure budget below can't be
     // multiplied by writing the same UUID in upper case, with braces, etc.
     const merchantId = canonicalMerchantId(rawMerchantId);

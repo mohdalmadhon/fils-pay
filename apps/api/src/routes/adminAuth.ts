@@ -58,6 +58,10 @@ export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
     if (!email || !password) {
       throw new BadRequestError("invalid_request", "email and password are required");
     }
+    // Client JSON: a non-string email crashed adminAccountKey's trim() (500).
+    if (typeof email !== "string" || typeof password !== "string") {
+      throw new BadRequestError("invalid_request", "email and password must be strings");
+    }
 
     // Same throttle as merchant login, checked before the password.
     const accountKey = adminAccountKey(email);
