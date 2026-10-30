@@ -6,6 +6,7 @@ import { describeError } from "../../api/client.js";
 import { RequireRole } from "../../auth/RequireRole.js";
 import type { AdminMerchantSummary, MerchantOnboardingStatus } from "../../types.js";
 import { EmptyState, ErrorBanner, Loading } from "../../components/ui.js";
+import { useRequestSequence } from "../../utils/requestSequence.js";
 
 const ONBOARDING_STATUSES: MerchantOnboardingStatus[] = [
   "submitted",
@@ -31,8 +32,12 @@ export function MerchantListPage() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkNotice, setBulkNotice] = useState<string | null>(null);
 
+  const requests = useRequestSequence();
   const load = useCallback(
     async (cursor: string | null) => {
+      const isCurrent = requests.begin();
+      // A first-page load is a new filter: forget the old "Load more" cursor.
+      if (!cursor) setNextCursor(null);
       setLoading(true);
       setError(null);
       try {
@@ -42,13 +47,14 @@ export function MerchantListPage() {
           limit: PAGE_SIZE,
           cursor: cursor ?? undefined,
         });
+        if (!isCurrent()) return;
         const page = result.merchants ?? [];
         setMerchants((previous) => (cursor ? [...previous, ...page] : page));
         setNextCursor(result.nextCursor ?? null);
       } catch (err) {
-        setError(describeError(err));
+        if (isCurrent()) setError(describeError(err));
       } finally {
-        setLoading(false);
+        if (isCurrent()) setLoading(false);
       }
     },
     [appliedQuery, statuses],

@@ -7,6 +7,7 @@ import { Pagination } from "../../components/Pagination.js";
 import { dash, dateTime } from "../../format.js";
 import type { WebhookDeliveryDto, WebhookDeliveryStatus, WebhookEndpointDto } from "../../types.js";
 import { EmptyState, ErrorBanner, Loading, StatePanel, statusLabel } from "../../components/ui.js";
+import { useRequestSequence } from "../../utils/requestSequence.js";
 
 /** `webhook_deliveries.status`' four CHECK values. Note the dispatcher only
  *  ever writes `succeeded`/`exhausted` — a row awaiting its next attempt
@@ -49,9 +50,13 @@ export function WebhookEndpointDetailPage() {
     }
   }, [merchantId, id]);
 
+  const requests = useRequestSequence();
   const loadDeliveries = useCallback(
     async (cursor: string | null) => {
       if (!merchantId || !id) return;
+      const isCurrent = requests.begin();
+      // A first-page load is a new filter: forget the old "Load more" cursor.
+      if (!cursor) setNextCursor(null);
       setLoading(true);
       setError(null);
       try {
@@ -60,14 +65,15 @@ export function WebhookEndpointDetailPage() {
           limit: PAGE_SIZE,
           cursor: cursor ?? undefined,
         });
+        if (!isCurrent()) return;
         setDeliveries((previous) =>
           cursor ? [...previous, ...result.deliveries] : result.deliveries,
         );
         setNextCursor(result.nextCursor);
       } catch (err) {
-        setError(describeError(err));
+        if (isCurrent()) setError(describeError(err));
       } finally {
-        setLoading(false);
+        if (isCurrent()) setLoading(false);
       }
     },
     [merchantId, id, statuses],

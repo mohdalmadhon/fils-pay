@@ -8,6 +8,7 @@ import { Pagination } from "../../components/Pagination.js";
 import { bhd, dash, dateTime } from "../../format.js";
 import type { PaymentLinkDto, PaymentLinkStatus } from "../../types.js";
 import { EmptyState, ErrorBanner, Loading, statusLabel } from "../../components/ui.js";
+import { useRequestSequence } from "../../utils/requestSequence.js";
 
 /** The four *stored* statuses, including `reserved` — the merchant-facing
  *  list deliberately exposes it distinctly rather than collapsing it into the
@@ -31,9 +32,13 @@ export function PaymentLinkListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const requests = useRequestSequence();
   const load = useCallback(
     async (cursor: string | null) => {
       if (!merchantId) return;
+      const isCurrent = requests.begin();
+      // A first-page load is a new filter: forget the old "Load more" cursor.
+      if (!cursor) setNextCursor(null);
       setLoading(true);
       setError(null);
       try {
@@ -42,12 +47,13 @@ export function PaymentLinkListPage() {
           limit: PAGE_SIZE,
           cursor: cursor ?? undefined,
         });
+        if (!isCurrent()) return;
         setLinks((previous) => (cursor ? [...previous, ...result.paymentLinks] : result.paymentLinks));
         setNextCursor(result.nextCursor);
       } catch (err) {
-        setError(describeError(err));
+        if (isCurrent()) setError(describeError(err));
       } finally {
-        setLoading(false);
+        if (isCurrent()) setLoading(false);
       }
     },
     [merchantId, statuses],
