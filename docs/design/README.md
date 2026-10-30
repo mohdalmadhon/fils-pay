@@ -1,58 +1,87 @@
-# FilsPay design: Ledger
+# FilsPay design: Carnival, Blush and Slate
 
 The merchant dashboard, the public checkout and the FilsPay Ops console share
-one design system. This is the reference for anyone adding a screen.
+one design system with **three designs**, each in light and dark, chosen per
+person in **Settings**. This is the reference for anyone adding a screen.
 
-## The idea
+Inspired by three payment-app concepts in the brief (2026-10-30): a festival
+poster of bold shapes, a soft pastel app with black pill buttons, and a calm
+slate app with coral actions. It replaces the earlier "Ledger" design.
 
-FilsPay keeps the books for merchants in Bahrain down to the fils, the
-smallest unit of the dinar. So the interface is set like a well-kept ledger:
+## The three designs
 
-- warm paper neutrals instead of cold grey
-- ink-black actions
-- tabular mono numerals for every amount
-- hairline rules
-- a single saffron accent that marks where you are and what moved
+| | Carnival (default) | Blush | Slate |
+|---|---|---|---|
+| Feel | a festival poster | soft and editorial | calm and technical |
+| Light page / card | lavender `#ECEAFB` / `#F8F7FF` | blush `#F6E3DF` / `#FFF8F5` | `#E6EAF1` / `#F5F7FA` |
+| Dark page / card | indigo `#1F2672` / `#283090` | warm plum `#2B2127` / `#382B33` | slate `#26324D` / `#2F3D5C` |
+| Sidebar | indigo panel, sun-yellow current page | blush panel, black current page | slate navy, coral current page |
+| Primary button | indigo pill (sun yellow in dark) | black pill (blush in dark) | coral, 8px corners |
+| Art colours | sun `#FFB42E`, rose `#FF3D68`, mint `#07C983`, peach | sand `#E6C49B`, rose, blush | coral `#FF6B6B`, sky `#6CB6FF`, gold |
+| Display face | Unbounded | Bricolage Grotesque | Lexend |
+| Illustration | geometric shapes: half-discs, a diamond, triangles | soft blobs and a sand card | a line chart and a dot grid |
+| Backdrop | a fading dot grid in the top corner | a blush-to-peach wash | a fading dot grid |
 
-Colour is kept for meaning: status, focus and the current page. There is no
-logo; the name is set as type. The sign-in screens show a ledger page (ruled
-lines and a margin rule) with one figure on it: `0.001 BHD`, one fils.
+**No dark mode is near-black.** Each is a coloured base that is clearly
+lighter than `#121212` (a test checks it). Body text is Geist in every design;
+the display face is for headings, amounts and the name. All fonts are
+bundled from `@fontsource` (OFL) and only download when used.
+
+**The one bold element per page** is the balance band on Overview: the
+design's hero colour, the captured amount large, two actions and the design's
+illustration (`components/art/DesignArt.tsx`). Sign-in panels and the
+checkout summary use the same band colours and illustration. Everything else
+stays quiet.
+
+## Settings
+
+Settings (`/dashboard/settings` in the dashboard, `/settings` in the Ops
+console, also in Ctrl+K) holds the Appearance panel
+(`components/kit/AppearanceSettings.tsx`), for every role:
+
+| Choice | Options | On `<html>` |
+|---|---|---|
+| Design | Carnival, Blush, Slate | `data-design` |
+| Light or dark | Light, Dark, Match my device | `data-theme="night"` in dark |
+| Layout | Sidebar, Top bar | `data-layout="topbar"` |
+| Spacing | Comfortable, Compact | `data-density="compact"` |
+| Halloween costume | on / off | `data-costume="halloween"` |
+
+Choices apply at once, are saved in this browser (`fp-appearance` in local
+storage, read by `components/kit/theme.ts` before the first paint) and carry
+over an older light/night choice. The sidebar's Light/Dark switch is a quick
+shortcut to the same setting. **Top bar** turns the sidebar into one bar
+across the top on wide screens (phones keep the drawer in both layouts);
+**Compact** tightens the spacing grid and control heights.
 
 ## Tokens (`apps/*/src/theme.css`)
 
+Components use only tokens, never raw colours, so every design and mode works
+everywhere. Each design sets its tokens in `:root[data-design="…"]` and its
+dark mode in `:root[data-design="…"][data-theme="night"]`.
+
 | Group | Tokens | Notes |
 |---|---|---|
-| Neutrals | `--c-bg`, `--c-surface`, `--c-surface-2/3`, `--c-line`, `--c-line-2`, `--c-ink` … `--c-ink-4` | parchment `#e9e5db` page, `#f3f0e8` cards, ink `#1c1a17`; night is navy `#070b14` |
-| Action | `--c-primary`, `--c-primary-hover`, `--c-on-primary` | ink buttons; saffron in night |
-| Accent | `--c-accent` `#d97a1e`, `--c-accent-ink`, `--c-accent-soft` | current page, focus, chart line, the BHD tag |
+| Neutrals | `--c-bg`, `--c-surface`, `--c-surface-2/3`, `--c-line`, `--c-line-2`, `--c-ink` … `--c-ink-4` | page, cards, rules and four text strengths |
+| Action | `--c-primary`, `--c-primary-hover`, `--c-on-primary` | the primary button |
+| Accent | `--c-accent`, `--c-accent-ink`, `--c-accent-soft` | focus, highlights, the BHD tag |
 | Meaning | `--c-good`, `--c-warn`, `--c-danger` with `-soft` fills | status pills always pair a dot with a word |
-| Type | `--font-sans` Geist, `--font-mono` Geist Mono, `--text-xs` … `--text-3xl` | 14px base; headings 22–28px, never oversized |
-| Space | `--sp-1` … `--sp-16` | a 4px grid |
-| Shape | `--r-1` 4px … `--r-4` 12px, `--shadow-xs/sm/pop` | small radii, hairline borders, shadows only on things that float |
-| Motion | `--ease`, `--dur-fast` 120ms, `--dur` 180ms, `--dur-slow` 320ms | short and purposeful |
-| Layout | `--sidebar-w`, `--content-max`, `--control-h` 36px, `--control-h-lg` 44px | |
+| Sidebar | `--side-bg`, `--side-surface(-3)`, `--side-line`, `--side-ink(-2/-3)`, `--side-active-bg/-ink` | redefined inside the sidebar, so its contents follow |
+| Band | `--hero-bg`, `--hero-ink(-2)`, `--hero-action-bg/-ink` | the balance band, sign-in panels, checkout summary |
+| Art | `--art-1` … `--art-5` | the illustration's colours |
+| Type | `--font-sans` Geist, `--font-display`, `--display-tracking`, `--display-weight`, `--font-mono` (IDs only) | |
+| Shape | `--r-1` … `--r-4`, `--r-button`, `--shadow-xs/sm/pop` | larger radii for outer panels than for chips and fields |
+| Space | `--sp-1` … `--sp-16`, `--control-h`, `--control-h-lg` | compact spacing changes these |
 
-There are three looks, all on the same tokens:
+**Contrast is tested.** `apps/web/src/designTokens.test.ts` reads
+`theme.css` and checks that every text-on-background pair (page, cards,
+sidebar, band, statuses) reaches 4.5:1 in every design and mode, that dark
+modes aren't near-black, and that the Ops console's copy of `theme.css` is
+identical. `npm run e2e:a11y` then audits every page in all seven looks.
 
-- **Light**, the default: warm parchment, never pure white, so the page
-  doesn't glare. Cards `#F3F0E8` on a `#E9E5DB` page, ink actions, the
-  saffron accent. Every text colour is at least 5:1 on the darkest surface.
-- **Night** (`data-theme="night"` on `<html>`): the ledger at midnight. A deep
-  navy (`#070B14` page, `#0D1320` to `#172033` surfaces) with saffron primary
-  buttons. It has its own depth, in the "Night depth" section of `theme.css`:
-  - a warm lamp glow and cool moonlight in opposite corners, with faint
-    ledger ruling, fixed behind the page
-  - a gradient sidebar with a saffron-to-blue hairline on its edge
-  - cards, tables, filter panels and the overview tiles lit from the top
-    with a highlight on their top edge
-  - a glowing saffron marker on the current page, lit buttons that glow on
-    hover, inset fields that light up on focus, and a midnight-blue card on
-    checkout
-
-  Toggled from the sidebar or the command palette. It is remembered per
-  browser; otherwise it follows the system. These styles are scoped to night
-  without the costume, which paints its own sky.
-- **Halloween costume**: see below.
+To add a design: add its two token blocks (the test lists what is required),
+an illustration group in `DesignArt.tsx`, a preview in `AppearanceSettings.tsx`
+and an entry in `DESIGNS` (`theme.ts`); the test will tell you what's missing.
 
 ## Building blocks
 
@@ -130,7 +159,7 @@ rest of the scenery stays, still.
 
 - Over 900px: a fixed sidebar. Under 900px: a top bar, and the sidebar becomes a drawer that closes on navigation, Escape or a tap outside.
 - Tables scroll sideways inside their own frame on narrow screens. Forms stack, and fields grow to 44px with 16px text so phones don't zoom.
-- Focus is a visible saffron outline. There is a skip link. Status is never shown by colour alone.
+- Focus is a visible outline in the design's colours. There is a skip link. Status is never shown by colour alone. Settings choices are real radio buttons, so they work with arrow keys and screen readers.
 - Every animation stops under `prefers-reduced-motion`.
 - Tab titles follow the page heading ("Transactions | FilsPay").
 
@@ -140,4 +169,4 @@ rest of the scenery stays, still.
 2. Wrap data in the existing classes (`dash-table`, `dash-dl`, `dash-filters`).
 3. Use `Loading` / `EmptyState` / `ErrorBanner` rather than plain text.
 4. Show money with `<Amount />`, and statuses with `statusLabel()` in a `dash-status dash-status-<status>` pill.
-5. Use tokens, never raw colours, so light, night and the costume all work.
+5. Use tokens, never raw colours, so every design, both modes and the costume all work.

@@ -13,13 +13,16 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
 - New interface for the merchant dashboard, checkout and Ops console ("Ledger"
   design system): Ctrl+K command palette, light and night themes, and a
   Halloween costume toggle (`docs/design/README.md`).
-- A softer light theme (warm parchment instead of white) and a richer night
-  theme (midnight navy with saffron actions, a lamp glow, raised surfaces and
-  lit buttons) (`docs/design/README.md`).
-- The Halloween costume is now pixel art in classic Halloween colours: pixel
-  sprites, a pixel font, square corners, a witch, a graveyard and stars
-  behind the page, and a ghost that haunts on its own instead of following
-  the pointer (`docs/design/README.md`).
+- **Redesign:** three designs, Carnival (default), Blush and Slate, each in
+  light and a coloured (not near-black) dark mode, replacing "Ledger". A
+  Settings page in the dashboard and the Ops console chooses the design,
+  light/dark/match my device, a sidebar or top-bar layout, comfortable or
+  compact spacing, and the Halloween costume. Overview opens with a balance
+  band and each design's own illustration (`docs/design/README.md`).
+- The Halloween costume is redrawn in vector SVG: a glowing jack-o'-lantern,
+  flapping bats, a ghost that haunts on its own instead of following the
+  pointer, a witch, and a night scene with a haunted house, a graveyard and a
+  black cat behind the page. It dresses any of the three designs.
 - `scripts/e2e/payment-check.mjs`: one-command end-to-end payment check, from
   link to payout, with PASS/FAIL per step
   (`docs/verification/end-to-end-2026-10-30.md`).
