@@ -55,7 +55,8 @@ export type MerchantRole = "owner" | "finance" | "support";
 export interface DashboardLoginResponse {
   otpRequired: boolean;
   otpExpiresAt: string;
-  /** Present only when config.otpDevExpose is on — never in production. */
+  /** Present only when config.otpDevExpose is on: local development, or the
+   *  hosted demo with OTP_SHOW_IN_PRODUCTION=true (docs/deploy.md). */
   devOtpCode?: string;
 }
 
