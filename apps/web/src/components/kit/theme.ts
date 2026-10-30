@@ -1,22 +1,22 @@
 /**
- * Appearance: which design (Orchid, Lagoon, Saffron), light or dark mode,
+ * Appearance: which design (Cobalt, Lagoon, Saffron), light or dark mode,
  * sidebar or top-bar layout, and comfortable or compact spacing. Chosen in
  * Settings, remembered in this browser, and applied to <html> as data
  * attributes before the first paint:
  *
- *   data-design="orchid|lagoon|saffron"  colours, type and shapes
+ *   data-design="cobalt|lagoon|saffron"  colours, type and shapes
  *   data-theme="night"                   present in dark mode
  *   data-layout="topbar"                 present for the top-bar layout
  *   data-density="compact"               present for compact spacing
  *
  * Mode "system" follows the operating system's light or dark setting.
  * Older saves are carried over: the plain "fp-theme" light/night key, and
- * the designs' earlier names (Carnival is now Orchid, Slate is Lagoon,
- * Blush is Saffron).
+ * the designs' earlier names (Carnival and Orchid are now Cobalt, Slate is
+ * Lagoon, Blush is Saffron).
  */
 import { useCallback, useEffect, useState } from "react";
 
-export type Design = "orchid" | "lagoon" | "saffron";
+export type Design = "cobalt" | "lagoon" | "saffron";
 export type Mode = "light" | "dark" | "system";
 export type Layout = "sidebar" | "topbar";
 export type Density = "comfortable" | "compact";
@@ -29,20 +29,20 @@ export interface Appearance {
 }
 
 export const DESIGNS: ReadonlyArray<{ id: Design; name: string; description: string }> = [
-  { id: "orchid", name: "Orchid", description: "Lilac and lime, outlined in ink, with bold shapes." },
+  { id: "cobalt", name: "Cobalt", description: "Sky blue and lime, outlined in navy, with bold shapes." },
   { id: "lagoon", name: "Lagoon", description: "Mint and coral like the Gulf shallows, with square corners." },
   { id: "saffron", name: "Saffron", description: "Butter yellow and tomato, warm as a spice market." },
 ];
 
-export const DEFAULT_APPEARANCE: Appearance = { design: "orchid", mode: "system", layout: "sidebar", density: "comfortable" };
+export const DEFAULT_APPEARANCE: Appearance = { design: "cobalt", mode: "system", layout: "sidebar", density: "comfortable" };
 
 const KEY = "fp-appearance";
 const LEGACY_KEY = "fp-theme";
 const CHANGE = "fp-appearance-change";
 
-const isDesign = (v: unknown): v is Design => v === "orchid" || v === "lagoon" || v === "saffron";
+const isDesign = (v: unknown): v is Design => v === "cobalt" || v === "lagoon" || v === "saffron";
 /** The designs' earlier names, so a saved choice survives the rename. */
-const RENAMED: Readonly<Record<string, Design>> = { carnival: "orchid", slate: "lagoon", blush: "saffron" };
+const RENAMED: Readonly<Record<string, Design>> = { carnival: "cobalt", orchid: "cobalt", slate: "lagoon", blush: "saffron" };
 const isMode = (v: unknown): v is Mode => v === "light" || v === "dark" || v === "system";
 
 /** The saved appearance, with anything missing or unknown set to its default. */

@@ -2,11 +2,11 @@
 /**
  * Accessibility check: runs axe-core (WCAG 2.1 A and AA, plus axe's best
  * practices) on every dashboard page and the public checkout page, in
- * Chromium, for every look: the three designs (Orchid, Lagoon, Saffron) in
+ * Chromium, for every look: the three designs (Cobalt, Lagoon, Saffron) in
  * light and dark, and the Halloween costume. Write-up:
  * docs/improvements/18; the designs: docs/design/README.md.
  *
- * LOOKS=orchid-light,lagoon-dark limits the run to some looks.
+ * LOOKS=cobalt-light,lagoon-dark limits the run to some looks.
  *
  * Any violation fails the run, with the rule, the elements and axe's
  * explanation. axe finds about a third of real problems: keyboard use,
@@ -45,7 +45,7 @@ const DASHBOARD_PAGES = [
   "settings",
 ];
 
-const ALL_LOOKS = ["orchid-light", "orchid-dark", "lagoon-light", "lagoon-dark", "saffron-light", "saffron-dark", "halloween"];
+const ALL_LOOKS = ["cobalt-light", "cobalt-dark", "lagoon-light", "lagoon-dark", "saffron-light", "saffron-dark", "halloween"];
 const LOOKS = process.env.LOOKS ? process.env.LOOKS.split(",") : ALL_LOOKS;
 
 let failures = 0;
@@ -116,11 +116,11 @@ async function main() {
   const browser = await chromium.launch();
   try {
     // Each look in its own browser context (the choice is per browser).
-    // "halloween" is the costume (components/kit/Halloween.tsx) over Orchid.
+    // "halloween" is the costume (components/kit/Halloween.tsx) over Cobalt.
     for (const theme of LOOKS) {
       const context = await browser.newContext();
       await context.addInitScript((look) => {
-        const [design, mode] = look === "halloween" ? ["orchid", "dark"] : look.split("-");
+        const [design, mode] = look === "halloween" ? ["cobalt", "dark"] : look.split("-");
         try {
           window.localStorage.setItem("fp-appearance", JSON.stringify({ design, mode, layout: "sidebar", density: "comfortable" }));
           window.localStorage.setItem("fp-costume", look === "halloween" ? "halloween" : "off");

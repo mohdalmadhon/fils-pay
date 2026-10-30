@@ -4,7 +4,7 @@
  * light and dark mode by itself. One component holds all three; CSS shows
  * the one for the current design (data-design on <html>).
  *
- *   Orchid    bold geometric shapes: half-discs, a diamond, a triangle,
+ *   Cobalt    bold geometric shapes: half-discs, a diamond, a triangle,
  *             a quarter-circle with a dot, like a poster
  *   Saffron   soft overlapping blobs and a card
  *   Lagoon    a line chart with a dot grid, drawn in strokes
@@ -21,7 +21,7 @@ export function DesignArt({ className }: { className?: string }) {
       aria-hidden
       focusable={false}
     >
-      <g className="fp-art-orchid">
+      <g className="fp-art-cobalt">
         {/* A large disc split into mint and sun halves. */}
         <path className="a3" d="M190 30a80 80 0 0 0 0 160Z" />
         <path className="a1" d="M190 30a80 80 0 0 1 0 160Z" />

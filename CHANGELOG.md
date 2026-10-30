@@ -13,11 +13,12 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
 - New interface for the merchant dashboard, checkout and Ops console ("Ledger"
   design system): Ctrl+K command palette, light and night themes, and a
   Halloween costume toggle (`docs/design/README.md`).
-- **Redesign:** three designs, Orchid (default; violet and lime), Lagoon (teal
-  and coral) and Saffron (marigold and espresso), each in light and a dark,
-  tinted dark mode, replacing "Ledger". Components follow Orbit: filled
-  fields with mono labels, info-list details, gradient action pills and
-  underline tabs; the sidebar is rebuilt as one set of rules. A
+- **Redesign:** three neo-brutalist designs, Cobalt (default; sky blue and
+  lime), Lagoon (mint and coral) and Saffron (butter yellow and tomato), each
+  in light and a dark, tinted dark mode, replacing "Ledger", with no purple.
+  Ink outlines and hard offset shadows on every card, field and button;
+  flat action colours; buttons that lift on hover; mono labels; a
+  double-outlined sign-in card; the sidebar rebuilt as one set of rules. A
   Settings page in the dashboard and the Ops console chooses the design,
   light/dark/match my device, a sidebar or top-bar layout, comfortable or
   compact spacing, and the Halloween costume. Overview opens with a balance

@@ -44,7 +44,7 @@ export function AdminLayout() {
       go("settlement", "Settlement ops", "/settlement", icons.settlement, "batches payouts"),
       go("imports", "Import adjustments", "/adjustment-imports", icons.imports, "csv upload"),
       go("webhooks", "Webhook replay", "/webhooks", icons.replay, "events deliveries"),
-      go("settings", "Settings", "/settings", icons.settings, "appearance design theme layout compact orchid lagoon saffron"),
+      go("settings", "Settings", "/settings", icons.settings, "appearance design theme layout compact cobalt lagoon saffron"),
       {
         id: "theme",
         label: theme === "night" ? "Switch to light mode" : "Switch to dark mode",

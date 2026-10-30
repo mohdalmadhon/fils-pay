@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 /**
- * Every design (Orchid, Lagoon, Saffron) in both modes defines the full set
+ * Every design (Cobalt, Lagoon, Saffron) in both modes defines the full set
  * of colour tokens, and every pair of text and background the components
  * use reaches WCAG AA (4.5:1). The thick ink borders that outline cards,
  * fields and buttons reach 3:1 against everything they sit on (WCAG's
@@ -17,7 +17,7 @@ import test from "node:test";
 const css = readFileSync(new URL("./theme.css", import.meta.url), "utf8");
 const adminCss = readFileSync(new URL("../../admin/src/theme.css", import.meta.url), "utf8");
 
-const DESIGNS = ["orchid", "lagoon", "saffron"] as const;
+const DESIGNS = ["cobalt", "lagoon", "saffron"] as const;
 const MODES = ["light", "dark"] as const;
 
 /** The custom properties set by the rule whose selector is exactly `selector`. */

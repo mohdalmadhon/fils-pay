@@ -1,66 +1,82 @@
-# FilsPay design: Orchid, Lagoon and Saffron
+# FilsPay design: Cobalt, Lagoon and Saffron
 
 The merchant dashboard, the public checkout and the FilsPay Ops console share
 one design system with **three designs**, each in light and dark, chosen per
-person in **Settings**. Components follow Mohammed's Orbit app (its
-`InputHolder` field, info list, sign-in tabs and gradient action button).
-This is the reference for anyone adding a screen.
+person in **Settings**. All three are **neo-brutalist**, after the reference
+login card Mohammed shared: thick ink outlines, hard unblurred shadows,
+flat loud colours, buttons that lift on hover and labels in a monospace
+face. No purple is used in any design. This is the reference for anyone
+adding a screen.
 
 ## The three designs
 
-| | Orchid (default) | Lagoon | Saffron |
+| | Cobalt (default) | Lagoon | Saffron |
 |---|---|---|---|
-| Feel | bold and electric | cool, like the Gulf shallows | warm, like a spice market |
-| Light page / card | lilac `#ECE8F4` / `#F7F5FB` | sea-glass `#E6F0F0` / `#F5FAFA` | parchment `#F3EBDD` / `#FBF6EE` |
-| Dark page / card | violet-black `#0F0B18` / `#171226` | teal-black `#06171A` / `#0C2226` | espresso-black `#140F0A` / `#1D1710` |
-| Ink and actions | violet `#6236C9` | teal `#0A6F6D` | burnt saffron `#A83F0C` |
-| Highlight (current page, band action) | lime `#C6F04A` | aqua `#5FD3C6`, coral `#FF7A59` | marigold `#F2A51A` |
-| Action gradient | violet to deep magenta | teal to deep sea-blue | burnt saffron |
+| Light page / card | sky `#D4E4FF` / white | mint `#BFF0E4` / `#FFFEF9` | butter `#FFE39A` / cream `#FFFAF0` |
+| Dark page / card | navy-black `#070D1A` / `#0F1830` | teal-black `#041416` / `#0B2023` | espresso-black `#150E07` / `#20170D` |
+| Ink (text, outlines) | navy `#0A1330` | deep sea `#071C1F` | espresso `#1F1206` |
+| Links | cobalt `#1D4ED8` | teal `#00706B` | rust `#A8370A` |
+| Buttons (`--c-action`) | lime `#C6F04A` | coral `#FF7A59` | tomato `#FF6B35` |
+| Band | sky blue `#5B9BFF` | aqua `#39D6C0` | tomato, with an espresso button |
+| Dark-mode shadows | cobalt | teal | burnt orange |
+| Corners | medium | square | round, pill buttons |
 | Display face | Liter (from Orbit) | Unbounded | Bricolage Grotesque |
 | Illustration | geometric shapes | a line chart and a dot grid | soft blobs and a card |
 
-The designs were renamed with their new colours (Carnival is now Orchid,
-Slate is Lagoon, Blush is Saffron); a saved choice carries over.
+The designs were renamed with their colours, and a saved choice carries
+over: Carnival and Orchid are now Cobalt, Slate is Lagoon, Blush is Saffron.
 
 **Dark modes are dark**: each page sits on a near-black tinted with its
-design's colour, never flat grey (a test checks both). Body text is Geist;
-small labels are **JetBrains Mono**; the display face is for headings, amounts
-and the name. All fonts are bundled from `@fontsource` (OFL).
+design's colour, never flat grey (a test checks both). In dark, outlines
+turn pale and shadows take the design's colour; the buttons and the band
+stay loud. Body text is Geist; labels and buttons are **JetBrains Mono**;
+the display face is for headings, amounts and the name. All fonts are
+bundled from `@fontsource` (OFL).
 
 **The one bold element per page** is the balance band on Overview: the
-design's hero colour, the captured amount large, two actions and the design's
-illustration (`components/art/DesignArt.tsx`). Sign-in panels and the
-checkout summary use the same band colours and illustration.
+design's band colour, outlined, with an 8px hard shadow, the captured amount
+large, two actions and the design's illustration
+(`components/art/DesignArt.tsx`). Sign-in panels and the checkout summary
+use the same band colour and illustration.
 
-## Components (after Orbit)
+## The brutalist rules
 
 | Piece | Look |
 |---|---|
-| Field | filled with a tint of the design (`--c-input`), no visible border until hovered, 7px corners (`--r-input`), 44px tall (40 compact); focus is the primary colour's border with a soft ring |
-| Field label | small uppercase JetBrains Mono with letter spacing; checkbox and radio labels keep normal type |
-| Fieldset title | a mono eyebrow in the primary colour |
-| Details | Orbit's info list: mono labels beside values, a rule under each row; stacked on phones |
-| Primary action | a 44px pill filled with the design's action gradient (`--action-from` to `--action-to`) |
-| Tabs | underline tabs (Settings' light/dark, the sidebar's light/dark) |
-| Filter checkbox | a filled toggle pill; the primary colour's border when on |
+| Edge | `--edge`: 2px (`--border-w`) of the design's ink (`--c-border`) |
+| Shadow | `--shadow-xs/sm/pop`: 2, 4 and 8px offset down and right, no blur, in `--c-shadow-hard` |
+| Card, table, details, filter box, Settings group, command palette | outlined, with a 4px shadow; table headers on a tinted band with an ink rule |
+| Overview band | outlined, with an 8px shadow |
+| Sign-in and checkout form | a card on the page colour with a second outline offset 6px behind it and an 8px shadow |
+| Field | the card colour, outlined, 44px tall (40 compact); a 2px shadow on hover; on focus the outline turns the primary colour and the field lifts onto a 4px shadow in it |
+| Field label | bold uppercase JetBrains Mono, in ink |
+| Primary button | the flat action colour with ink text, outlined, bold uppercase mono; rests on a 2px shadow, lifts to 4px on hover, presses flat on click |
+| Secondary button | the same, in the card colour |
+| Tabs | uppercase mono; the chosen one underlined in 4px of ink |
+| Filter checkbox | an outlined toggle; on, it fills with the action colour and lifts |
+| Notice, error, confirmation | a small outlined slip with a 2px shadow |
+| Details | mono labels beside values, a rule under each row; stacked on phones |
 
 ## The sidebar
 
 One complete set of rules in `theme.css` for both apps, anchored at `:root`
 so the older rules in `dashboard.css` and `admin.css` (which load after
-`theme.css`) can't override parts of it. It has its own colours (`--side-*`),
-darker than the page:
+`theme.css`) can't override parts of it. It has its own colours (`--side-*`:
+the card colour in light, a shade off the page in dark) and an ink edge
+against the page:
 
-- a merchant card: avatar, the role as a mono eyebrow above the name, then
-  the email (the "Owner" chip no longer squeezes them)
-- an Orbit-style filled search field with the Ctrl K shortcut
-- mono section labels and 40px rows; the current page is a solid pill in the
-  design's highlight
-- light/dark as underline tabs, then log out
+- a merchant card: an outlined avatar, the role as a mono eyebrow above the
+  name, then the email; outlined, with a 2px shadow
+- an outlined search field with the Ctrl K shortcut, lifting on hover
+- mono section labels and 40px rows; the current page is the action
+  colour, outlined, with a 2px shadow
+- light/dark as ink-underlined tabs, then log out
 
-When adding a shared component rule to `theme.css` that an app stylesheet
-also styles, anchor it at `:root` (or raise its specificity), or the app
-file's rule will win because it loads later.
+**When adding a shared component rule to `theme.css`** that an app
+stylesheet also styles, anchor it at `:root` (or raise its specificity), or
+the app file's rule will win because it loads later. Watch `:is()` lists
+too: a list's specificity is that of its most specific member, so a later,
+simpler rule for one of its members can lose to it.
 
 ## Settings
 
@@ -70,7 +86,7 @@ console, also in Ctrl+K) holds the Appearance panel
 
 | Choice | Options | On `<html>` |
 |---|---|---|
-| Design | Orchid, Lagoon, Saffron | `data-design` |
+| Design | Cobalt, Lagoon, Saffron | `data-design` |
 | Light or dark | Light, Dark, Match my device | `data-theme="night"` in dark |
 | Layout | Sidebar, Top bar | `data-layout="topbar"` |
 | Spacing | Comfortable, Compact | `data-density="compact"` |
@@ -92,22 +108,25 @@ dark mode in `:root[data-design="…"][data-theme="night"]`.
 | Group | Tokens | Notes |
 |---|---|---|
 | Neutrals | `--c-bg`, `--c-surface`, `--c-surface-2/3`, `--c-line`, `--c-line-2`, `--c-ink` … `--c-ink-4` | page, cards, rules and four text strengths |
-| Action | `--c-primary`, `--c-primary-hover`, `--c-on-primary` | the primary button |
+| Links and focus | `--c-primary`, `--c-primary-hover`, `--c-on-primary` | links, focused fields, chosen items |
+| Buttons | `--c-action`, `--c-on-action` | the flat fill of primary buttons and its text |
+| Edges | `--c-border`, `--c-shadow-hard`, `--border-w`, `--edge` | the brutalist outline and hard shadow colour |
 | Accent | `--c-accent`, `--c-accent-ink`, `--c-accent-soft` | focus, highlights, the BHD tag |
 | Meaning | `--c-good`, `--c-warn`, `--c-danger` with `-soft` fills | status pills always pair a dot with a word |
 | Sidebar | `--side-bg`, `--side-surface(-3)`, `--side-line`, `--side-ink(-2/-3)`, `--side-active-bg/-ink` | redefined inside the sidebar, so its contents follow |
 | Band | `--hero-bg`, `--hero-ink(-2)`, `--hero-action-bg/-ink` | the balance band, sign-in panels, checkout summary |
 | Art | `--art-1` … `--art-5` | the illustration's colours |
 | Type | `--font-sans` Geist, `--font-display`, `--font-meta` JetBrains Mono (labels), `--display-tracking`, `--display-weight`, `--font-mono` (IDs and digits) | |
-| Fields and actions | `--c-input`, `--r-input`, `--action-from`, `--action-to`, `--gradient-action` | Orbit-style fields and the action gradient |
-| Shape | `--r-1` … `--r-4`, `--r-button`, `--shadow-xs/sm/pop` | larger radii for outer panels than for chips and fields |
+| Fields | `--c-input`, `--r-input` | field fill and corners |
+| Shape | `--r-1` … `--r-4`, `--r-button`, `--shadow-xs/sm/pop` (hard offsets) | larger radii for outer panels than for chips and fields |
 | Space | `--sp-1` … `--sp-16`, `--control-h`, `--control-h-lg` | compact spacing changes these |
 
 **Contrast is tested.** `apps/web/src/designTokens.test.ts` reads
 `theme.css` and checks that every text-on-background pair (page, cards,
-sidebar, band, statuses, both ends of the action gradient) reaches 4.5:1 in
-every design and mode, that dark modes are dark but tinted, and that the Ops
-console's copy of `theme.css` is
+sidebar, band, statuses, button text on the action colour, links on the
+page and cards) reaches 4.5:1 in every design and mode, that the ink outline
+reaches 3:1 against everything it sits on, that dark modes are dark but
+tinted, and that the Ops console's copy of `theme.css` is
 identical. `npm run e2e:a11y` then audits every page in all seven looks.
 
 To add a design: add its two token blocks (the test lists what is required),

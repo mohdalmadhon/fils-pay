@@ -11,7 +11,7 @@ import { useCostume } from "./Halloween.js";
 /** Each design's own colours, for its preview (light mode): outlined in
  * its ink, with the band's hard shadow. */
 const PREVIEW: Record<Design, { ink: string; page: string; side: string; band: string; pill: string; art: [string, string, string] }> = {
-  orchid: { ink: "#160f26", page: "#e9ddff", side: "#ffffff", band: "#a98bff", pill: "#c6f04a", art: ["#c6f04a", "#ff5fa2", "#7c4dff"] },
+  cobalt: { ink: "#0a1330", page: "#d4e4ff", side: "#ffffff", band: "#5b9bff", pill: "#c6f04a", art: ["#c6f04a", "#ff5fa2", "#1d4ed8"] },
   lagoon: { ink: "#071c1f", page: "#bff0e4", side: "#fffef9", band: "#39d6c0", pill: "#ff7a59", art: ["#ff7a59", "#ffd23f", "#00706b"] },
   saffron: { ink: "#1f1206", page: "#ffe39a", side: "#fffaf0", band: "#ff6b35", pill: "#ff6b35", art: ["#ffb400", "#e2617a", "#1f1206"] },
 };

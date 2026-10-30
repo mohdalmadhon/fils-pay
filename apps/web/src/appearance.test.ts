@@ -46,19 +46,20 @@ function reset(): void {
   for (const k of Object.keys(attrs)) delete attrs[k];
 }
 
-test("with nothing saved: Orchid, follow the system, sidebar, comfortable", () => {
+test("with nothing saved: Cobalt, follow the system, sidebar, comfortable", () => {
   reset();
   assert.deepEqual(readAppearance(), DEFAULT_APPEARANCE);
-  assert.deepEqual(DEFAULT_APPEARANCE, { design: "orchid", mode: "system", layout: "sidebar", density: "comfortable" });
+  assert.deepEqual(DEFAULT_APPEARANCE, { design: "cobalt", mode: "system", layout: "sidebar", density: "comfortable" });
   assert.deepEqual(
     DESIGNS.map((d) => d.id),
-    ["orchid", "lagoon", "saffron"],
+    ["cobalt", "lagoon", "saffron"],
   );
 });
 
 test("a design saved under its old name carries over to its new one", () => {
   for (const [old, now] of [
-    ["carnival", "orchid"],
+    ["carnival", "cobalt"],
+    ["orchid", "cobalt"],
     ["slate", "lagoon"],
     ["blush", "saffron"],
   ]) {
@@ -81,7 +82,7 @@ test("an old light/night choice is carried over", () => {
 test("unknown or broken saved values fall back to the defaults, one field at a time", () => {
   reset();
   store.set("fp-appearance", JSON.stringify({ design: "neon", mode: "dusk", layout: "topbar", density: "tiny" }));
-  assert.deepEqual(readAppearance(), { design: "orchid", mode: "system", layout: "topbar", density: "comfortable" });
+  assert.deepEqual(readAppearance(), { design: "cobalt", mode: "system", layout: "topbar", density: "comfortable" });
   store.set("fp-appearance", "{not json");
   assert.deepEqual(readAppearance(), DEFAULT_APPEARANCE);
 });

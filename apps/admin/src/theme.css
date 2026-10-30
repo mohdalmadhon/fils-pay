@@ -3,7 +3,7 @@
  * Three designs share every component, chosen in Settings (data-design on
  * <html>), each with a light and a dark mode (data-theme="night"):
  *
- *   Orchid (default)  lilac page, violet links, lime actions, pink art
+ *   Cobalt (default)  sky page, cobalt links, lime actions, pink art
  *   Lagoon            mint page, teal links, coral actions; square corners
  *   Saffron           butter page, rust links, tomato actions; round corners
  *
@@ -84,35 +84,35 @@
   --control-h-lg: 44px;
 }
 
-/* Orchid -----------------------------------------------------------------
- * The default. A bright lilac page with white cards outlined in violet-
- * black ink, violet links, lime buttons and a lilac band; pink, violet and
- * yellow in its art. In dark, a violet-black page with pale outlines and
- * violet shadows; the lime and lilac stay loud. Liter, the display face
- * from Orbit, at its one weight. */
+/* Cobalt -----------------------------------------------------------------
+ * The default. A pale sky page with white cards outlined in navy ink,
+ * cobalt links, lime buttons and a sky-blue band; pink, cobalt and yellow
+ * in its art. In dark, a navy-black page with pale outlines and cobalt
+ * shadows; the lime and sky stay loud. No purple anywhere. Liter, the
+ * display face from Orbit, at its one weight. */
 :root,
-:root[data-design="orchid"] {
+:root[data-design="cobalt"] {
   color-scheme: light;
   --font-display: "Liter", "Geist", system-ui, sans-serif;
   --display-tracking: -0.015em;
   --display-weight: 400;
-  --c-bg: #e9ddff;
+  --c-bg: #d4e4ff;
   --c-surface: #ffffff;
-  --c-surface-2: #f7f2ff;
-  --c-surface-3: #efe6ff;
-  --c-ink: #160f26;
-  --c-ink-2: #3b3057;
-  --c-ink-3: #54497a;
-  --c-ink-4: #8f84ad;
-  --c-line: #ddd0f5;
-  --c-line-2: #c3b2e6;
-  --c-primary: #5b2bd6;
-  --c-primary-hover: #4a1fbb;
+  --c-surface-2: #f3f7ff;
+  --c-surface-3: #e6efff;
+  --c-ink: #0a1330;
+  --c-ink-2: #2a3756;
+  --c-ink-3: #44516f;
+  --c-ink-4: #8090ad;
+  --c-line: #c7d6f0;
+  --c-line-2: #a6bbe0;
+  --c-primary: #1d4ed8;
+  --c-primary-hover: #1a3fb0;
   --c-on-primary: #ffffff;
   --c-action: #c6f04a;
-  --c-on-action: #160f26;
-  --c-border: #160f26;
-  --c-shadow-hard: #160f26;
+  --c-on-action: #0a1330;
+  --c-border: #0a1330;
+  --c-shadow-hard: #0a1330;
   --c-accent: #ff5fa2;
   --c-accent-ink: #4a6100;
   --c-accent-soft: #ecf8c6;
@@ -120,31 +120,31 @@
   --c-good-soft: #d8f0e3;
   --c-warn: #7f5100;
   --c-warn-soft: #f7e8c8;
-  --c-danger: #b21f4c;
-  --c-danger-soft: #fbdbe6;
-  --c-neutral-soft: #ece3fb;
+  --c-danger: #b4232f;
+  --c-danger-soft: #fbdcdc;
+  --c-neutral-soft: #e3ecfb;
   --c-input: #ffffff;
-  --c-focus: rgba(91, 43, 214, 0.35);
-  --c-scrim: rgba(22, 15, 38, 0.5);
+  --c-focus: rgba(29, 78, 216, 0.35);
+  --c-scrim: rgba(10, 19, 48, 0.5);
   --art-1: #c6f04a;
   --art-2: #ff5fa2;
-  --art-3: #7c4dff;
+  --art-3: #2f6bff;
   --art-4: #ffd23f;
-  --art-5: #160f26;
+  --art-5: #0a1330;
   --side-bg: #ffffff;
-  --side-surface: #f7f2ff;
-  --side-surface-3: #efe6ff;
-  --side-ink: #160f26;
-  --side-ink-2: #3b3057;
-  --side-ink-3: #54497a;
+  --side-surface: #f3f7ff;
+  --side-surface-3: #e6efff;
+  --side-ink: #0a1330;
+  --side-ink-2: #2a3756;
+  --side-ink-3: #44516f;
   --side-active-bg: #c6f04a;
-  --side-active-ink: #160f26;
-  --hero-bg: #a98bff;
-  --hero-ink: #160f26;
-  --hero-ink-2: #2a1f45;
+  --side-active-ink: #0a1330;
+  --hero-bg: #5b9bff;
+  --hero-ink: #0a1330;
+  --hero-ink-2: #13244a;
   --hero-action-bg: #c6f04a;
-  --hero-action-ink: #160f26;
-  --side-line: #160f26;
+  --hero-action-ink: #0a1330;
+  --side-line: #0a1330;
   --r-1: 6px;
   --r-2: 8px;
   --r-3: 12px;
@@ -154,25 +154,25 @@
 }
 
 :root:not([data-design])[data-theme="night"],
-:root[data-design="orchid"][data-theme="night"] {
+:root[data-design="cobalt"][data-theme="night"] {
   color-scheme: dark;
-  --c-bg: #0f0a1a;
-  --c-surface: #1a1329;
-  --c-surface-2: #1f172f;
-  --c-surface-3: #271d3b;
-  --c-ink: #f4f0ff;
-  --c-ink-2: #d2c8ec;
-  --c-ink-3: #ab9fcc;
-  --c-ink-4: #716793;
-  --c-line: #2e2447;
-  --c-line-2: #41355f;
-  --c-primary: #b59cff;
-  --c-primary-hover: #c6b2ff;
-  --c-on-primary: #120a22;
+  --c-bg: #070d1a;
+  --c-surface: #0f1830;
+  --c-surface-2: #131e38;
+  --c-surface-3: #1a2744;
+  --c-ink: #eef3ff;
+  --c-ink-2: #c3d0ea;
+  --c-ink-3: #9aabcc;
+  --c-ink-4: #66789c;
+  --c-line: #22304e;
+  --c-line-2: #33446a;
+  --c-primary: #7fb0ff;
+  --c-primary-hover: #a3c6ff;
+  --c-on-primary: #070d1a;
   --c-action: #c6f04a;
-  --c-on-action: #120a22;
-  --c-border: #d2c8ec;
-  --c-shadow-hard: #7c4dff;
+  --c-on-action: #070d1a;
+  --c-border: #c3d0ea;
+  --c-shadow-hard: #2f6bff;
   --c-accent: #ff5fa2;
   --c-accent-ink: #d4f56e;
   --c-accent-soft: #232a17;
@@ -180,27 +180,27 @@
   --c-good-soft: #10291f;
   --c-warn: #ffc857;
   --c-warn-soft: #2a2210;
-  --c-danger: #ff7a9c;
-  --c-danger-soft: #2e1220;
-  --c-neutral-soft: #271d3b;
-  --c-input: #1a1329;
-  --c-focus: rgba(181, 156, 255, 0.5);
-  --c-scrim: rgba(22, 15, 38, 0.75);
-  --art-5: #f4f0ff;
-  --side-bg: #140e21;
-  --side-surface: #1f172f;
-  --side-surface-3: #271d3b;
-  --side-ink: #f4f0ff;
-  --side-ink-2: #d2c8ec;
-  --side-ink-3: #ab9fcc;
+  --c-danger: #ff8080;
+  --c-danger-soft: #2e1418;
+  --c-neutral-soft: #1a2744;
+  --c-input: #0f1830;
+  --c-focus: rgba(127, 176, 255, 0.5);
+  --c-scrim: rgba(10, 19, 48, 0.75);
+  --art-5: #eef3ff;
+  --side-bg: #0b1426;
+  --side-surface: #131e38;
+  --side-surface-3: #1a2744;
+  --side-ink: #eef3ff;
+  --side-ink-2: #c3d0ea;
+  --side-ink-3: #9aabcc;
   --side-active-bg: #c6f04a;
-  --side-active-ink: #120a22;
-  --hero-bg: #a98bff;
-  --hero-ink: #120a22;
-  --hero-ink-2: #271a45;
+  --side-active-ink: #070d1a;
+  --hero-bg: #5b9bff;
+  --hero-ink: #070d1a;
+  --hero-ink-2: #10224a;
   --hero-action-bg: #c6f04a;
-  --hero-action-ink: #120a22;
-  --side-line: #f4f0ff;
+  --hero-action-ink: #070d1a;
+  --side-line: #eef3ff;
 }
 
 /* Saffron ----------------------------------------------------------------
@@ -481,8 +481,8 @@
   --c-on-primary: #1a0d05;
   --c-action: #ff7a1a;
   --c-on-action: #1a0d05;
-  --c-border: #a894c9;
-  --c-shadow-hard: #4b2470;
+  --c-border: #c9b79a;
+  --c-shadow-hard: #ff7a1a;
   --c-accent: #ff7a1a;
   --c-accent-ink: #ffa24c;
   --c-accent-soft: rgba(255, 122, 26, 0.14);
@@ -861,7 +861,7 @@ h1 {
   display: none;
 }
 
-:is(:root[data-design="orchid"], :root:not([data-design])):not([data-costume="halloween"]) .fp-art-orchid,
+:is(:root[data-design="cobalt"], :root:not([data-design])):not([data-costume="halloween"]) .fp-art-cobalt,
 :root[data-design="saffron"]:not([data-costume="halloween"]) .fp-art-saffron,
 :root[data-design="lagoon"]:not([data-costume="halloween"]) .fp-art-lagoon,
 :root[data-costume="halloween"] .fp-art-halloween {
@@ -958,13 +958,13 @@ h1 {
 /* The card picture on checkout, in each design's colours: flat fills
  * with a few hard shapes at the right edge, so the card's text stays
  * clear. */
-:root[data-design="orchid"]:not([data-costume="halloween"]) .checkout-card,
+:root[data-design="cobalt"]:not([data-costume="halloween"]) .checkout-card,
 :root:not([data-design]):not([data-costume="halloween"]) .checkout-card {
   color: #ffffff;
   background:
     radial-gradient(circle at 104% 50%, #ff5fa2 0 54px, transparent 55px),
     radial-gradient(circle at 80% 112%, #c6f04a 0 34px, transparent 35px),
-    #7c4dff;
+    #1d4ed8;
 }
 
 :root[data-design="saffron"]:not([data-costume="halloween"]) .checkout-card {
@@ -1735,9 +1735,9 @@ h1 {
   box-shadow: var(--shadow-sm);
 }
 
-/* Page backdrops. Orchid and Lagoon get a dot grid in the top corner;
+/* Page backdrops. Cobalt and Lagoon get a dot grid in the top corner;
  * Saffron a soft wash. */
-:is(:root[data-design="orchid"], :root:not([data-design]), :root[data-design="lagoon"]):not([data-costume="halloween"]) body::before {
+:is(:root[data-design="cobalt"], :root:not([data-design]), :root[data-design="lagoon"]):not([data-costume="halloween"]) body::before {
   content: "";
   position: fixed;
   top: 0;

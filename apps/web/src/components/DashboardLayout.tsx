@@ -90,7 +90,7 @@ export function DashboardLayout() {
       list.push({ id: "new-link", label: "Create a payment link", group: "Actions", icon: icons.plus, keywords: "new invoice", run: () => navigate("/dashboard/payment-links/new") });
     }
     list.push(
-      go("settings", "Settings", "/dashboard/settings", icons.settings, "appearance design theme layout compact orchid lagoon saffron"),
+      go("settings", "Settings", "/dashboard/settings", icons.settings, "appearance design theme layout compact cobalt lagoon saffron"),
       {
         id: "theme",
         label: theme === "night" ? "Switch to light mode" : "Switch to dark mode",
