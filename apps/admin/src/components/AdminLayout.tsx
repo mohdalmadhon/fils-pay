@@ -44,9 +44,10 @@ export function AdminLayout() {
       go("settlement", "Settlement ops", "/settlement", icons.settlement, "batches payouts"),
       go("imports", "Import adjustments", "/adjustment-imports", icons.imports, "csv upload"),
       go("webhooks", "Webhook replay", "/webhooks", icons.replay, "events deliveries"),
+      go("settings", "Settings", "/settings", icons.settings, "appearance design theme layout compact carnival blush slate"),
       {
         id: "theme",
-        label: theme === "night" ? "Switch to light theme" : "Switch to night theme",
+        label: theme === "night" ? "Switch to light mode" : "Switch to dark mode",
         group: "Actions",
         icon: theme === "night" ? icons.sun : icons.moon,
         keywords: "theme dark light mode",
@@ -171,6 +172,11 @@ export function AdminLayout() {
             {icons.replay}
             Webhook replay
           </NavLink>
+          <span className="admin-nav-label">You</span>
+          <NavLink to="/settings">
+            {icons.settings}
+            Settings
+          </NavLink>
         </nav>
 
         <div className="admin-sidebar-foot">
@@ -181,7 +187,7 @@ export function AdminLayout() {
             </button>
             <button type="button" aria-pressed={theme === "night"} onClick={() => setTheme("night")}>
               {icons.moon}
-              Night
+              Dark
             </button>
           </div>
           <button type="button" className="admin-signout" onClick={() => void handleSignOut()}>

@@ -8,6 +8,7 @@ import { MerchantListPage } from "./pages/merchants/MerchantListPage.js";
 import { MerchantDetailPage } from "./pages/merchants/MerchantDetailPage.js";
 import { SettlementPage } from "./pages/settlement/SettlementPage.js";
 import { WebhookReplayPage } from "./pages/webhooks/WebhookReplayPage.js";
+import { SettingsPage } from "./pages/settings/SettingsPage.js";
 import { NotFoundPage, RouteErrorPage } from "./pages/errors/ErrorPages.js";
 
 // MK: /v2 routes live behind VITE_ADMIN_V2 — see the admin v2 doc
@@ -32,6 +33,8 @@ export const router = createBrowserRouter([
       { path: "/adjustment-imports", element: <AdjustmentImportPage /> },
       { path: "/webhooks", element: <WebhookReplayPage /> },
       { path: "/webhooks/:merchantId", element: <WebhookReplayPage /> },
+      // Every staff role can change how the console looks for them.
+      { path: "/settings", element: <SettingsPage /> },
     ],
   },
   { path: "*", element: <NotFoundPage /> },
