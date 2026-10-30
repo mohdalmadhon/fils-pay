@@ -37,6 +37,12 @@ export async function createPendingAdminSession(
   const tokenHash = sha256Hex(rawToken);
   const expiresAt = new Date(Date.now() + params.ttlMinutes * 60_000);
 
+  // One pending sign-in per admin (docs/defence/01).
+  await client.query(
+    `UPDATE admin_sessions SET revoked_at = now()
+      WHERE admin_user_id = $1 AND authenticated = false AND revoked_at IS NULL`,
+    [params.adminUserId],
+  );
   const result = await client.query<{ id: string }>(
     `INSERT INTO admin_sessions (admin_user_id, token_hash, otp_challenge_id, authenticated, expires_at, ip_address, user_agent)
      VALUES ($1, $2, $3, false, $4, $5, $6)

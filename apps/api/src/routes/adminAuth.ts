@@ -3,7 +3,7 @@ import { verifyPassword } from "../adminAuth/passwords.js";
 import { issueAdminChallenge } from "../adminAuth/otp.js";
 import { attemptOtp, consumeOtpChallenge } from "../auth/otp.js";
 import { sendAdminOtpCode } from "../adminAuth/notifier.js";
-import { adminAccountKey, recordAuthFailure, releaseLoginAttempt, reserveLoginAttempt } from "../auth/throttle.js";
+import { adminAccountKey, assertUnderLoginLimit, recordAuthFailure, releaseLoginAttempt, reserveLoginAttempt } from "../auth/throttle.js";
 import { requireAdminSession } from "../adminAuth/middleware.js";
 import {
   createPendingAdminSession,
@@ -139,6 +139,13 @@ export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
     // Same atomic attempt claim as merchant login (see attemptOtp). The old
     // comment here said this path read the challenge FOR UPDATE; it didn't,
     // so parallel guesses beat the attempt limit on admin logins too.
+    // The account's login limit covers code guesses too (docs/defence/01).
+    const who = await app.db.query<{ email: string }>(`SELECT email FROM admin_users WHERE id = $1`, [pending.adminUserId]);
+    const accountKey = who.rows[0] ? adminAccountKey(who.rows[0].email) : null;
+    if (accountKey) {
+      await assertUnderLoginLimit(app.db, app.config, { accountKey, ipAddress: request.ip });
+    }
+
     const attempt = await attemptOtp(app.db, "admin_otp_challenges", pending.otpChallengeId, code);
     if (attempt.outcome === "expired") {
       throw new GoneError("otp_expired");
@@ -148,12 +155,11 @@ export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
       throw new TooManyRequestsError("too_many_attempts");
     }
     if (attempt.outcome === "invalid_code") {
-      const who = await app.db.query<{ email: string }>(`SELECT email FROM admin_users WHERE id = $1`, [pending.adminUserId]);
-      if (who.rows[0]) {
+      if (accountKey) {
         await recordAuthFailure(app.db, app.config, {
           plane: "admin",
           kind: "otp",
-          accountKey: adminAccountKey(who.rows[0].email),
+          accountKey,
           ipAddress: request.ip,
         });
       }

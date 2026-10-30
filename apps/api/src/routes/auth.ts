@@ -3,7 +3,14 @@ import { verifyPassword } from "../auth/passwords.js";
 import { attemptOtp, consumeOtpChallenge, issueChallenge } from "../auth/otp.js";
 import { requireSession } from "../auth/middleware.js";
 import { sendOtpCode } from "../auth/notifier.js";
-import { canonicalMerchantId, merchantAccountKey, recordAuthFailure, releaseLoginAttempt, reserveLoginAttempt } from "../auth/throttle.js";
+import {
+  assertUnderLoginLimit,
+  canonicalMerchantId,
+  merchantAccountKey,
+  recordAuthFailure,
+  releaseLoginAttempt,
+  reserveLoginAttempt,
+} from "../auth/throttle.js";
 import { lookupImpersonationGrant } from "../admin/impersonation.js";
 import {
   createPendingSession,
@@ -154,6 +161,18 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         throw new UnauthorizedError("no_pending_session");
       }
 
+      // The account's login limit covers code guesses too: over it, no
+      // pending sign-in accepts a code, not even the right one.
+      // docs/defence/01.
+      const who = await app.db.query<{ merchant_id: string; email: string }>(
+        `SELECT merchant_id, email FROM merchant_users WHERE id = $1`,
+        [pending.merchantUserId],
+      );
+      const accountKey = who.rows[0] ? merchantAccountKey(who.rows[0].merchant_id, who.rows[0].email) : null;
+      if (accountKey) {
+        await assertUnderLoginLimit(app.db, app.config, { accountKey, ipAddress: request.ip });
+      }
+
       // One attempt is spent before the code is compared, atomically, so
       // parallel guesses can't all slip under the limit (see attemptOtp).
       const attempt = await attemptOtp(app.db, "otp_challenges", pending.otpChallengeId, code);
@@ -167,15 +186,11 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       if (attempt.outcome === "invalid_code") {
         // Counts toward the account's login limit, so fresh logins can't
         // keep buying new sets of guesses.
-        const who = await app.db.query<{ merchant_id: string; email: string }>(
-          `SELECT merchant_id, email FROM merchant_users WHERE id = $1`,
-          [pending.merchantUserId],
-        );
-        if (who.rows[0]) {
+        if (accountKey) {
           await recordAuthFailure(app.db, app.config, {
             plane: "merchant",
             kind: "otp",
-            accountKey: merchantAccountKey(who.rows[0].merchant_id, who.rows[0].email),
+            accountKey,
             ipAddress: request.ip,
           });
         }

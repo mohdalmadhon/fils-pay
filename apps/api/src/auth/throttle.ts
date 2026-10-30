@@ -86,6 +86,21 @@ export async function reserveLoginAttempt(
   return id;
 }
 
+/**
+ * Throws 429 too_many_login_attempts when the account (or the address) is
+ * over its failure limit, without recording anything. The OTP step calls it
+ * before comparing a code, so a code can't be tried once the account has
+ * hit the limit, whichever pending sign-in it comes through.
+ * docs/defence/01.
+ */
+export async function assertUnderLoginLimit(
+  db: Pool | PoolClient,
+  config: ThrottleConfig,
+  entry: { accountKey: string; ipAddress: string | null },
+): Promise<void> {
+  await countRecentFailures(db, config, entry.accountKey, entry.ipAddress);
+}
+
 export async function releaseLoginAttempt(db: Pool | PoolClient, attemptId: string): Promise<void> {
   await db.query(`DELETE FROM auth_failures WHERE id = $1`, [attemptId]);
 }

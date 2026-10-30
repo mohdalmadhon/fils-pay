@@ -27,6 +27,13 @@ export async function createPendingSession(
   const tokenHash = sha256Hex(rawToken);
   const expiresAt = new Date(Date.now() + params.ttlMinutes * 60_000);
 
+  // One pending sign-in per user: a new one ends the earlier ones, so each
+  // password check buys at most one set of code guesses. docs/defence/01.
+  await client.query(
+    `UPDATE sessions SET revoked_at = now()
+      WHERE merchant_user_id = $1 AND authenticated = false AND revoked_at IS NULL`,
+    [params.merchantUserId],
+  );
   const result = await client.query<{ id: string }>(
     `INSERT INTO sessions (merchant_user_id, token_hash, otp_challenge_id, authenticated, expires_at, ip_address, user_agent)
      VALUES ($1, $2, $3, false, $4, $5, $6)
