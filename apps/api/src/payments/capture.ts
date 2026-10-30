@@ -5,6 +5,7 @@ import { ZERO_FILS, addFils, compareFils, subtractFils, toFils, type Fils } from
 import { enqueueEvent } from "@filspay/events";
 import { withTransaction } from "../db/withTransaction.js";
 import type { AcquirerSimulator } from "../acquirer/types.js";
+import { nextStatusAfterRefund } from "./refundState.js";
 import { claimIdempotencyKey, completeIdempotencyKey, failIdempotencyKey, hashRequest } from "./idempotency.js";
 import { recordTransactionEvent } from "../transactions/events.js";
 import { serializeTransaction, type TransactionRow } from "../transactions/serialize.js";
@@ -70,6 +71,7 @@ interface LockedTransactionRow {
   amount_fils: string | number;
   captured_fils: string | number;
   acquirer_reference: string;
+  refunded_fils: string | number;
   /** The authorization's hold has lapsed (docs/bugs/005). */
   authorization_expired: boolean;
 }
@@ -141,7 +143,7 @@ export async function captureTransactionWithClient(
     // rule for card-not-present) has passed. expire_holds deletes lapsed
     // holds, so with no hold row left the 7 days are counted from the
     // authorization itself. Judged on the database clock.
-    `SELECT id, merchant_id, status, amount_fils, captured_fils, acquirer_reference,
+    `SELECT id, merchant_id, status, amount_fils, captured_fils, acquirer_reference, refunded_fils,
             COALESCE(
               (SELECT max(h.expires_at) FROM holds h WHERE h.transaction_id = t.id),
               t.occurred_at + interval '7 days'
@@ -244,7 +246,15 @@ export async function captureTransactionWithClient(
     ),
   );
   const newCapturedFils = addFils(capturedSoFar, requestedAmount);
-  const newStatus = compareFils(newCapturedFils, amountAuthorized) === 0 ? "captured" : "partially_captured";
+  // Derived from all the money columns, refunds included: capturing the rest
+  // of a partly captured order whose first part was refunded must not
+  // forget that refund and say 'captured'. docs/bugs/006.
+  const fullyCaptured = compareFils(newCapturedFils, amountAuthorized) === 0;
+  const newStatus = nextStatusAfterRefund({
+    amountFils: amountAuthorized,
+    capturedFils: newCapturedFils,
+    refundedTotalFils: toFils(Number(txn.refunded_fils)),
+  });
 
   const updateResult = await client.query<TransactionRow>(
     `UPDATE transactions SET status = $2, captured_fils = $3 WHERE id = $1 RETURNING *`,
@@ -276,7 +286,7 @@ export async function captureTransactionWithClient(
   await applyPayableCacheDelta(client, input.merchantId, requestedAmount - feeFils);
 
   // Hold lifecycle: released exactly when nothing remains outstanding.
-  if (newStatus === "captured") {
+  if (fullyCaptured) {
     await client.query(`UPDATE holds SET status = 'released' WHERE transaction_id = $1 AND status = 'active'`, [
       txn.id,
     ]);
@@ -297,7 +307,7 @@ export async function captureTransactionWithClient(
 
   await recordTransactionEvent(client, {
     transactionId: txn.id,
-    eventType: newStatus === "captured" ? "captured" : "partially_captured",
+    eventType: fullyCaptured ? "captured" : "partially_captured",
     amountFils: requestedAmount,
     actor: input.actor,
     metadata: { feeFils, negotiatedDiscountBps: merchant.negotiated_discount_bps, chargedMdrBps: Math.max(0, effectiveMdrBps - volumeTierBonusBps), acquirerReference: acquirerResult.acquirerReference },
