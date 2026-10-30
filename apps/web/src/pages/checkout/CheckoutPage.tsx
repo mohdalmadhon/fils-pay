@@ -182,6 +182,14 @@ export function CheckoutPage() {
       </CheckoutOutcome>
     );
   }
+  if (link.status === "unavailable") {
+    return (
+      <CheckoutOutcome scene="locked" title="This link can't take payments right now">
+        {link.merchantDisplayName} can't accept payments at the moment. No payment was taken. Contact them to pay
+        another way.
+      </CheckoutOutcome>
+    );
+  }
   if (link.status === "processing") {
     return (
       <CheckoutOutcome scene="waiting" title="A payment is in progress">
