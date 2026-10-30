@@ -9,7 +9,8 @@ import { getPublicPaymentLink } from "../paymentLinks/read.js";
 import { payPaymentLink } from "../paymentLinks/pay.js";
 import { cancelPaymentLink } from "../paymentLinks/cancel.js";
 import { listPaymentLinks } from "../paymentLinks/query.js";
-import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../lib/errors.js";
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, TooManyRequestsError } from "../lib/errors.js";
+import { createAttemptLimiter } from "../lib/attemptLimiter.js";
 import { parseCardInput } from "../lib/paymentInput.js";
 import { canonicalUuid } from "../lib/uuid.js";
 import type { SimulatedCardInput } from "../acquirer/types.js";
@@ -150,6 +151,15 @@ export async function paymentLinkMerchantRoutes(app: FastifyInstance): Promise<v
  * prefix '/v1/payment-links'.
  */
 export async function paymentLinkPublicRoutes(app: FastifyInstance): Promise<void> {
+  // The pay route is public, so without a limit one link was an oracle for
+  // testing stolen card numbers: 80 different cards in 0.8 s, each answered
+  // approved or declined. A buyer who mistypes needs a few tries, not
+  // dozens. docs/defence/03.
+  const payAttempts = createAttemptLimiter({
+    max: app.config.paymentLinkMaxAttempts,
+    windowMs: app.config.paymentLinkAttemptWindowMinutes * 60_000,
+  });
+
   app.get<{ Params: TokenParams }>("/:token", async (request) => {
     const link = await getPublicPaymentLink(
       app.db,
@@ -165,12 +175,20 @@ export async function paymentLinkPublicRoutes(app: FastifyInstance): Promise<voi
   app.post<{ Params: TokenParams; Body: PayPaymentLinkBody }>("/:token/pay", async (request, reply) => {
     const idempotencyKey = getIdempotencyKey(request);
     const card = parseCardInput(request.body?.card);
+    const token = request.params.token;
+    if (!payAttempts.tryAttempt(token)) {
+      reply.header("retry-after", String(payAttempts.retryAfterSeconds(token)));
+      throw new TooManyRequestsError(
+        "too_many_payment_attempts",
+        "Too many card attempts on this payment link. Try again later or contact the business.",
+      );
+    }
 
     const result = await payPaymentLink(
       app.db,
       app.acquirer,
       { paymentLinkReservationTimeoutSeconds: app.config.paymentLinkReservationTimeoutSeconds },
-      { token: request.params.token, card, idempotencyKey },
+      { token, card, idempotencyKey },
     );
     reply.code(result.statusCode).send(result.body);
   });

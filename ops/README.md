@@ -137,6 +137,7 @@ docker compose -f ops/docker-compose.yml up
 | api | `OTP_DEV_EXPOSE` | off unless set to `true`; refused when `NODE_ENV=production` |
 | api | `OTP_LOG_FILE` | optional private server file for temporary operator OTP delivery; see `docs/fixes/operator-otp-file.md` |
 | api | `OTP_DEMO_DISPLAY` | default false; only the exact value `true` turns it on: demo-only OTP display on both login screens. In production it also needs `OTP_SHOW_IN_PRODUCTION=true` or the api refuses to start, and it warns at boot (docs/defence/02). Does not enable development logging |
+| api | `PAYMENT_LINK_MAX_ATTEMPTS`, `PAYMENT_LINK_ATTEMPT_WINDOW_MINUTES` | default 10 card attempts per payment link per 10 minutes, then `429 too_many_payment_attempts` with `Retry-After`; `0` turns the limit off (docs/defence/03) |
 | settlement | `DATABASE_URL` | `environment:` |
 | reporting | `DATABASE_URL` | `environment:`; runs `worker` by default |
 

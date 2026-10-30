@@ -119,6 +119,10 @@ export interface Config {
    *  attempt) before it self-expires back to claimable, closing the gap
    *  between claim and finalize without a sweep job. */
   paymentLinkReservationTimeoutSeconds: number;
+  /** Card attempts one payment link accepts per window; 0 turns the limit
+   *  off. docs/defence/03. */
+  paymentLinkMaxAttempts: number;
+  paymentLinkAttemptWindowMinutes: number;
 
   /** Base64-encoded 32 raw bytes, the single application-level AES-256-GCM
    *  key `webhooks/secretCrypto.ts` uses to encrypt/decrypt
@@ -402,6 +406,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 
     checkoutBaseUrl: env.CHECKOUT_BASE_URL ?? "http://localhost:5173",
     paymentLinkReservationTimeoutSeconds: parseIntEnv(env.PAYMENT_LINK_RESERVATION_TIMEOUT_SECONDS, 60),
+    paymentLinkMaxAttempts: parseIntEnv(env.PAYMENT_LINK_MAX_ATTEMPTS, 10),
+    paymentLinkAttemptWindowMinutes: parseIntEnv(env.PAYMENT_LINK_ATTEMPT_WINDOW_MINUTES, 10),
 
     // No built-in fallback: a key that ships in the repo protects nothing.
     webhookSecretEncryptionKey: parseWebhookSecretEncryptionKey(env.WEBHOOK_SECRET_ENCRYPTION_KEY),
