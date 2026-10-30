@@ -49,6 +49,7 @@ export async function runMigrations(
   await bootstrapSchemaMigrationsTable(client);
   const applied = await getAppliedMigrations(client);
   const files = listMigrationFiles(dir);
+  await verifyAppliedChecksums(client, dir, files, applied, log);
 
   let appliedCount = 0;
   for (const filename of files) {
@@ -101,9 +102,60 @@ async function bootstrapSchemaMigrationsTable(client: Client): Promise<void> {
   await client.query(`ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS checksum TEXT`);
 }
 
-async function getAppliedMigrations(client: Client): Promise<Set<string>> {
-  const result = await client.query<{ filename: string }>("SELECT filename FROM schema_migrations");
-  return new Set(result.rows.map((row) => row.filename));
+async function getAppliedMigrations(client: Client): Promise<Map<string, string | null>> {
+  const result = await client.query<{ filename: string; checksum: string | null }>(
+    "SELECT filename, checksum FROM schema_migrations",
+  );
+  return new Map(result.rows.map((row) => [row.filename, row.checksum]));
+}
+
+/**
+ * Before applying anything, compares every applied file still on disk with
+ * the checksum recorded for it. A mismatch means the file was edited after
+ * it ran, so this database and a new one built from the same files would
+ * differ; the runner stops and names the files. Rows from before checksums
+ * existed (checksum NULL) adopt the current file's checksum, once.
+ *
+ * MIGRATE_ACCEPT_CHANGED=<file>[,<file>...] accepts a reviewed change
+ * (a comment fix, say) and records the new checksum. See docs/RUNBOOK.md.
+ */
+async function verifyAppliedChecksums(
+  client: Client,
+  dir: string,
+  files: string[],
+  applied: Map<string, string | null>,
+  log: (line: string) => void,
+): Promise<void> {
+  const accepted = new Set(
+    (process.env.MIGRATE_ACCEPT_CHANGED ?? "")
+      .split(",")
+      .map((name) => name.trim())
+      .filter(Boolean),
+  );
+  const changed: string[] = [];
+  for (const filename of files) {
+    if (!applied.has(filename)) continue;
+    const recorded = applied.get(filename) ?? null;
+    const current = migrationChecksum(readFileSync(join(dir, filename), "utf8"));
+    if (recorded === current) continue;
+    if (recorded === null) {
+      await client.query("UPDATE schema_migrations SET checksum = $2 WHERE filename = $1", [filename, current]);
+      log(`RECORD ${filename}  (checksum recorded for a migration applied before checksums)`);
+    } else if (accepted.has(filename)) {
+      await client.query("UPDATE schema_migrations SET checksum = $2 WHERE filename = $1", [filename, current]);
+      log(`ACCEPT ${filename}  (changed after it was applied; accepted by MIGRATE_ACCEPT_CHANGED)`);
+    } else {
+      changed.push(filename);
+    }
+  }
+  if (changed.length > 0) {
+    throw new Error(
+      `migrate: ${changed.join(", ")} changed after it was applied. ` +
+        "Put the change in a new migration and restore the file (git checkout). " +
+        "If the edit is reviewed and harmless (a comment, say), rerun with " +
+        `MIGRATE_ACCEPT_CHANGED=${changed.join(",")}. Nothing was applied.`,
+    );
+  }
 }
 
 // FH: numbering gaps (0039, 0041, ...) make this fail on a fresh DB?

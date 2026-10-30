@@ -13,7 +13,7 @@
     "migrate": "tsx db/migrate.ts",
     "seed": "tsx db/seed/index.ts",
     "audit:prod": "npm audit --omit=dev --audit-level=moderate",
-    "test:db": "tsx --test db/migrate.integration.test.ts db/seed/guard.test.ts"
+    "test:db": "tsx --test db/migrate.integration.test.ts db/migrateChecksum.test.ts db/seed/guard.test.ts"
   },
   "devDependencies": {
     "@types/node": "^24.5.2",

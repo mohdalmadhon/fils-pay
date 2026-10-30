@@ -57,6 +57,15 @@ test("an applied migration that changes afterwards stops the runner; line ending
     await assert.rejects(runMigrations(client, dir, quiet), /0001_a\.sql.*changed/);
     const c = await client.query(`SELECT to_regclass('c') AS t`);
     assert.equal(c.rows[0].t, null, "nothing new was applied once the change was found");
+
+    // A reviewed change can be accepted by name; the new checksum is kept.
+    process.env.MIGRATE_ACCEPT_CHANGED = "0001_a.sql";
+    try {
+      assert.equal((await runMigrations(client, dir, quiet)).applied, 1);
+    } finally {
+      delete process.env.MIGRATE_ACCEPT_CHANGED;
+    }
+    assert.equal((await runMigrations(client, dir, quiet)).applied, 0, "accepted once, no flag needed after");
   } finally {
     await client.end();
     await admin.query(`DROP DATABASE IF EXISTS ${scratch} WITH (FORCE)`);
