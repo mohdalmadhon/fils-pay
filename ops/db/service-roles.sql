@@ -61,6 +61,9 @@ GRANT UPDATE ON merchant_split_children TO filspay_settlement;
 GRANT SELECT ON outbox_events, transactions, transaction_events, settlement_batches TO filspay_reporting;
 GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE ON merchant_daily_volume, merchant_payout_trends, reporting_outbox_cursor
   TO filspay_reporting;
+-- Which outbox events each consumer has applied (0081, audit 10 on main):
+-- the consumer checks, records and, on a cursor reset, clears them.
+GRANT SELECT, INSERT, DELETE ON reporting_processed_events TO filspay_reporting;
 
 -- New tables created later by the owner: the api gets DML by default; give
 -- settlement and reporting what they need explicitly, here.
