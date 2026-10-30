@@ -25,3 +25,16 @@ test(".gitignore covers .env.* variants", () => {
     .filter(Boolean);
   assert.deepEqual(ignored.sort(), ["apps/api/.env.production", "ops/.env.docker"]);
 });
+
+test("no Math.random() in API or reporting code that could feed a secret", async () => {
+  // Allowed: the webhook retry jitter default, which only spreads retries.
+  const allowed = new Set(["apps/api/src/webhooks/dispatcher.ts"]);
+  const offenders: string[] = [];
+  const { readFileSync } = await import("node:fs");
+  for (const path of tracked) {
+    if (!/^apps\/(api|reporting)\/src\/.*\.ts$/.test(path) || path.endsWith(".test.ts") || allowed.has(path)) continue;
+    const source = readFileSync(path, "utf8").replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+    if (/Math\.random\s*\(/.test(source)) offenders.push(path);
+  }
+  assert.deepEqual(offenders, [], "use lib/random.ts (node:crypto) instead");
+});
