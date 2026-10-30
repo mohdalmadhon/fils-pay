@@ -31,7 +31,10 @@ blocked.addSubnet("240.0.0.0", 4, "ipv4"); // reserved, broadcast
 // IPv6
 blocked.addAddress("::", "ipv6"); // unspecified
 blocked.addAddress("::1", "ipv6"); // loopback
+blocked.addSubnet("::", 96, "ipv6"); // IPv4-compatible (deprecated; ::7f00:1 is 127.0.0.1)
 blocked.addSubnet("64:ff9b::", 96, "ipv6"); // NAT64 (embeds IPv4)
+blocked.addSubnet("2002::", 16, "ipv6"); // 6to4 (deprecated; 2002:7f00:1:: embeds 127.0.0.1)
+blocked.addSubnet("2001::", 32, "ipv6"); // Teredo (embeds an IPv4 address)
 blocked.addSubnet("100::", 64, "ipv6"); // discard
 blocked.addSubnet("2001:db8::", 32, "ipv6"); // documentation
 blocked.addSubnet("fc00::", 7, "ipv6"); // unique local
