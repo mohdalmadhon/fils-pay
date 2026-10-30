@@ -10,6 +10,10 @@
  *    (10,021 fils at 250 bps with a 10 % discount: 226 vs 225);
  *  - payment-link captures got no discount at all.
  *
+ * After merging main (whose checkout also runs a per-event discount
+ * adjustment), the payment-link test also checks that no second discount
+ * is posted.
+ *
  * Requires DATABASE_URL pointing at a real, migrated Postgres.
  */
 import assert from "node:assert/strict";
@@ -117,5 +121,22 @@ test("a paid payment link charges the same discounted fee", async () => {
   });
   assert.equal(paid.statusCode, 200, paid.body);
   const transactionId = (paid.json() as { transactionId: string }).transactionId;
-  assert.equal(await netFeeCharged(transactionId), await expectedFee());
+  const fee = await expectedFee();
+  assert.equal(await netFeeCharged(transactionId), fee);
+  // Checkout also runs main's per-event discount adjustment
+  // (discountAdjustment.ts). Capture already charged the discounted fee, so
+  // it must post no rebate and only mark the event as adjusted (0 fils):
+  // the discount is never taken twice.
+  const rebates = await pool.query(
+    `SELECT 1 FROM ledger_entries WHERE transaction_id = $1 AND description = 'capture: negotiated discount adjustment'`,
+    [transactionId],
+  );
+  assert.equal(rebates.rowCount, 0);
+  const event = await pool.query<{ applied: string; fee: string }>(
+    `SELECT metadata->>'negotiatedDiscountAppliedFils' AS applied, metadata->>'feeFils' AS fee
+       FROM transaction_events WHERE transaction_id = $1 AND event_type = 'captured'`,
+    [transactionId],
+  );
+  assert.equal(event.rows[0]?.applied, "0");
+  assert.equal(Number(event.rows[0]?.fee), fee);
 });
