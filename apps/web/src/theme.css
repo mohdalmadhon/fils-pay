@@ -1,7 +1,7 @@
 /* FilsPay design system: "Ledger".
  *
  * FilsPay keeps the books for Bahraini merchants down to the fils, so the
- * interface is set like a well-kept ledger: warm paper neutrals, ink-black
+ * interface is set like a well-kept ledger: warm parchment neutrals, ink-black
  * actions, tabular mono numerals, hairline rules, and a single saffron accent
  * that marks where you are and what moved. Colour is reserved for meaning
  * (status, focus, the current page). Three looks share every component:
@@ -16,34 +16,36 @@
 :root {
   color-scheme: light;
 
-  /* Neutrals: warm paper, not cold grey. */
-  --c-bg: #f6f5f2;
-  --c-surface: #ffffff;
-  --c-surface-2: #fafaf8;
-  --c-surface-3: #f1f0ec;
-  --c-line: #e6e4df;
-  --c-line-2: #d5d3cc;
-  --c-ink: #18181b;
-  --c-ink-2: #46464d;
-  --c-ink-3: #6b6a71; /* 4.69:1 on the darkest light surface (was #75747b, 4.06) */
-  --c-ink-4: #a3a2a8;
+  /* Neutrals: warm parchment, not cold grey and never pure white, so the
+   * page doesn't glare. Text colours are all at least 5:1 on the darkest
+   * surface. */
+  --c-bg: #e9e5db;
+  --c-surface: #f3f0e8;
+  --c-surface-2: #eeeae1;
+  --c-surface-3: #e2ddd1;
+  --c-line: #d8d1c2;
+  --c-line-2: #c4bba8;
+  --c-ink: #1c1a17;
+  --c-ink-2: #48433a;
+  --c-ink-3: #5f594e; /* 5.12:1 on surface-3 */
+  --c-ink-4: #9b9384;
 
   /* Actions are ink; the accent is used sparingly. */
-  --c-primary: #18181b;
-  --c-primary-hover: #34343a;
-  --c-on-primary: #ffffff;
+  --c-primary: #1c1a17;
+  --c-primary-hover: #38342d;
+  --c-on-primary: #f3f0e8;
   --c-accent: #d97a1e;
-  --c-accent-ink: #9a520e;
-  --c-accent-soft: #fbf1e6;
+  --c-accent-ink: #8a4a0c;
+  --c-accent-soft: #f0dfc8;
 
   /* Meaning */
-  --c-good: #1d7a4c;
-  --c-good-soft: #e9f5ee;
-  --c-warn: #966000;
-  --c-warn-soft: #fcf3df;
-  --c-danger: #c0362c;
-  --c-danger-soft: #fcecea;
-  --c-neutral-soft: #f0efeb;
+  --c-good: #17683f;
+  --c-good-soft: #dcebdf;
+  --c-warn: #7f5200;
+  --c-warn-soft: #f1e5c8;
+  --c-danger: #a92d24;
+  --c-danger-soft: #f2dcd6;
+  --c-neutral-soft: #e3ded2;
 
   --c-focus: rgba(217, 122, 30, 0.45);
   --c-scrim: rgba(24, 24, 27, 0.4);
@@ -77,9 +79,9 @@
   --r-2: 6px;
   --r-3: 8px;
   --r-4: 12px;
-  --shadow-xs: 0 1px 1px rgba(24, 24, 27, 0.04);
-  --shadow-sm: 0 1px 2px rgba(24, 24, 27, 0.06), 0 1px 1px rgba(24, 24, 27, 0.03);
-  --shadow-pop: 0 16px 40px -12px rgba(24, 24, 27, 0.28), 0 2px 6px rgba(24, 24, 27, 0.06);
+  --shadow-xs: 0 1px 1px rgba(60, 45, 20, 0.05);
+  --shadow-sm: 0 1px 2px rgba(60, 45, 20, 0.08), 0 1px 1px rgba(60, 45, 20, 0.04);
+  --shadow-pop: 0 16px 40px -12px rgba(60, 45, 20, 0.3), 0 2px 6px rgba(60, 45, 20, 0.08);
   --ring: 0 0 0 3px var(--c-focus);
 
   /* Motion */
