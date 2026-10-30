@@ -61,3 +61,38 @@ jobs:
       - run: npm run seed
       # Workspaces in sequence: they share one database.
       - run: npm test
+
+  settlement:
+    name: Settlement (Go vet and tests, against Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: filspay_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s
+          --health-timeout 3s --health-retries 30
+    env:
+      DATABASE_URL: postgres://postgres:ci@localhost:5432/filspay_ci
+      WEBHOOK_SECRET_ENCRYPTION_KEY: Y1ZTGTcYbe30GZJebys9w7T3OYZNKewuOH3SUCEdRQk=
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # The schema comes from the same migrations the API uses.
+      - run: npm ci --no-audit --no-fund
+      - run: npm run migrate
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/settlement/go.mod
+          cache-dependency-path: apps/settlement/go.sum
+      - name: go vet and go test
+        working-directory: apps/settlement
+        run: |
+          go vet ./...
+          go test ./...
