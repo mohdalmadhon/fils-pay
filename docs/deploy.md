@@ -21,9 +21,10 @@ it at the IP and deploy with `SITE_HOST=pay.example.com OPS_HOST=ops.example.com
 **Sign-in codes are shown on screen.** The one-time sign-in code has no
 delivery channel yet (no email sending exists), so for the hosted demo the
 sign-in pages show it with a "Use it" button, as in development. Production
-allows that only with two switches set together (`OTP_DEV_EXPOSE` and
+allows that only with two switches set together (`OTP_DEMO_DISPLAY` and
 `OTP_SHOW_IN_PRODUCTION`, both `true`), and the api warns about it at every
-boot. While it is on, **the password alone signs in**, so:
+boot. The code is shown on the page only; in production it is never written
+to the container logs (docs/defence/05). While it is on, **the password alone signs in**, so:
 
 - the demo data's passwords, which are published in this repo, are
   replaced on every deploy with random ones, **one per account** (so handing

@@ -11,14 +11,17 @@ import { deliverOtpToFile } from "../auth/otpFile.js";
 // MK: console only until the SMS gateway contract lands. 'temporary' — Dec 2025
 export function sendAdminOtpCode(
   logger: MinimalLogger,
-  config: Pick<Config, "otpDevExpose" | "otpLogFile">,
+  config: Pick<Config, "otpDevExpose" | "otpLogFile"> & { nodeEnv?: Config["nodeEnv"] },
   recipient: { adminUserId: string; email: string },
   code: string,
 ): void {
   if (config.otpLogFile) {
     deliverOtpToFile(config.otpLogFile, "admin", recipient.adminUserId, code);
     logger.info({ adminUserId: recipient.adminUserId, channel: "admin_otp" }, "admin otp delivered to operator file");
-  } else if (!config.otpDevExpose) {
+  } else if (!config.otpDevExpose || config.nodeEnv === "production") {
+    // Never the code in a production log, even on the hosted demo where the
+    // code is shown on screen: logs are kept and shipped, and whoever reads
+    // them could finish a sign-in. docs/defence/05.
     logger.info({ adminUserId: recipient.adminUserId, channel: "admin_otp" }, "admin otp code generated");
   } else {
     logger.info(
