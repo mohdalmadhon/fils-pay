@@ -25,7 +25,7 @@ authorization is also forbidden by the card rules (PCI DSS 3.3.1).
 |---|---|---|
 | 1 | `test: the authorize idempotency hash can't reveal the card` | Fails before the fix. |
 | 2 | `payments: fingerprint authorize requests without the card number or CVV` | `authorizeRequestHash`: amount, reference, expiry and **last four digits** only. |
-| 3 | `db: redact authorize request hashes written before the fingerprint change` | Migration `0079` overwrites old authorize hashes with `redacted:0079`. |
+| 3 | `db: redact authorize request hashes written before the fingerprint change` | Migration `0079` overwrites old authorize hashes with `redacted:0079` (all statuses, after [18](18-review-follow-ups.md)). |
 | 4 | `payments: hashRequest refuses card numbers, CVVs and passwords` | Throws on `pan`, `cvv`, `cvc`, `cardNumber`, `password` at any depth, so this can't return through another endpoint. |
 | 5 | `docs: cyper 10, card data in the idempotency hash` | This file. |
 

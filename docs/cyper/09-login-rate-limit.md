@@ -48,7 +48,7 @@ How it works:
 |---|---|---|
 | `LOGIN_MAX_FAILURES` | 10 | Failures per account in the window before 429. |
 | `LOGIN_FAILURE_WINDOW_MINUTES` | 15 | Window length. |
-| `LOGIN_MAX_FAILURES_PER_IP` | 100 in production, 0 (off) otherwise | Failures per client IP. Needs `TRUST_PROXY` behind a load balancer. |
+| `LOGIN_MAX_FAILURES_PER_IP` | 0 (off) | Failures per client IP. Turn on only with `TRUST_PROXY` set behind a load balancer. (Was 100 in production; changed in [18](18-review-follow-ups.md).) |
 | `TRUST_PROXY` | off | `true`, or a comma list of proxy addresses/CIDRs (preferred). |
 
 ## Verified
@@ -57,9 +57,16 @@ How it works:
 `admin.test.ts`, `adminRoleChecks.test.ts` and `loginTenantBinding.test.ts`
 pass.
 
+## Hardened after review
+
+An independent review found two ways around the first version: other
+spellings of the merchant UUID each got their own budget, and parallel
+requests all passed the count before any failure was written. Both are fixed
+in [18](18-review-follow-ups.md).
+
 ## Trade-off
 
 A per-account limit lets someone lock a known account out for 15 minutes by
-failing on purpose. That is the usual trade-off. The per-IP limit and the short
+failing on purpose. That is the usual trade-off. The optional per-IP limit and the short
 window keep it bounded. Alerting on many `auth_failures` for one account is a
 good next step.

@@ -34,7 +34,7 @@
 |---|---|---|
 | 1 | `test: KYC uploads check bytes not names, bound image decoding, take one file` | 3 of 4 cases fail before the fix. |
 | 2 | `kyc: enforce PDF-only document types on the file's bytes` | `detected === "pdf"` is required; the filename check stays as well. |
-| 3 | `kyc: bound image decoding and leave no files behind on failure` | Header read first; over 25 MP is `422 image_too_large`. Decode uses `limitInputPixels` and `failOn`; unreadable images are `422 invalid_image`. Files are written after the checks and removed if the insert fails. |
+| 3 | `kyc: bound image decoding and leave no files behind on failure` | Header read first; over 25 MP is `422 image_too_large`. Decode uses `limitInputPixels` and `failOn`; unreadable images are `422 invalid_image`. Files are written only after the checks. (Removing them after a failed insert was dropped in [18](18-review-follow-ups.md): it could delete a file a concurrent upload of the same content still needs.) |
 | 4 | `kyc: one file per upload, bounded form parts, safe download filenames` | Second file is `400 one_file_only`; parser limits files, fields and parts. `contentDisposition()` sends an ASCII fallback plus RFC 5987 `filename*`. |
 | 5 | `docs: cyper 12, KYC uploads` | This file. |
 
