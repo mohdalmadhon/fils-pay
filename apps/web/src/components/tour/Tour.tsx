@@ -72,9 +72,12 @@ export function Tour({ steps, onClose }: TourProps) {
     };
   }, [layout]);
 
+  // Focus Next once the card is placed: until then it is hidden and can't
+  // take focus.
+  const placed = placement !== null;
   useEffect(() => {
-    primaryRef.current?.focus();
-  }, [index]);
+    if (placed) primaryRef.current?.focus();
+  }, [index, placed]);
 
   useEffect(() => {
     const opener = openerRef.current;

@@ -35,3 +35,7 @@ test("a huge element: the card floats at the bottom of the window", () => {
   const p = placeCard({ top: 0, left: 0, width: 1280, height: 800 }, card, desktop);
   assert.deepEqual(p, { top: 608, left: 480, side: "center" });
 });
+
+test("an element in a bar along the top gets the card below it, not beside it", () => {
+  assert.deepEqual(placeCard({ top: 8, left: 260, width: 520, height: 46 }, card, desktop), { top: 68, left: 260, side: "bottom" });
+});

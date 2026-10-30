@@ -1543,3 +1543,172 @@
     transition: none;
   }
 }
+
+/* Take a tour ---------------------------------------------------------------
+ * components/tour/Tour.tsx. Above everything (the drawer, the palette's
+ * scrim), the page dimmed except the outlined element, and a card in the
+ * brutalist kit. */
+.fp-tour {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+/* Catches clicks so the page can't be used behind the tour. Without a
+ * spotlight it also does the dimming. */
+.fp-tour-shade {
+  position: fixed;
+  inset: 0;
+  background: rgb(5 10 25 / 0.55);
+}
+
+.fp-tour-shade[data-spot] {
+  background: transparent;
+}
+
+/* The outlined element: a hole in the dimming, drawn with a huge shadow. */
+:root .fp-tour-spot {
+  position: fixed;
+  border: 3px solid var(--c-action);
+  border-radius: var(--r-3);
+  box-shadow: 0 0 0 9999px rgb(5 10 25 / 0.55);
+  pointer-events: none;
+  transition: top var(--dur) var(--ease), left var(--dur) var(--ease), width var(--dur) var(--ease),
+    height var(--dur) var(--ease);
+}
+
+:root .fp-tour-card {
+  position: fixed;
+  width: min(320px, calc(100vw - 24px));
+  padding: var(--sp-4);
+  color: var(--c-ink);
+  background: var(--c-surface);
+  border: var(--edge);
+  border-radius: var(--r-3);
+  box-shadow: var(--shadow-pop);
+  transition: top var(--dur) var(--ease), left var(--dur) var(--ease);
+}
+
+.fp-tour-progress {
+  margin: 0 0 var(--sp-1);
+  font-family: var(--font-meta);
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-ink-3);
+}
+
+:root .fp-tour-title {
+  margin: 0 0 var(--sp-2);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  line-height: 1.25;
+}
+
+.fp-tour-body {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--c-ink-2);
+}
+
+.fp-tour-dots {
+  display: flex;
+  gap: 5px;
+  margin-bottom: var(--sp-3);
+}
+
+.fp-tour-dots span {
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid var(--c-border);
+  border-radius: 50%;
+}
+
+.fp-tour-dots span[data-on] {
+  background: var(--c-action);
+}
+
+.fp-tour-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+}
+
+.fp-tour-nav {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+:root .fp-tour-actions button {
+  height: 34px;
+  padding: 0 var(--sp-3);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  border-radius: var(--r-2);
+  cursor: pointer;
+}
+
+:root .fp-tour-skip {
+  padding: 0 var(--sp-1);
+  color: var(--c-ink-2);
+  background: transparent;
+  border: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+:root .fp-tour-back {
+  color: var(--c-ink);
+  background: var(--c-surface);
+  border: var(--edge);
+}
+
+:root .fp-tour-back:disabled {
+  color: var(--c-ink-4);
+  border-color: var(--c-line-2);
+  cursor: default;
+}
+
+:root .fp-tour-next {
+  color: var(--c-on-action);
+  background: var(--c-action);
+  border: var(--edge);
+  box-shadow: var(--shadow-xs);
+}
+
+:root .fp-tour-actions button:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* "New" on the Take a tour button until the tour has been taken once. */
+.dash-new-chip {
+  margin-left: auto;
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 18px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-on-action);
+  background: var(--c-action);
+  border: 1.5px solid var(--c-border);
+  border-radius: var(--r-1);
+}
+
+@media (min-width: 901px) {
+  :root[data-layout="topbar"] .dash-take-tour {
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fp-tour-spot,
+  .fp-tour-card {
+    transition: none;
+  }
+}

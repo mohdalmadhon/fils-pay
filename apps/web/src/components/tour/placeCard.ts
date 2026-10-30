@@ -1,6 +1,8 @@
 /**
- * Where the tour's card goes next to the element it points at: to the right
- * if it fits (the sidebar's links), else below, else above, else left, and
+ * Where the tour's card goes next to the element it points at: below an
+ * element in a bar along the top of the window (the top-bar layout), else to
+ * the right if it fits (the sidebar's links), else below, else above, else
+ * left, and
  * always kept inside the window with a margin. Without a target it is
  * centred. Pure, so it is tested without a browser.
  */
@@ -31,11 +33,15 @@ export function placeCard(
   if (!target) {
     return { top: clampTop((viewport.height - card.height) / 2), left: clampLeft((viewport.width - card.width) / 2), side: "center" };
   }
+  const below = target.top + target.height + GAP;
+  const inTopBar = target.top + target.height <= viewport.height * 0.15;
+  if (inTopBar && below + card.height + MARGIN <= viewport.height) {
+    return { top: below, left: clampLeft(target.left), side: "bottom" };
+  }
   const right = target.left + target.width + GAP;
   if (right + card.width + MARGIN <= viewport.width) {
     return { top: clampTop(target.top), left: right, side: "right" };
   }
-  const below = target.top + target.height + GAP;
   if (below + card.height + MARGIN <= viewport.height) {
     return { top: below, left: clampLeft(target.left), side: "bottom" };
   }
