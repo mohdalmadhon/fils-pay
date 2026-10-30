@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { requireRole, requireSession } from "../auth/middleware.js";
 import { createMerchantWithOwner, type SignupInput } from "../onboarding/signup.js";
+import { reserveSignup } from "../onboarding/signupLimits.js";
 import { getBusinessProfile, updateBusinessProfile, type BusinessProfilePatch } from "../onboarding/businessProfile.js";
 import { BadRequestError, ForbiddenError } from "../lib/errors.js";
 
@@ -15,8 +16,10 @@ interface MerchantIdParams {
  * /v1/merchants/:merchantId/business-profile).
  */
 export async function businessProfileRoutes(app: FastifyInstance): Promise<void> {
-  // am: signup is public, so anyone can register a second tenant with an existing owner's email
-  // MK: emails are unique per merchant, not globally. that's by design
+  // Signup is public. Emails are unique per merchant, not globally (one
+  // person may own several merchants), so the limits below, the password
+  // rules and the OTP-at-login (which proves the address) are what stop
+  // abuse. docs/improvements/11.
   app.post<{ Body: Partial<SignupInput> }>("/", async (request, reply) => {
     const body = request.body ?? {};
     if (!body.businessProfile || !body.owner) {
@@ -38,6 +41,7 @@ export async function businessProfileRoutes(app: FastifyInstance): Promise<void>
       throw new BadRequestError("invalid_request", "missing required business profile or owner fields");
     }
 
+    await reserveSignup(app.db, app.config, String(owner.email), request.ip);
     const result = await createMerchantWithOwner(app.db, app.config, body as SignupInput);
     reply.code(201).send({
       merchantId: result.merchantId,

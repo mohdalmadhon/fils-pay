@@ -30,6 +30,11 @@ export interface Config {
    *  on only with TRUST_PROXY set correctly behind a load balancer. */
   loginMaxFailuresPerIp: number;
   loginFailureWindowMinutes: number;
+  /** Merchants one owner email may open per window (onboarding/signupLimits.ts). */
+  signupMaxPerEmail: number;
+  /** Signups per client IP per window; 0 (default) = off. Needs TRUST_PROXY. */
+  signupMaxPerIp: number;
+  signupWindowMinutes: number;
   /** Fastify trustProxy: false (default, request.ip is the socket peer),
    *  true, or a comma list of proxy addresses/CIDRs (preferred over true). Set it to
    *  the load balancer when there is one, or every request.ip (audit rows,
@@ -292,6 +297,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     // one address, and a per-IP limit would lock everyone out at once.
     loginMaxFailuresPerIp: parseIntEnv(env.LOGIN_MAX_FAILURES_PER_IP, 0),
     loginFailureWindowMinutes: parseIntEnv(env.LOGIN_FAILURE_WINDOW_MINUTES, 15),
+    signupMaxPerEmail: parseIntEnv(env.SIGNUP_MAX_PER_EMAIL, 3),
+    signupMaxPerIp: parseIntEnv(env.SIGNUP_MAX_PER_IP, 0),
+    signupWindowMinutes: parseIntEnv(env.SIGNUP_WINDOW_MINUTES, 60),
     trustProxy: parseTrustProxy(env.TRUST_PROXY),
 
     argon2MemoryKib: parseIntEnv(env.ARGON2_MEMORY_KIB, 19_456),
