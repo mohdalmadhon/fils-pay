@@ -1,0 +1,21 @@
+-- Indexes for the two lookups every checkout makes on ledger_entries
+-- (docs/perf/checkout-capacity.md).
+--
+-- entry_group_id: the deferred balance check from 0007
+-- (check_ledger_group_balance) sums a row's entry group at COMMIT, once per
+-- inserted row. With no index each of those sums read the whole ledger, so
+-- a capture's commit (four ledger rows) scanned the table four times, and
+-- got slower with every payment. It ran while the merchant's
+-- merchant_balances row was locked, so it also capped how fast one
+-- merchant's checkouts could go: on one vCPU with ~90,000 ledger rows,
+-- COMMIT averaged 57 ms and checkout topped out near 22 a second.
+--
+-- transaction_id: the negotiated-discount adjustment
+-- (apps/api/src/payments/discountAdjustment.ts) looks up a transaction's
+-- ledger rows three times per checkout, also by full scan.
+--
+-- Plain CREATE INDEX (the runner applies each file in a transaction): it
+-- blocks ledger writes while it builds, a few seconds at this size, so
+-- deploy it while checkout traffic is low.
+CREATE INDEX IF NOT EXISTS idx_ledger_entries_entry_group ON ledger_entries (entry_group_id);
+CREATE INDEX IF NOT EXISTS idx_ledger_entries_transaction ON ledger_entries (transaction_id);

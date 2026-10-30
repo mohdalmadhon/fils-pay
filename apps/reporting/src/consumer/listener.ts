@@ -24,9 +24,22 @@ export function startReportingConsumer(pool: Pool, config: ReportingConfig): Rep
   let running = false;
   let stopped = false;
 
-  const triggerPass = (): void => {
-    if (running || stopped) return;
+  // Passes are spaced at least reportingMinPassGapMs apart. Every captured
+  // payment sends a NOTIFY, and each pass reads the outbox against the
+  // processed-events table, a cost that grows with the outbox. Started on
+  // every NOTIFY, back to back under checkout load, the passes took about a
+  // fifth of a one-vCPU box away from checkout. Events that arrive during
+  // the gap (or during a pass, which used to be ignored until the next poll
+  // tick) are picked up together by the next pass. docs/perf/checkout-capacity.md.
+  let lastFinished = 0;
+  let scheduled: ReturnType<typeof setTimeout> | null = null;
+  let wanted = false;
+
+  const startPass = (): void => {
+    scheduled = null;
+    if (stopped) return;
     running = true;
+    wanted = false;
     runConsumerPass(pool, config)
       .catch((err: unknown) => {
         // A thrown error from one pass must never crash the listener or the
@@ -35,7 +48,21 @@ export function startReportingConsumer(pool: Pool, config: ReportingConfig): Rep
       })
       .finally(() => {
         running = false;
+        lastFinished = Date.now();
+        if (wanted) triggerPass();
       });
+  };
+
+  const triggerPass = (): void => {
+    if (stopped) return;
+    if (running) {
+      wanted = true;
+      return;
+    }
+    if (scheduled) return;
+    const wait = lastFinished + config.reportingMinPassGapMs - Date.now();
+    if (wait <= 0) startPass();
+    else scheduled = setTimeout(startPass, wait);
   };
 
   // MK: dedicated Client, not from the pool -- LISTEN needs a pinned connection. DO NOT TOUCH
@@ -47,7 +74,6 @@ export function startReportingConsumer(pool: Pool, config: ReportingConfig): Rep
   listenClient.on("error", (err: Error) => {
     console.error("[reporting/consumer] LISTEN client error", err);
   });
-  // copilot: triggerPass already ignores notifications while a pass is running, so no debounce is needed.
   listenClient.on("notification", () => {
     triggerPass();
   });
@@ -76,6 +102,7 @@ export function startReportingConsumer(pool: Pool, config: ReportingConfig): Rep
     async stop(): Promise<void> {
       stopped = true;
       clearInterval(interval);
+      if (scheduled) clearTimeout(scheduled);
       await connectPromise;
       if (listenClientConnected) {
         await listenClient.end().catch(() => {});

@@ -26,15 +26,58 @@ export async function withTransaction<T>(
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    const scope: TransactionScope = { hooks: [], locals: new Map() };
+    scopes.set(client, scope);
     try {
       const result = await fn(client);
+      // Work registered with onBeforeCommit runs last, still inside the
+      // transaction, so it commits or rolls back with everything else.
+      for (const hook of scope.hooks) await hook();
       await client.query("COMMIT");
       return result;
     } catch (err) {
       await client.query("ROLLBACK");
       throw err;
+    } finally {
+      // Commit or rollback: this transaction's hooks and state go with it,
+      // never into the pooled connection's next transaction.
+      scopes.delete(client);
     }
   } finally {
     client.release();
   }
+}
+
+interface TransactionScope {
+  hooks: Array<() => Promise<void>>;
+  locals: Map<symbol, unknown>;
+}
+
+const scopes = new WeakMap<PoolClient, TransactionScope>();
+
+/**
+ * Runs `hook` as the last step of the transaction `client` is in, just
+ * before COMMIT, and returns true; or returns false when `client` isn't in
+ * a withTransaction transaction (the caller should then do the work at
+ * once). For writes to rows many transactions contend for, so their lock
+ * is held only for the last statement and the commit
+ * (payments/balanceCache.ts, docs/perf/checkout-capacity.md).
+ */
+export function onBeforeCommit(client: PoolClient, hook: () => Promise<void>): boolean {
+  const scope = scopes.get(client);
+  if (!scope) return false;
+  scope.hooks.push(hook);
+  return true;
+}
+
+/**
+ * State that lives exactly as long as the transaction `client` is in:
+ * created by `init` on first use, dropped at commit or rollback. Undefined
+ * when `client` isn't in a withTransaction transaction.
+ */
+export function transactionLocal<T>(client: PoolClient, key: symbol, init: () => T): T | undefined {
+  const scope = scopes.get(client);
+  if (!scope) return undefined;
+  if (!scope.locals.has(key)) scope.locals.set(key, init());
+  return scope.locals.get(key) as T;
 }

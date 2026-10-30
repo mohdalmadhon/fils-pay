@@ -13,6 +13,9 @@ export interface ReportingConfig {
    *  default, deliberately: a missed analytics notification only ever
    *  means a dashboard number is a few extra seconds later to update. */
   reportingPollIntervalMs: number;
+  /** Least time between the end of one consumer pass and the start of the
+   *  next (docs/perf/checkout-capacity.md). */
+  reportingMinPassGapMs: number;
   /** Max outbox rows read per runConsumerPass call — matches webhooks'
    *  Step A cap. */
   consumerBatchLimit: number;
@@ -43,6 +46,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ReportingConfi
     pgPoolMax: parseIntEnv(env.PG_POOL_MAX, 5),
     // MK: 15s fine. dashboards aren't realtime.
     reportingPollIntervalMs: parseIntEnv(env.REPORTING_POLL_INTERVAL_MS, 15_000),
+    reportingMinPassGapMs: parseIntEnv(env.REPORTING_MIN_PASS_GAP_MS, 500),
     consumerBatchLimit: parseIntEnv(env.REPORTING_CONSUMER_BATCH_LIMIT, 500),
   };
 }
