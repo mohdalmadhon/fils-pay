@@ -36,6 +36,20 @@ git -c core.autocrlf=false archive --format=tar HEAD | ssh "$SERVER" "
   rm -rf ~/fils-pay.new && mkdir -p ~/fils-pay.new
   tar -x -C ~/fils-pay.new
   echo '$BRANCH @ $COMMIT' > ~/fils-pay.new/DEPLOYED_COMMIT
+  # Settings from before ~/fils-pay-config existed lived in the code folder.
+  # Keep them now, before the rotation below deletes ~/fils-pay.old: if an
+  # earlier deploy failed before remote-deploy.sh copied them, .old holds the
+  # only copy (with the database password). Same files and rule as step 2
+  # of remote-deploy.sh: never replace a file already in ~/fils-pay-config.
+  mkdir -p ~/fils-pay-config && chmod 700 ~/fils-pay-config
+  for f in .env .env.docker; do
+    for old in ~/fils-pay/ops/\$f ~/fils-pay.old/ops/\$f; do
+      if [ ! -f ~/fils-pay-config/\$f ] && [ -f \"\$old\" ]; then
+        cp \"\$old\" ~/fils-pay-config/\$f && chmod 600 ~/fils-pay-config/\$f
+        echo \"kept existing settings from \$old\"
+      fi
+    done
+  done
   if [ -d ~/fils-pay ]; then rm -rf ~/fils-pay.old && mv ~/fils-pay ~/fils-pay.old; fi
   mv ~/fils-pay.new ~/fils-pay
 "
