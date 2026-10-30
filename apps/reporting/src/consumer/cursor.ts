@@ -61,4 +61,5 @@ export async function resetCursor(client: QueryableClient, consumerName: string)
      ON CONFLICT (consumer_name) DO UPDATE SET last_processed_id = 0, updated_at = now()`,
     [consumerName],
   );
+  await client.query(`DELETE FROM reporting_processed_events WHERE consumer_name = $1`, [consumerName]);
 }
