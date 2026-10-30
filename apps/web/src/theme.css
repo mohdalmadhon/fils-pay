@@ -869,6 +869,103 @@ h1 {
   }
 }
 
+/* Top-bar layout (Settings) ----------------------------------------------
+ * On wide screens the sidebar becomes a bar across the top: the merchant
+ * chip shrinks to its initial, search keeps its icon and shortcut, the nav
+ * runs in a row without its section labels, and the light/dark switch and
+ * log out sit at the right. Pages get the full width. On phones both
+ * layouts use the same slide-in drawer, so nothing changes there. */
+@media (min-width: 901px) {
+  :root[data-layout="topbar"] :is(.dash-shell, .admin-shell) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :root[data-layout="topbar"] :is(.dash-sidebar, .admin-sidebar) {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-2) var(--sp-5);
+    border-right: 0;
+    border-bottom: 1px solid var(--c-line);
+    overflow: visible;
+  }
+
+  :root[data-layout="topbar"] :is(.dash-sidebar-head, .admin-sidebar-head) {
+    flex: none;
+    padding: 0;
+  }
+
+  :root[data-layout="topbar"] :is(.dash-merchant, .admin-identity) {
+    flex: none;
+    padding: 3px;
+    border-radius: var(--r-button);
+  }
+
+  :root[data-layout="topbar"] :is(.dash-merchant-text, .admin-identity-text, .dash-role-chip, .admin-role-chip) {
+    display: none;
+  }
+
+  :root[data-layout="topbar"] .fp-nav-search {
+    flex: none;
+    width: auto;
+  }
+
+  :root[data-layout="topbar"] .fp-nav-search > span {
+    display: none;
+  }
+
+  :root[data-layout="topbar"] :is(.dash-nav, .admin-nav) {
+    flex: 1;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 2px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  /* Text only in the bar, so the whole nav fits on one line. */
+  :root[data-layout="topbar"] :is(.dash-nav, .admin-nav) a svg {
+    display: none;
+  }
+
+  /* The light/dark switch shows just its icons; the words stay as the
+   * buttons' accessible names. */
+  :root[data-layout="topbar"] :is(.dash-sidebar-foot, .admin-sidebar-foot) .fp-segment button {
+    width: 32px;
+    padding: 0;
+    font-size: 0;
+    gap: 0;
+  }
+
+  :root[data-layout="topbar"] :is(.dash-nav-label, .admin-nav-label) {
+    display: none;
+  }
+
+  :root[data-layout="topbar"] :is(.dash-nav, .admin-nav) a {
+    height: 34px;
+    padding: 0 var(--sp-3);
+    white-space: nowrap;
+  }
+
+  :root[data-layout="topbar"] :is(.dash-sidebar-foot, .admin-sidebar-foot) {
+    flex: none;
+    flex-direction: row;
+    align-items: center;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  :root[data-layout="topbar"] :is(.dash-main, .admin-main) {
+    max-width: calc(var(--content-max) + 120px);
+  }
+}
+
 /* Page backdrops. Carnival and Slate get a dot grid in the top corner
  * (from the brief's images 2 and 3); Blush a blush-to-peach wash. */
 :is(:root[data-design="carnival"], :root:not([data-design]), :root[data-design="slate"]):not([data-costume="halloween"]) body::before {
