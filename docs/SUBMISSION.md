@@ -32,6 +32,17 @@ which colours), and corrected it when it went the wrong way ("continue but
 do not use purple"). It was expected to prove every claim with a test, a
 measurement or a log, and the write-ups record that evidence.
 
+**By area.** How it was used, which checks it ran and what it got wrong in
+each part of the work:
+[security](../ai-setup/areas/security.md),
+[fixes and improvements](../ai-setup/areas/improvements.md),
+[design](../ai-setup/areas/design.md),
+[merging main](../ai-setup/areas/merge.md) and
+[capacity](../ai-setup/areas/capacity.md). The design and security work
+happened before the part of the session that can still be quoted, so
+those sections are written from the commits and write-ups, with my requests
+quoted as I wrote them.
+
 The three excerpts below are from the session transcript, word for word.
 `[…]` marks a cut; times are Bahrain time on 30 October 2026. Each one is
 followed by notes on what it shows.

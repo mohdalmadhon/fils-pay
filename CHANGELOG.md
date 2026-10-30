@@ -106,6 +106,10 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
   transcript excerpts. Three claims in the capacity work that were never
   measured were found while preparing it and corrected
   (`docs/perf/checkout-capacity.md`, "Corrections").
+  `ai-setup/areas/` covers each part of the work (security, fixes and
+  improvements, design, merging main, capacity): what was asked, how the
+  assistant worked and checked, and what it got wrong; plus
+  `ai-setup/scripts/settings-check.mjs`.
 - **Checkout capacity:** about 38 checkouts a second on one vCPU at p95 under
   1 s, up from 10 (a 5-connection pool, an unindexed ledger lookup at every
   commit, a long lock on the merchant's balance row, reporting passes on

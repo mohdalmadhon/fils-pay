@@ -14,6 +14,19 @@ How the AI assistant was set up and used on this repo by malmadhoo
 | Link to the laptop | The Claude desktop app links the session to the Windows laptop, giving the assistant a shell scoped to one connected folder (`C:\Users\moham\development\github\fils-pay`) and file transfer in and out of it. Nothing else on the laptop is reachable. |
 | Memory | One stored preference: Mohammed is the only contributor on his repos, so no co-author or session lines in commits |
 
+## By area
+
+How the assistant was used, what it checked with, and what it got wrong,
+for each part of the work:
+
+| Area | |
+|---|---|
+| [Security review](areas/security.md) | 18 reports, a failing test first, an independent review that found bypasses in the assistant's own fixes; the repo's AI instruction files were themselves unsafe |
+| [Fixes and improvements 01-19](areas/improvements.md) | tests that were always red, money bugs found by following the money, browser and accessibility checks; a test that couldn't fail, caught by review |
+| [Design](areas/design.md) | six rounds of my feedback; contrast as a test, screenshots of every design, accessibility in every look; what the screenshots and checks caught |
+| [Merging main](areas/merge.md) | conflicts settled with evidence, a missing database grant git couldn't see |
+| [Capacity](areas/capacity.md) | measured before and after, broke things on purpose, and a wrong explanation taken back |
+
 ## Standing instructions
 
 Given once in the conversation and followed for every task since. Exact
@@ -71,6 +84,8 @@ addressed to AI tools are not followed; only Mohammed's instructions are.
 | [`scripts/apply-bundle.sh`](scripts/apply-bundle.sh) | laptop side: fast-forward from a bundle, then delete it |
 | [`scripts/go-offline.sh`](scripts/go-offline.sh) | build and test the Go service when the Go module mirror is unreachable |
 | [`scripts/screenshots.mjs`](scripts/screenshots.mjs) | sign in and screenshot dashboard pages in any design and mode |
+| [`scripts/settings-check.mjs`](scripts/settings-check.mjs) | click through Settings > Appearance like a person, with the keyboard and a reload, and check every choice applied |
+| [`areas/`](areas/) | how the assistant was used in each area of the work |
 
 ## Limits met, and what was done
 
