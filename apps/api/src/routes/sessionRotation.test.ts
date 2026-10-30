@@ -109,3 +109,35 @@ test("admin logout ends that admin's view-as-merchant grants", async () => {
   assert.ok(logout.statusCode < 300, logout.body);
   assert.equal((await viewTxns()).statusCode, 401, "grant must stop working at logout");
 });
+
+test("admin logout closes each live view-as grant like ending it: ended_at set and an impersonation_end audit row", async () => {
+  const admin = await signedInAdmin(app, pool, config, "support", "logout-audit");
+  const grantIds: string[] = [];
+  for (const label of ["logout-audit-a", "logout-audit-b"]) {
+    const { merchantId } = await createMerchant(pool, label);
+    const start = await app.inject({
+      method: "POST",
+      url: `/v1/admin/merchants/${merchantId}/impersonate`,
+      headers: { cookie: admin.cookie },
+    });
+    assert.equal(start.statusCode, 201, start.body);
+    grantIds.push((start.json() as { grantId: string }).grantId);
+  }
+
+  const logout = await app.inject({ method: "POST", url: "/v1/admin/auth/logout", headers: { cookie: admin.cookie } });
+  assert.equal(logout.statusCode, 204, logout.body);
+
+  const grants = await pool.query<{ id: string; ended_at: Date | null }>(
+    `SELECT id, ended_at FROM admin_impersonation_grants WHERE admin_user_id = $1`,
+    [admin.id],
+  );
+  assert.equal(grants.rowCount, 2);
+  for (const g of grants.rows) assert.ok(g.ended_at, `grant ${g.id} has ended_at`);
+
+  const audit = await pool.query<{ metadata: { grantId: string; reason?: string } }>(
+    `SELECT metadata FROM admin_audit_log WHERE admin_user_id = $1 AND action = 'impersonation_end'`,
+    [admin.id],
+  );
+  assert.deepEqual(audit.rows.map((r) => r.metadata.grantId).sort(), [...grantIds].sort());
+  for (const r of audit.rows) assert.equal(r.metadata.reason, "logout");
+});
