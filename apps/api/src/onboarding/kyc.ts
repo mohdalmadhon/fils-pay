@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Pool } from "pg";
 import type { Config } from "../config.js";
@@ -68,18 +68,29 @@ export async function recordKycDocument(
   const sha256 = sha256Hex(input.buffer);
   const storageKey = join(input.merchantId, `${sha256}.${extensionFor(detected)}`);
   const fullPath = join(config.kycUploadDir, storageKey);
-  await mkdir(join(config.kycUploadDir, input.merchantId), { recursive: true });
-  // written before the db insert, a failed insert leaves an orphan in ./data/kyc — am
-  await writeFile(fullPath, input.buffer);
-
   const mimeType = mimeTypeFor(detected);
 
+  // Decode (and refuse) the image before anything is written, so a bad or
+  // oversized image never leaves a file behind.
   const thumbnail = await generateKycThumbnail(input.buffer, detected);
+
+  await mkdir(join(config.kycUploadDir, input.merchantId), { recursive: true });
+  await writeFile(fullPath, input.buffer);
   let thumbnailStorageKey: string | null = null;
   if (thumbnail) {
     thumbnailStorageKey = join(input.merchantId, `${sha256}.thumb.jpg`);
     await writeFile(join(config.kycUploadDir, thumbnailStorageKey), thumbnail.buffer);
   }
+
+  // If the row doesn't land, remove what was just written. Files are named by
+  // content hash, so keep them when another row already points at the same file.
+  const removeWrittenFiles = async () => {
+    const stillUsed = await pool.query(`SELECT 1 FROM kyc_documents WHERE storage_key = $1 LIMIT 1`, [storageKey]);
+    if (stillUsed.rowCount === 0) {
+      await rm(fullPath, { force: true });
+      if (thumbnailStorageKey) await rm(join(config.kycUploadDir, thumbnailStorageKey), { force: true });
+    }
+  };
 
   return withTransaction(pool, async (client) => {
     const inserted = await client.query<{ id: string; uploaded_at: Date }>(
@@ -132,6 +143,9 @@ export async function recordKycDocument(
       onboardingStatus,
       hasThumbnail: thumbnail !== null,
     };
+  }).catch(async (err: unknown) => {
+    await removeWrittenFiles();
+    throw err;
   });
 }
 
