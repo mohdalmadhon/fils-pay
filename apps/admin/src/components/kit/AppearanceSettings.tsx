@@ -8,11 +8,12 @@
 import { DESIGNS, useAppearance, type Density, type Design, type Layout, type Mode } from "./theme.js";
 import { useCostume } from "./Halloween.js";
 
-/** Each design's own colours, for its preview (light mode). */
-const PREVIEW: Record<Design, { page: string; side: string; band: string; pill: string; art: [string, string, string] }> = {
-  orchid: { page: "#e9ddff", side: "#ffffff", band: "#a98bff", pill: "#c6f04a", art: ["#c6f04a", "#ff5fa2", "#7c4dff"] },
-  lagoon: { page: "#bff0e4", side: "#fffef9", band: "#39d6c0", pill: "#ff7a59", art: ["#ff7a59", "#ffd23f", "#00706b"] },
-  saffron: { page: "#ffe39a", side: "#fffaf0", band: "#ff6b35", pill: "#ff6b35", art: ["#ffb400", "#e2617a", "#1f1206"] },
+/** Each design's own colours, for its preview (light mode): outlined in
+ * its ink, with the band's hard shadow. */
+const PREVIEW: Record<Design, { ink: string; page: string; side: string; band: string; pill: string; art: [string, string, string] }> = {
+  orchid: { ink: "#160f26", page: "#e9ddff", side: "#ffffff", band: "#a98bff", pill: "#c6f04a", art: ["#c6f04a", "#ff5fa2", "#7c4dff"] },
+  lagoon: { ink: "#071c1f", page: "#bff0e4", side: "#fffef9", band: "#39d6c0", pill: "#ff7a59", art: ["#ff7a59", "#ffd23f", "#00706b"] },
+  saffron: { ink: "#1f1206", page: "#ffe39a", side: "#fffaf0", band: "#ff6b35", pill: "#ff6b35", art: ["#ffb400", "#e2617a", "#1f1206"] },
 };
 
 const MODES: ReadonlyArray<{ id: Mode; label: string }> = [
@@ -36,12 +37,13 @@ function DesignPreview({ design }: { design: Design }) {
   return (
     <svg className="fp-settings-preview" viewBox="0 0 120 72" aria-hidden focusable={false}>
       <rect width="120" height="72" fill={c.page} />
-      <rect width="30" height="72" fill={c.side} />
-      <rect x="5" y="16" width="20" height="5" rx="2.5" fill={c.pill} />
-      <rect x="38" y="8" width="74" height="30" rx="6" fill={c.band} />
+      <rect width="30" height="72" fill={c.side} stroke={c.ink} strokeWidth="1.5" />
+      <rect x="5" y="16" width="20" height="5" rx="2.5" fill={c.pill} stroke={c.ink} strokeWidth="1" />
+      <rect x="41" y="11" width="74" height="30" rx="6" fill={c.ink} />
+      <rect x="38" y="8" width="74" height="30" rx="6" fill={c.band} stroke={c.ink} strokeWidth="1.5" />
       <circle cx="98" cy="23" r="9" fill={c.art[0]} />
       <path d="M86 32l7-7 7 7z" fill={c.art[1]} />
-      <rect x="44" y="27" width="22" height="6" rx="3" fill={c.pill} />
+      <rect x="44" y="27" width="22" height="6" rx="3" fill={c.pill} stroke={c.ink} strokeWidth="1" />
       <rect x="38" y="44" width="22" height="20" rx="4" fill={c.art[2]} opacity="0.6" />
       <rect x="64" y="44" width="22" height="20" rx="4" fill={c.art[0]} opacity="0.45" />
       <rect x="90" y="44" width="22" height="20" rx="4" fill={c.art[1]} opacity="0.4" />

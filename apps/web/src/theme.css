@@ -1500,8 +1500,136 @@ h1 {
   accent-color: var(--c-primary);
 }
 
-/* Page backdrops. Carnival and Slate get a dot grid in the top corner
- * (from the brief's images 2 and 3); Blush a blush-to-peach wash. */
+/* Brutalist surfaces ------------------------------------------------------
+ * Every card, panel, table and band is outlined in the design's ink
+ * (--edge: 2px of --c-border) and casts a hard, unblurred shadow down and
+ * to the right (--shadow-sm for cards, --shadow-pop for the one big
+ * element on a page). Anchored at :root so the older 1px hairlines in
+ * dashboard.css, admin.css and CheckoutPage.css, which load after this
+ * file, can't win. */
+:root :is(
+    .ov-tiles,
+    .ov-chart-card,
+    .dash-table,
+    .admin-table,
+    .dash-dl,
+    .admin-dl,
+    .dash-pre,
+    .dash-secret,
+    .fp-settings-card,
+    .fp-settings-option,
+    .fp-settings-group,
+    .dash-filters,
+    .admin-filters,
+    .fp-palette
+  ) {
+  border: var(--edge);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Tables and the tiles keep their inner rules soft, so the outline reads
+ * as the edge. Header rows sit on a tinted band with an ink rule under. */
+:root :is(.dash-table, .admin-table) th {
+  background: var(--c-surface-3);
+  border-bottom: var(--edge);
+}
+
+:root .ov-tile {
+  border-left: var(--edge);
+}
+
+:root .ov-tile:first-child {
+  border-left: 0;
+}
+
+/* The balance band on Overview: the page's one big block. */
+:root .ov-hero {
+  border: var(--edge);
+  box-shadow: var(--shadow-pop);
+}
+
+/* Notices, errors and confirmations are small outlined slips. */
+:root :is(.dash-confirm, .dash-notice, .dash-error, .admin-confirm, .admin-notice, .admin-error) {
+  border: var(--edge);
+  border-radius: var(--r-2);
+  box-shadow: var(--shadow-xs);
+}
+
+/* Settings: a chosen card is lifted and tinted. */
+:root .fp-settings-card:has(input:checked),
+:root .fp-settings-option:has(input:checked) {
+  background: var(--c-accent-soft);
+  box-shadow: var(--shadow-pop);
+  transform: translate(-2px, -2px);
+}
+
+/* Sign-in: the form sits in an outlined card on the page colour, with a
+ * second outline offset behind it and a hard shadow, like a stack of two
+ * cards. The panel isolates its layers so the offset outline is drawn
+ * above the panel but under the card. */
+:root :is(.dash-login-panel, .admin-login-panel) {
+  isolation: isolate;
+  background: var(--c-bg);
+}
+
+:root :is(.dash-centered, .admin-centered) {
+  position: relative;
+  max-width: 26rem;
+  padding: var(--sp-10) var(--sp-8);
+  background: var(--c-surface);
+  border: var(--edge);
+  border-radius: var(--r-4);
+  box-shadow: var(--shadow-pop);
+}
+
+:root :is(.dash-centered, .admin-centered)::before {
+  content: "";
+  position: absolute;
+  inset: 6px -6px -6px 6px;
+  z-index: -1;
+  border: var(--edge);
+  border-radius: var(--r-4);
+}
+
+/* The hero panels (sign-in, checkout summary) get an ink edge where they
+ * meet the page. */
+:root :is(.dash-login-aside, .admin-login-aside) {
+  border-right: var(--edge);
+}
+
+:root :is(.dash-login-points, .admin-login-points) svg {
+  color: var(--hero-ink);
+}
+
+/* Checkout: the payment form is a card like sign-in's; the card picture
+ * is outlined with a small hard shadow. */
+:root .checkout-page {
+  background: var(--c-bg);
+}
+
+:root .checkout-sea {
+  border-right: var(--edge);
+}
+
+:root .checkout-panel {
+  position: relative;
+  align-self: center;
+  justify-self: center;
+  margin: var(--sp-8) var(--sp-6);
+  padding: var(--sp-8);
+  background: var(--c-surface);
+  border: var(--edge);
+  border-radius: var(--r-4);
+  box-shadow: var(--shadow-pop);
+}
+
+:root .checkout-card {
+  border: var(--edge);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Page backdrops. Orchid and Lagoon get a dot grid in the top corner;
+ * Saffron a soft wash. */
 :is(:root[data-design="orchid"], :root:not([data-design]), :root[data-design="lagoon"]):not([data-costume="halloween"]) body::before {
   content: "";
   position: fixed;
