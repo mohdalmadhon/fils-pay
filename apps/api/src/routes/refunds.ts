@@ -8,15 +8,11 @@ import { requireMerchantAuth, requireMerchantRole } from "../auth/requireMerchan
  */
 // FP-212. stub until refunds land. transactions.test.ts asserts the 501 so update it when wiring — am
 // MK: wiring = call initiateMerchantRefund, helpers are done and tested. half a day yalla
-// Do NOT wire the handler that used to be drafted here. It spread the request
-// body after merchantId (`{ merchantId, ...body }`), so a caller could put any
-// merchantId in the body and refund another merchant's transaction, and it
-// minted a random idempotency key per request, so a retried refund would
-// refund twice. When wiring: take merchantId only from merchantAuth, map
-// body fields explicitly, and require the client's Idempotency-Key header.
-// See docs/cyper/05-capture-void-roles.md.
-// YA (left a note in Mar): don't just wire it, the helpers were written before the capture
-// discount and tier existed
+// The real endpoint is POST /v1/merchants/:merchantId/refunds
+// (routes/merchantRefunds.ts, docs/improvements/08). This prefix stays a 501
+// stub: AGENTS.md asks that 501 stubs are kept, and transactions.test.ts
+// asserts it. The handler once drafted here must not come back: it spread
+// the body over merchantId and minted a random idempotency key per request.
 export async function refundRoutes(app: FastifyInstance): Promise<void> {
   // Gated now, so wiring the refund can't ship without it.
   app.post("/", { preHandler: [requireMerchantAuth, requireMerchantRole("owner", "finance")] }, async (_request, reply) => {

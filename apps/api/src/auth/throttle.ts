@@ -15,6 +15,7 @@
  */
 import type { Pool, PoolClient } from "pg";
 import { withTransaction } from "../db/withTransaction.js";
+import { canonicalUuid } from "../lib/uuid.js";
 import type { Config } from "../config.js";
 import { sha256Hex } from "../lib/crypto.js";
 import { TooManyRequestsError } from "../lib/errors.js";
@@ -26,13 +27,10 @@ type ThrottleConfig = Pick<Config, "loginMaxFailures" | "loginMaxFailuresPerIp" 
 /** Same key whether or not the account exists. Emails compare as typed at
  *  login (the lookup is exact), lower-cased here so case variants share one
  *  budget. */
-const CANONICAL_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** The merchant id in its one canonical spelling (lower-case, hyphenated),
- *  or null. Postgres accepts the same UUID in many spellings (upper case,
- *  braces, no hyphens); each used to get its own failure budget. */
+/** The merchant id in its one canonical spelling, or null. Each spelling
+ *  Postgres accepts used to get its own failure budget. */
 export function canonicalMerchantId(raw: unknown): string | null {
-  return typeof raw === "string" && CANONICAL_UUID.test(raw) ? raw.toLowerCase() : null;
+  return canonicalUuid(raw);
 }
 
 /** Call with a canonical merchant id (canonicalMerchantId). */
