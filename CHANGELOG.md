@@ -61,14 +61,24 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
     in idempotency hashes (10), payment-link leaks (11), KYC uploads (12),
     hardening (13), session rotation (14), dependencies (15), unsafe agent
     guidance (16)
+- **Improvements (`docs/improvements/README.md`):** 18 fixes beyond the
+  security review:
+  - money: net payout used `float32` (04), the platform volume counter was
+    `INT4` (05), the negotiated discount was charged three ways (06), the API
+    and settlement could pick different fee schedules (07)
+  - `docker compose up` re-ran the seed and emptied the database (12)
+  - refunds reachable at `POST /v1/merchants/:id/refunds`, and the refund
+    helper checks the merchant owns the transaction (08)
+  - a suspended merchant's payment link reads as `unavailable` (16)
+  - signup limits and password rules (11), one least-privilege database role
+    per service (13), migration checksums enforced (15)
+  - the always-red tests fixed (01-03), CI added (10), Dockerfiles added (09),
+    agent docs corrected (14), a browser end-to-end check (17), an
+    accessibility pass with an automated check (18)
 - **Performance:** large exports and uploads (`large-exports`), and slow reporting queries (`slow-dashboard-queries`).
 - **Finance problems 001-013:** fixed and documented in `docs/solved-problems/`.
 
 ### Known issues
-- Test failures that predate this work, listed in the verification report:
-  - 2 API tests
-  - 4 `RecalculateMDR` Go tests
-  - 4 reporting tests
 - The Dilmun Cloud deployment is not yet verified.
 - Security items that need action outside the repo (rotate the acquirer
   secret, change the database password, upgrade pgx with Go 1.25, review
@@ -82,6 +92,14 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
   `ops/.env` (see `ops/README.md`).
 - Local development: set `OTP_DEV_EXPOSE=true` to get the OTP in the login
   response.
+- Run `npm run migrate` for 0080 and 0081 too. Its first run records a
+  checksum for every applied migration, and later runs refuse an edited one
+  (`docs/RUNBOOK.md`).
+- Add `API_DB_PASSWORD`, `SETTLEMENT_DB_PASSWORD` and `REPORTING_DB_PASSWORD`
+  to `ops/.env`. The seed no longer runs on `docker compose up`; use
+  `--profile seed` locally.
+- Browser checks: `npx playwright install chromium` once, then
+  `npm run e2e:browser` and `npm run e2e:a11y`.
 
 ## [1.9.2] - 2026-09-12
 
