@@ -9,7 +9,7 @@ demo instance uses the same compose file with a different `.env`.
 ```
 docker compose -f ops/docker-compose.yml up -d postgres
 docker compose -f ops/docker-compose.yml run --rm migrate
-docker compose -f ops/docker-compose.yml run --rm seed
+docker compose -f ops/docker-compose.yml --profile seed run --rm seed   # local only: empties the database
 docker compose -f ops/docker-compose.yml up api settlement reporting
 ```
 
@@ -37,13 +37,12 @@ what a passing run looks like, are in
 | File | Purpose |
 |---|---|
 | `docker-compose.yml` | the stack |
-| `.env.docker` | shared service settings, loaded by compose for every service |
-| `Dockerfile.node` | image for api, reporting, migrate and seed (`node:20`, full install) |
+| `.env.docker` | api settings, loaded with `env_file:` (create it from `.env.docker.example`) |
+| `Dockerfile.node` | image for api, reporting, migrate and seed (Node 22, dev dependencies for tsx) |
 | `Dockerfile.go` | multi-stage build of `apps/settlement` |
 
-> **AM (July):** the two Dockerfiles aren't in the repo for me. built my own
->
-> **MK:** they were in the initial ops commit. check you're on main
+The two Dockerfiles were missing from the repo until 2026-10-30
+(`docs/improvements/09`); they had never been committed.
 
 ## Database
 
@@ -61,10 +60,11 @@ The settlement worker can be given a second connection string,
 `PGCONN_SETTLEMENT`, for its batch-close pool. It only takes effect when
 `DATABASE_URL` is unset.
 
-To reset the database to a clean, freshly-seeded state at any point, re-run
-the `seed` job above — `db/seed/index.ts` truncates and regenerates its
-fixture tables on every invocation; it doesn't need the volume removed
-first.
+To reset a **local** database to the demo data, run the `seed` job above.
+It empties the whole database first (it does not only touch its own tables),
+refuses `NODE_ENV=production`, and refuses a database with merchants it
+didn't create unless `SEED_RESET_CONFIRM=<database name>` is set
+(`docs/improvements/12`).
 
 ## Building the images
 

@@ -61,6 +61,8 @@ jobs:
       - run: npm run seed
       # Workspaces in sequence: they share one database.
       - run: npm test
+      # Every migration on an empty database, and the seed guard.
+      - run: npm run test:db
 
   settlement:
     name: Settlement (Go vet and tests, against Postgres)

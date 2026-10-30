@@ -321,9 +321,21 @@ See [the fix, references, audit query, and verification](solved-problems/012-mar
 npm run migrate && npm run seed
 ```
 
-The seed truncates and regenerates the fixture tables it owns and
-self-checks the result. It prints `REAL FAIL` lines if anything doesn't
-come out as expected — don't ignore them. It won't touch other tables, so
-it's safe against a shared staging database.
+**The seed empties the database.** It starts with one `TRUNCATE ... CASCADE`
+over merchants, transactions, the ledger, settlement batches, the outbox,
+admin users and more, then regenerates the demo data and self-checks it. It
+prints `REAL FAIL` lines if anything doesn't come out as expected; don't
+ignore them. (This section used to say it only touched its own tables and was
+safe on a shared staging database. It wasn't: see the note below.)
+
+Since 2026-10-30 (`docs/improvements/12`) it refuses:
+
+- `NODE_ENV=production`, always;
+- a database holding any merchant the seed didn't create, unless you name the
+  database: `SEED_RESET_CONFIRM=<database name> npm run seed`.
+
+A new or already-seeded database seeds without a flag. In compose, the seed is
+behind a profile and no longer runs on `up`:
+`docker compose -f ops/docker-compose.yml --profile seed run --rm seed`.
 
 > **AM (Sept):** check DATABASE_URL before seeding. staging-2 got reset this way
