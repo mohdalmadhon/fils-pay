@@ -686,29 +686,29 @@ h1 {
   color: #ffffff;
   /* Shapes kept to the right edge, softened, so the card's text stays clear. */
   background:
-    radial-gradient(circle at 104% 50%, rgba(255, 61, 104, 0.85) 0 54px, transparent 55px),
-    radial-gradient(circle at 80% 112%, rgba(255, 180, 46, 0.8) 0 34px, transparent 35px),
-    radial-gradient(circle at 70% -10%, rgba(7, 201, 131, 0.7) 0 30px, transparent 31px),
-    #2b34b8;
+    radial-gradient(circle at 104% 50%, rgba(224, 71, 158, 0.8) 0 54px, transparent 55px),
+    radial-gradient(circle at 80% 112%, rgba(198, 240, 74, 0.75) 0 34px, transparent 35px),
+    radial-gradient(circle at 70% -10%, rgba(169, 139, 255, 0.7) 0 30px, transparent 31px),
+    linear-gradient(135deg, #3b1f7a, #6236c9);
 }
 
 :root[data-design="saffron"]:not([data-costume="halloween"]) .checkout-card {
-  color: #3b2a1a;
+  color: #2a1708;
   background:
-    radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.55), transparent 55%),
-    linear-gradient(135deg, #f0d6b4, #e6c49b 55%, #d9ae7f);
+    radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.5), transparent 55%),
+    linear-gradient(135deg, #f8cf6a, #f2a51a 55%, #d98a0b);
 }
 
 :root[data-design="saffron"]:not([data-costume="halloween"]) :is(.checkout-card-brand, .checkout-card-bottom) {
-  color: rgba(59, 42, 26, 0.75);
+  color: rgba(42, 23, 8, 0.78);
 }
 
 :root[data-design="lagoon"]:not([data-costume="halloween"]) .checkout-card {
-  color: #f1f4fa;
+  color: #e8f6f5;
   background:
-    linear-gradient(180deg, transparent 62%, #ff6b6b 62% 66%, transparent 66%),
-    radial-gradient(circle, rgba(108, 182, 255, 0.35) 0 2px, transparent 2.5px) 0 0 / 14px 14px,
-    #1e2a46;
+    linear-gradient(180deg, transparent 62%, #ff7a59 62% 66%, transparent 66%),
+    radial-gradient(circle, rgba(95, 211, 198, 0.35) 0 2px, transparent 2.5px) 0 0 / 14px 14px,
+    linear-gradient(150deg, #0e3b3f, #0a2427);
 }
 
 /* Empty, error and not-found scenes: the line drawing's accent takes the
