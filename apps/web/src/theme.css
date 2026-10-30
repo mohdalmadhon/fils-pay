@@ -295,7 +295,21 @@ strong {
 
 /* Amounts: whole dinars, then the three fils digits in a lighter weight ---- */
 
+/* Read by screen readers, not shown. */
+.fp-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .fp-amount {
+  position: relative;
   display: inline-flex;
   align-items: baseline;
   font-family: var(--font-mono);

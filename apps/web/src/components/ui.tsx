@@ -23,8 +23,13 @@ export function usePageTitle(title: string | null | undefined, app = "FilsPay"):
 export function Amount({ fils, className, currency = true }: { fils: number; className?: string; currency?: boolean }) {
   const text = formatBhd(toFils(fils, { allowNegative: true }));
   const [bd, fl] = text.split(".");
+  // The digits are split into styled parts, which a screen reader would
+  // read as "12", ".345". It reads the hidden whole instead. (aria-label on
+  // a plain span is ignored by screen readers, and the parts were
+  // aria-hidden, so amounts used to be read as nothing.)
   return (
-    <span className={["fp-amount", className].filter(Boolean).join(" ")} aria-label={`${text} BHD`}>
+    <span className={["fp-amount", className].filter(Boolean).join(" ")}>
+      <span className="fp-visually-hidden">{`${text} BHD`}</span>
       <span className="fp-amount-bd" aria-hidden>
         {bd}
       </span>
