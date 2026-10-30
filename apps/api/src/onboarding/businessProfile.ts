@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import { BadRequestError, NotFoundError } from "../lib/errors.js";
 import { todayStamp } from "../lib/dateUtil.js";
+import { validateBusinessProfileFields } from "./profileValidation.js";
 
 export interface BusinessProfile {
   merchantId: string;
@@ -109,9 +110,10 @@ export async function updateBusinessProfile(
   if (unknown.length > 0) {
     throw new BadRequestError("unknown_field", `not a business profile field: ${unknown.join(", ")}`);
   }
-  const entries = Object.entries(patch).filter(([, value]) => value !== undefined) as Array<
-    [keyof BusinessProfilePatch, string | null]
-  >;
+  // Types, the business_type list, CHAR(2) country and NOT NULL columns are
+  // checked here (400), not left to Postgres (500). Values come back trimmed.
+  const checked = validateBusinessProfileFields(patch as Record<string, unknown>, { partial: true });
+  const entries = Object.entries(checked) as Array<[keyof BusinessProfilePatch, string | null]>;
 
   if (entries.length === 0) {
     return getBusinessProfile(pool, merchantId);
