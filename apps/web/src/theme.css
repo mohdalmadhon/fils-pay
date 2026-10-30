@@ -575,14 +575,16 @@ h1 {
  * One complete set of rules for the dashboard's and the Ops console's
  * sidebar, anchored at :root so the older rules in dashboard.css and
  * admin.css (which load after this file) can't override parts of it.
- * It has its own colours (--side-*, darker than the page in every design
- * and in the costume); the colour tokens are redefined inside it so
- * anything placed in it follows.
+ * It has its own colours (--side-*: the card colour in light, a shade
+ * off the page in dark); the colour tokens are redefined inside it so
+ * anything placed in it follows. Brutalist like the rest: an ink edge
+ * against the page, outlined pieces and hard shadows.
  *
- *   merchant card   avatar, the role as a mono eyebrow, name, email
- *   search          a filled field, as in Orbit
- *   nav             mono section labels; 40px rows; the current page is a
- *                   solid pill in the design's highlight
+ *   merchant card   avatar, the role as a mono eyebrow, name, email; an
+ *                   outlined card with a hard shadow
+ *   search          an outlined field that lifts on hover
+ *   nav             mono section labels; 40px rows; the current page is
+ *                   the action colour, outlined, with a hard shadow
  *   foot            light/dark as underline tabs, then log out */
 :root :is(.dash-sidebar, .admin-sidebar) {
   --c-surface: var(--side-surface);
@@ -596,9 +598,10 @@ h1 {
   --c-ink-4: var(--side-ink-3);
   gap: 18px;
   padding: 20px 14px 16px;
+  --c-border: var(--side-line);
   color: var(--side-ink);
   background: var(--side-bg);
-  border-right: 1px solid var(--side-line);
+  border-right: var(--edge);
 }
 
 :root :is(.dash-sidebar-head, .admin-sidebar-head) {
@@ -622,9 +625,9 @@ h1 {
   align-items: center;
   padding: 12px;
   background: var(--side-surface);
-  border: 1px solid var(--side-line);
+  border: var(--edge);
   border-radius: var(--r-3);
-  box-shadow: none;
+  box-shadow: var(--shadow-xs);
 }
 
 :root :is(.dash-merchant-avatar, .admin-identity-avatar) {
@@ -635,7 +638,8 @@ h1 {
   font-size: 1rem;
   color: var(--side-active-ink);
   background: var(--side-active-bg);
-  border-radius: 10px;
+  border: var(--edge);
+  border-radius: var(--r-2);
 }
 
 :root .dash-role-chip {
@@ -702,10 +706,11 @@ h1 {
   min-height: 40px;
   padding: 0 10px 0 12px;
   color: var(--side-ink-2);
-  background: var(--side-surface-3);
-  border: 1px solid transparent;
+  background: var(--side-bg);
+  border: var(--edge);
   border-radius: var(--r-input);
   box-shadow: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
 :root :is(.dash-sidebar, .admin-sidebar) .fp-nav-search > span {
@@ -724,8 +729,9 @@ h1 {
 }
 
 :root :is(.dash-sidebar, .admin-sidebar) .fp-nav-search:hover {
-  border-color: var(--side-line);
   color: var(--side-ink);
+  box-shadow: var(--shadow-xs);
+  transform: translate(-1px, -1px);
 }
 
 :root :is(.dash-sidebar, .admin-sidebar) .fp-kbd {
@@ -763,7 +769,8 @@ h1 {
   font-weight: 500;
   color: var(--side-ink-2);
   background: transparent;
-  border-radius: 10px;
+  border: var(--border-w) solid transparent;
+  border-radius: var(--r-2);
   box-shadow: none;
 }
 
@@ -777,10 +784,11 @@ h1 {
 }
 
 :root :is(.dash-nav, .admin-nav) a.active {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--side-active-ink);
   background: var(--side-active-bg);
-  box-shadow: 0 6px 16px -8px var(--side-active-bg);
+  border-color: var(--side-line);
+  box-shadow: var(--shadow-xs);
 }
 
 :root :is(.dash-nav, .admin-nav) a.active svg {
@@ -796,7 +804,7 @@ h1 {
 :root :is(.dash-sidebar-foot, .admin-sidebar-foot) {
   gap: 6px;
   padding-top: 12px;
-  border-top: 1px solid var(--side-line);
+  border-top: var(--edge);
 }
 
 :root :is(.dash-sidebar-foot, .admin-sidebar-foot) .fp-segment {
@@ -804,17 +812,23 @@ h1 {
   padding: 0 6px;
   background: none;
   border: 0;
-  border-bottom: 1px solid var(--side-line);
+  border-bottom: var(--edge);
   border-radius: 0;
 }
 
 :root :is(.dash-sidebar-foot, .admin-sidebar-foot) .fp-segment button {
   flex: none;
   height: 36px;
+  margin-bottom: calc(-1 * var(--border-w));
   padding: 0 0 2px;
+  font-family: var(--font-meta);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--side-ink-3);
   background: none;
-  border-bottom: 2px solid transparent;
+  border-bottom: 4px solid transparent;
   border-radius: 0;
   box-shadow: none;
 }
@@ -826,7 +840,7 @@ h1 {
 :root :is(.dash-sidebar-foot, .admin-sidebar-foot) .fp-segment button[aria-pressed="true"] {
   color: var(--side-ink);
   background: none;
-  border-bottom-color: var(--side-active-bg);
+  border-bottom-color: var(--side-ink);
   box-shadow: none;
 }
 
@@ -834,7 +848,7 @@ h1 {
   height: 40px;
   padding: 0 12px;
   color: var(--side-ink-2);
-  border-radius: 10px;
+  border-radius: var(--r-2);
 }
 
 :root :is(.dash-signout, .admin-signout):hover {
@@ -1154,7 +1168,7 @@ h1 {
   width: 18px;
   height: 18px;
   margin-top: 2px;
-  accent-color: var(--c-primary);
+  accent-color: var(--c-ink);
 }
 
 .fp-settings-saved {
@@ -1267,22 +1281,22 @@ h1 {
   }
 }
 
-/* Fields (after Orbit's InputHolder) -------------------------------------
+/* Fields (brutalist) -------------------------------------------------------
  * One look for every form: the dashboard, the Ops console, sign-in and
- * checkout. Inputs are filled with a tint of the design (--c-input), with
- * no visible border until hovered or focused; 44px tall (40 in compact);
- * focus is the primary colour's border with a soft ring. Field labels are
- * small uppercase JetBrains Mono; checkbox and radio labels keep normal
- * type. A fieldset's title is a mono eyebrow in the primary colour. */
+ * checkout. Inputs are the card colour outlined in 2px of ink, 44px tall
+ * (40 in compact); on focus they cast a 4px hard shadow and the outline
+ * takes the primary colour. Field labels are bold uppercase JetBrains
+ * Mono; checkbox and radio labels keep normal type. A fieldset's title is
+ * a mono eyebrow in the primary colour. */
 :is(.dash-form, .dash-filters, .admin-form, .admin-filters, .checkout-form)
   label:not(:has(input[type="checkbox"], input[type="radio"])) {
-  gap: 6px;
+  gap: 8px;
   font-family: var(--font-meta);
-  font-size: 0.6875rem;
-  font-weight: 500;
+  font-size: 0.75rem;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--c-ink-3);
+  color: var(--c-ink);
 }
 
 :is(.dash-form, .dash-filters, .admin-form, .admin-filters, .checkout-form)
@@ -1298,11 +1312,11 @@ h1 {
   text-transform: none;
   color: var(--c-ink);
   background: var(--c-input);
-  border: 1px solid transparent;
+  border: var(--edge);
   border-radius: var(--r-input);
   box-shadow: none;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
 /* Card details and codes keep a monospace face for their digits. */
@@ -1318,13 +1332,14 @@ h1 {
 
 :is(.dash-form, .dash-filters, .admin-form, .admin-filters, .checkout-form)
   :is(input:not([type="checkbox"], [type="radio"], [type="file"]), select, textarea):hover {
-  border-color: var(--c-line-2);
+  box-shadow: var(--shadow-xs);
 }
 
 :is(.dash-form, .dash-filters, .admin-form, .admin-filters, .checkout-form)
   :is(input:not([type="checkbox"], [type="radio"], [type="file"]), select, textarea):focus {
   border-color: var(--c-primary);
-  box-shadow: 0 0 0 3px var(--c-focus);
+  box-shadow: 4px 4px 0 var(--c-primary);
+  transform: translate(-2px, -2px);
 }
 
 :is(.dash-form, .dash-filters, .admin-form, .admin-filters, .checkout-form)
@@ -1404,10 +1419,13 @@ h1 {
   }
 }
 
-/* Buttons and tabs (after Orbit) ----------------------------------------
- * The primary action on every form and page is a 44px button filled with
- * the design's flat action colour (--c-action, with --c-on-action text). Settings' light/dark choice is a row
- * of underline tabs, and filter checkboxes are filled toggle pills. */
+/* Buttons and tabs (brutalist) --------------------------------------------
+ * The primary action on every form and page is a 44px button in the
+ * design's flat action colour (--c-action, with --c-on-action text),
+ * outlined in ink, its label in bold uppercase mono. Every button rests
+ * on a 2px hard shadow, lifts to 4px on hover and presses flat when
+ * clicked, after the reference login button. Secondary buttons are the
+ * card colour with the same outline and lift. */
 :root:not([data-costume="halloween"]) :is(
     .dash-form button[type="submit"],
     .dash-button-primary,
@@ -1415,19 +1433,7 @@ h1 {
     .admin-form button[type="submit"],
     .admin-button-primary,
     .checkout-form button[type="submit"]
-  ) {
-  min-height: var(--control-h-lg);
-  height: auto;
-  padding-inline: 22px;
-  font-weight: 700;
-  color: var(--c-on-action);
-  background: var(--c-action);
-  border: 0;
-  border-radius: var(--r-button);
-  box-shadow: var(--shadow-xs);
-  transition: filter 0.2s ease, transform 0.2s ease;
-}
-
+  ),
 :root:not([data-costume="halloween"]) :is(
     .dash-form button[type="submit"],
     .dash-button-primary,
@@ -1438,13 +1444,101 @@ h1 {
   ):hover {
   color: var(--c-on-action);
   background: var(--c-action);
-  filter: brightness(1.08);
+}
+
+:root :is(
+    .dash-form button[type="submit"],
+    .dash-button-primary,
+    .dash-button-link,
+    .admin-form button[type="submit"],
+    .admin-button-primary,
+    .checkout-form button[type="submit"],
+    .ov-hero-primary,
+    .dash-button,
+    .admin-button,
+    .ov-hero-secondary
+  ) {
+  min-height: var(--control-h-lg);
+  height: auto;
+  padding-inline: 22px;
+  font-family: var(--font-meta);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: var(--edge);
+  border-radius: var(--r-button);
+  box-shadow: var(--shadow-xs);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+:root :is(.dash-button, .admin-button):not(.dash-button-primary, .admin-button-primary, .dash-button-link) {
+  color: var(--c-ink);
+  background: var(--c-surface);
+}
+
+:root :is(
+    .dash-form button[type="submit"],
+    .dash-button-primary,
+    .dash-button-link,
+    .admin-form button[type="submit"],
+    .admin-button-primary,
+    .checkout-form button[type="submit"],
+    .ov-hero-primary,
+    .dash-button,
+    .admin-button,
+    .ov-hero-secondary
+  ):hover:not(:disabled) {
+  filter: none;
+  box-shadow: var(--shadow-sm);
+  transform: translate(-2px, -2px);
+}
+
+:root :is(
+    .dash-form button[type="submit"],
+    .dash-button-primary,
+    .dash-button-link,
+    .admin-form button[type="submit"],
+    .admin-button-primary,
+    .checkout-form button[type="submit"],
+    .ov-hero-primary,
+    .dash-button,
+    .admin-button,
+    .ov-hero-secondary
+  ):active:not(:disabled) {
+  box-shadow: none;
+  transform: translate(2px, 2px);
+}
+
+/* On the band the outline and shadow are the band's ink. */
+:root :is(.ov-hero-primary, .ov-hero-secondary) {
+  --c-border: var(--hero-ink);
+  --c-shadow-hard: var(--hero-ink);
+}
+
+:root:not([data-costume="halloween"]) .ov-hero-primary,
+:root:not([data-costume="halloween"]) .ov-hero-primary:hover {
+  color: var(--hero-action-ink);
+  background: var(--hero-action-bg);
+}
+
+:root .ov-hero-secondary,
+:root .ov-hero-secondary:hover {
+  color: var(--hero-ink);
+  background: transparent;
 }
 
 :root :is(.dash-form, .admin-form, .checkout-form) button[type="submit"]:disabled {
   cursor: not-allowed;
-  filter: none;
+  box-shadow: none;
   opacity: 0.55;
+}
+
+/* Small icon buttons (menu, close) are outlined squares. */
+:root :is(.dash-icon-button, .admin-icon-button) {
+  border: var(--edge);
+  border-radius: var(--r-2);
+  box-shadow: var(--shadow-xs);
 }
 
 /* Light / Dark / Match my device as underline tabs. */
@@ -1453,7 +1547,7 @@ h1 {
   padding: 0;
   background: none;
   border: 0;
-  border-bottom: 1px solid var(--c-line);
+  border-bottom: var(--edge);
   border-radius: 0;
 }
 
@@ -1461,11 +1555,15 @@ h1 {
   flex: none;
   height: 44px;
   padding: 0 0 2px;
-  font-size: 0.875rem;
-  font-weight: 600;
+  margin-bottom: calc(-1 * var(--border-w));
+  font-family: var(--font-meta);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--c-ink-3);
   background: none;
-  border-bottom: 2px solid transparent;
+  border-bottom: 4px solid transparent;
   border-radius: 0;
 }
 
@@ -1476,24 +1574,27 @@ h1 {
 :root .fp-settings-segment label:has(input:checked) {
   color: var(--c-ink);
   background: none;
-  border-bottom-color: var(--c-primary);
+  border-bottom-color: var(--c-ink);
 }
 
-/* Filter checkboxes: filled toggle pills. */
+/* Filter checkboxes: outlined toggles; on, they take the action colour
+ * and lift. */
 :root :is(.dash-filters, .admin-filters) label:has(> input[type="checkbox"]) {
   height: 34px;
   padding: 0 14px 0 10px;
   font-size: 0.8125rem;
-  color: var(--c-ink-2);
-  background: var(--c-input);
-  border: 1px solid transparent;
-  border-radius: 999px;
+  color: var(--c-ink);
+  background: var(--c-surface);
+  border: var(--edge);
+  border-radius: var(--r-button);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 
 :root :is(.dash-filters, .admin-filters) label:has(> input[type="checkbox"]:checked) {
-  color: var(--c-ink);
-  background: var(--c-surface);
-  border-color: var(--c-primary);
+  color: var(--c-on-action);
+  background: var(--c-action);
+  box-shadow: var(--shadow-xs);
+  transform: translate(-1px, -1px);
 }
 
 :root :is(.dash-filters, .admin-filters) input[type="checkbox"] {
@@ -1525,6 +1626,12 @@ h1 {
   ) {
   border: var(--edge);
   box-shadow: var(--shadow-sm);
+}
+
+/* Pages sit on the design's bright page colour (the app layouts paint
+ * their content area in the card colour; the cards carry that now). */
+:root :is(.dash-content, .admin-content) {
+  background: transparent;
 }
 
 /* Tables and the tiles keep their inner rules soft, so the outline reads
