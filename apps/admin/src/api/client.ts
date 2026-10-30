@@ -1,4 +1,5 @@
 import type { ApiErrorBody } from "../types.js";
+import { reportApiFailure } from "./sessionEvents.js";
 
 const API_BASE_URL =
   (import.meta.env.VITE_ADMIN_API_BASE_URL as string | undefined) ?? "http://localhost:3000";
@@ -48,7 +49,10 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   const body = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new ApiError(res.status, (body as ApiErrorBody) ?? { error: "unknown_error" });
+    const errorBody = (body as ApiErrorBody) ?? { error: "unknown_error" };
+    // A 401 unauthenticated means the session is gone: let the auth context know.
+    reportApiFailure(res.status, errorBody.error);
+    throw new ApiError(res.status, errorBody);
   }
   return body as T;
 }

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { logout as logoutRequest, me as fetchMe } from "../api/dashboardAuth.js";
+import { onSessionEnded } from "../api/sessionEvents.js";
 import type { DashboardMe } from "../types.js";
 
 export type DashboardAuthStatus = "loading" | "authenticated" | "anonymous";
@@ -74,6 +75,19 @@ export function DashboardAuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Any API call that answers 401 unauthenticated means the session has
+  // expired or was revoked. Drop to anonymous so the guard sends the user to
+  // the login page (with the current page as `from`) and the login page
+  // doesn't bounce them back.
+  useEffect(
+    () =>
+      onSessionEnded(() => {
+        setMe(null);
+        setStatus("anonymous");
+      }),
+    [],
+  );
 
   const signOut = useCallback(async () => {
     try {
