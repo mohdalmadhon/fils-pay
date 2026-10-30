@@ -1,0 +1,36 @@
+{
+  "api": "http://localhost:3000",
+  "at": "2026-10-30T19:12:31.080Z",
+  "p95LimitMs": 1500,
+  "stepSeconds": 90,
+  "steps": [
+    {
+      "users": 120,
+      "arrivalWindowSeconds": 90,
+      "elapsedSeconds": 91.684,
+      "checkouts": 3103,
+      "paid": 2911,
+      "declined": 88,
+      "acquirer": 32,
+      "shed": 51,
+      "shedResponses": 6467,
+      "checkoutsDelayedByShedding": 703,
+      "recoveredAfterFailure": 196,
+      "errors": 21,
+      "errorKinds": [
+        "pay:409 payment_link_processing"
+      ],
+      "completedPerSecond": 33.1,
+      "p50": 616,
+      "p95": 847,
+      "p99": 948,
+      "max": 1185,
+      "buyerP95": 16747,
+      "unusedLinks": 2297,
+      "exhaustedLinkSupply": false,
+      "fastAndCorrect": false
+    }
+  ],
+  "capacity": null,
+  "problems": []
+}
