@@ -57,7 +57,7 @@ recorded rather than fixed:
    fee: `rate(rate(amount, mdr), discount)`. At settlement it comes off the
    amount first: `rate(amount − rate(amount, discount), mdr)`. These can differ
    by a fil through rounding.
-3. **Fee schedule ties are not broken the same way.** CloseBatch loads
+3. **(Fixed, improvement 07)** **Fee schedule ties are not broken the same way.** CloseBatch loads
    schedules ordered by `effective_from` only. The API breaks ties on
    `created_at`. Two rows with the same `effective_from` could resolve
    differently on each side.
