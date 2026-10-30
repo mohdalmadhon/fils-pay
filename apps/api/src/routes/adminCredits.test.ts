@@ -405,3 +405,22 @@ test("GET /v1/admin/credits filters by status", async () => {
     );
   }
 });
+
+test("splitting a credit doesn't skip the second approver: the same operator's credits today add up", async () => {
+  const finance = await signedInAdmin("finance", "split");
+  const merchantId = await createMerchant("split");
+
+  const first = await issueCredit(finance.cookie, merchantId, { baseAmountFils: 50_000 });
+  assert.equal(first.status, "posted");
+
+  const second = await issueCredit(finance.cookie, merchantId, { baseAmountFils: 50_000 });
+  assert.equal(second.requiresApproval, true);
+  assert.equal(second.status, "pending_approval");
+  assert.equal(second.ledgerEntryGroupId, null);
+
+  // A different operator, or a different merchant, starts from zero.
+  const other = await signedInAdmin("finance", "split-other");
+  assert.equal((await issueCredit(other.cookie, merchantId, { baseAmountFils: 10_000 })).status, "posted");
+  const otherMerchant = await createMerchant("split-2");
+  assert.equal((await issueCredit(finance.cookie, otherMerchant, { baseAmountFils: 10_000 })).status, "posted");
+});
