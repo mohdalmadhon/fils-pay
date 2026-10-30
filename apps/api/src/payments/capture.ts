@@ -188,8 +188,10 @@ export async function captureTransactionWithClient(
     return { statusCode: 422, body };
   }
 
-  const merchantResult = await client.query<{ mdr_bps: number; negotiated_discount_bps: number }>(
-    `SELECT mdr_bps, negotiated_discount_bps FROM merchants WHERE id = $1`,
+  // now() rides along on this read so the capture instant costs no extra
+  // round trip (see the fee rate below).
+  const merchantResult = await client.query<{ mdr_bps: number; negotiated_discount_bps: number; now: Date }>(
+    `SELECT mdr_bps, negotiated_discount_bps, now() AS now FROM merchants WHERE id = $1`,
     [input.merchantId],
   );
   const merchant = merchantResult.rows[0];
@@ -202,7 +204,14 @@ export async function captureTransactionWithClient(
   // applies yet — the ordinary case for every merchant that has never had
   // a negotiated rate change recorded. Resolved at the instant of capture,
   // inside the same locked transaction that computes and journals the fee.
-  const effectiveMdrBps = await getEffectiveMdrBps(client, input.merchantId, new Date(), merchant.mdr_bps);
+  //
+  // "The instant of capture" is the database's now(): the capture event and
+  // its ledger legs are dated with it (column DEFAULT now(), the start of
+  // this transaction), and settlement prices the event at that occurred_at.
+  // The API server's own clock runs later (lock waits, the acquirer call),
+  // so a schedule starting in between gave capture and settlement different
+  // rates and left a residue. docs/bugs/015.
+  const effectiveMdrBps = await getEffectiveMdrBps(client, input.merchantId, merchant.now, merchant.mdr_bps);
   const volumeTierBonusBps = await getVolumeTierBonusBps(client);
 
   // Call the acquirer — awaited here, with the row lock from above still
