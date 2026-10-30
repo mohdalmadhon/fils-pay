@@ -41,6 +41,12 @@ export async function businessProfileRoutes(app: FastifyInstance): Promise<void>
       throw new BadRequestError("invalid_request", "missing required business profile or owner fields");
     }
 
+    // 12+ characters (length beats composition rules), and at most 256 so a
+    // huge body can't make argon2 hash megabytes. It accepted anything,
+    // including one character. docs/improvements/11.
+    if (typeof owner.password !== "string" || owner.password.length < 12 || owner.password.length > 256) {
+      throw new BadRequestError("weak_password", "the password must be 12 to 256 characters");
+    }
     await reserveSignup(app.db, app.config, String(owner.email), request.ip);
     const result = await createMerchantWithOwner(app.db, app.config, body as SignupInput);
     reply.code(201).send({
