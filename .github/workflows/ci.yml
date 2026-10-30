@@ -1,0 +1,33 @@
+# Continuous integration for the FilsPay monorepo (docs/improvements/10).
+# Runs on every pull request and on pushes to main. Make these checks
+# required in the branch protection rule for main (Settings > Branches).
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck-and-build:
+    name: Typecheck and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - name: Build the dashboard and the Ops console
+        run: |
+          npx --workspace apps/web vite build
+          npx --workspace apps/admin vite build
