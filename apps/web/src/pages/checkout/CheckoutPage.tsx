@@ -8,6 +8,7 @@ import { Scene, Wordmark, type SceneName } from "../../components/art/Art.js";
 import { icons } from "../../components/art/Icons.js";
 import { useCountUp } from "../../components/kit/CountUp.js";
 import { Amount, Loading, StatePanel, usePageTitle } from "../../components/ui.js";
+import { describePayFailure } from "./payError.js";
 import "./CheckoutPage.css";
 
 type LoadState =
@@ -69,28 +70,13 @@ export function CheckoutPage() {
       setPayState({ kind: "success", result });
     } catch (err) {
       if (err instanceof ApiError) {
-        const { statusCode, body } = err;
-        if (statusCode === 402) {
-          const stageLabel =
-            body.stage === "capture"
-              ? "Your card was approved but the payment couldn't be completed. No payment was taken. Try again."
-              : "Your card was declined. Try another card, or contact your bank.";
-          setPayState({ kind: "declined", message: stageLabel, retryable: true });
-          setDeclines((n) => n + 1);
-        } else if (statusCode === 502) {
-          setPayState({ kind: "declined", message: "The card network didn't respond. No payment was taken. Try again in a moment.", retryable: true });
-          setDeclines((n) => n + 1);
-        } else if (statusCode === 409 && body.error === "payment_link_already_paid") {
-          setPayState({ kind: "terminal", message: "This invoice has already been paid." });
-        } else if (statusCode === 409 && body.error === "payment_link_canceled") {
-          setPayState({ kind: "terminal", message: "This payment link is no longer available." });
-        } else if (statusCode === 409) {
-          setPayState({ kind: "declined", message: "Someone is paying this link right now. Wait a moment, then refresh the page.", retryable: true });
-        } else if (statusCode === 410) {
-          setPayState({ kind: "terminal", message: "This payment link has expired." });
-        } else {
-          setPayState({ kind: "declined", message: body.message ?? "The payment didn't go through. Try again.", retryable: true });
-        }
+        const failure = describePayFailure(err.statusCode, err.body);
+        setPayState(
+          failure.kind === "terminal"
+            ? { kind: "terminal", message: failure.message }
+            : { kind: "declined", message: failure.message, retryable: true },
+        );
+        if (failure.countsAsDecline) setDeclines((n) => n + 1);
       } else {
         setPayState({ kind: "declined", message: "Can't reach FilsPay. Check your connection and try again.", retryable: true });
       }
@@ -182,6 +168,14 @@ export function CheckoutPage() {
       </CheckoutOutcome>
     );
   }
+  if (link.status === "unavailable") {
+    return (
+      <CheckoutOutcome scene="locked" title="This link can't take payments right now">
+        {link.merchantDisplayName} can't accept payments at the moment. No payment was taken. Contact them to pay
+        another way.
+      </CheckoutOutcome>
+    );
+  }
   if (link.status === "processing") {
     return (
       <CheckoutOutcome scene="waiting" title="A payment is in progress">
@@ -198,12 +192,13 @@ export function CheckoutPage() {
     <CheckoutFrame
       summary={
         <div className="checkout-summary">
-          <p className="checkout-payee">
+          {/* The page's one h1: what this page is for. Styled as before. */}
+          <h1 className="checkout-payee">
             <span className="checkout-payee-mark" aria-hidden>
               {link.merchantDisplayName.trim().charAt(0).toUpperCase()}
             </span>
             Pay {link.merchantDisplayName}
-          </p>
+          </h1>
           <p className="checkout-amount">
             <Amount fils={link.amountFils} />
           </p>

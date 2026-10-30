@@ -59,10 +59,13 @@ async function insertDelivery(
   endpointId: string,
   opts: { eventType: string; createdAt: string },
 ): Promise<string> {
+  // The outbox row only anchors the delivery; a test-only type keeps the
+  // reporting consumer and the dispatcher from picking it up (an empty
+  // 'transaction.voided' payload used to break later reporting runs).
   const outbox = await pool.query<{ id: string }>(
     `INSERT INTO outbox_events (event_type, aggregate_type, aggregate_id, payload)
-     VALUES ($1, 'transaction', $2, '{}'::jsonb) RETURNING id`,
-    [opts.eventType, randomUUID()],
+     VALUES ('test.webhook_archive_fixture', 'transaction', $1, '{}'::jsonb) RETURNING id`,
+    [randomUUID()],
   );
   const outboxEventId = outbox.rows[0]!.id;
 

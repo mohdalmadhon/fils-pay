@@ -7,6 +7,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/filspay/settlement/internal/money"
 )
 
 // recalcWindow returns the half-open [from, to) range covering exactly the
@@ -15,137 +17,163 @@ func recalcWindow(businessDate time.Time) (time.Time, time.Time) {
 	return businessDate, businessDate.AddDate(0, 0, 1)
 }
 
-// MK: this is the finance flow. history gets rewritten at the new rate, that's intended.
-func TestRecalculateMDR_RecomputesAtCurrentRate(t *testing.T) {
+// These tests describe ADR 0008 (docs/adr/0008-mdr-finalized-batches.md):
+// RecalculateMDR refreshes provisional totals of OPEN batches only, from the
+// captures CloseBatch would claim, and never touches closed or paid batches
+// or posts ledger entries. The four tests that used to be here asserted the
+// old behaviour (rewrite closed batches, post an adjustment group), which the
+// ADR replaced on 2026-10-29; they were left failing on purpose at the time.
+
+// insertOpenBatch creates an open batch row with the given provisional totals.
+func insertOpenBatch(t *testing.T, pool *pgxpool.Pool, merchantID uuid.UUID, businessDate time.Time, gross, fee money.Fils) uuid.UUID {
+	t.Helper()
+	var id uuid.UUID
+	err := pool.QueryRow(context.Background(), `
+		INSERT INTO settlement_batches (merchant_id, batch_date, status, gross_fils, fee_fils, net_payout_fils)
+		VALUES ($1, $2, 'open', $3, $4, $5)
+		RETURNING id
+	`, merchantID, businessDate, int64(gross), int64(fee), int64(NetPayableFils(gross, fee))).Scan(&id)
+	if err != nil {
+		t.Fatalf("insertOpenBatch: %v", err)
+	}
+	return id
+}
+
+// currentTierBonusBps reads the platform volume tier the same way
+// RecalculateMDR does, so expected fees match whatever volume the shared
+// test database has accumulated.
+func currentTierBonusBps(t *testing.T, pool *pgxpool.Pool) int64 {
+	t.Helper()
+	ctx := context.Background()
+	tx, err := pool.Begin(ctx)
+	if err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	processed, err := ReadAndLockPlatformProcessedFils(ctx, tx)
+	if err != nil {
+		t.Fatalf("read platform volume: %v", err)
+	}
+	return VolumeTierMdrBonusBps(processed)
+}
+
+func feeAt(amount money.Fils, mdrBps, tierBonusBps int64) money.Fils {
+	rate := mdrBps - tierBonusBps
+	if rate < 0 {
+		rate = 0
+	}
+	return ComputeSettlementFee(amount, rate, 0)
+}
+
+func countRecalcLedgerLegs(t *testing.T, pool *pgxpool.Pool, merchantID uuid.UUID) int64 {
+	t.Helper()
+	var n int64
+	if err := pool.QueryRow(context.Background(), `
+		SELECT COUNT(*) FROM ledger_entries
+		 WHERE merchant_id = $1 AND description = 'MDR recalculation adjustment'
+	`, merchantID).Scan(&n); err != nil {
+		t.Fatalf("count adjustment legs: %v", err)
+	}
+	return n
+}
+
+func TestRecalculateMDR_RefreshesOpenBatchAtCurrentRate(t *testing.T) {
 	pool := mustPool(t)
 	ctx := context.Background()
-	const originalMdrBps = 250
+	const originalMdrBps, newMdrBps = 250, 300
 	merchantID := insertActiveMerchant(t, pool, originalMdrBps)
 
 	businessDate := time.Date(2026, 4, 2, 0, 0, 0, 0, time.UTC)
 	start, _ := BusinessDayWindow(businessDate)
-	// Three separate events, so the recomputation has to sum per-event fees
-	// rather than rate a pre-summed total — the amounts are chosen so the
-	// two differ.
-	insertCaptureEvent(t, pool, merchantID, originalMdrBps, 4750, start.Add(time.Hour))
-	insertCaptureEvent(t, pool, merchantID, originalMdrBps, 1333, start.Add(2*time.Hour))
-	insertCaptureEvent(t, pool, merchantID, originalMdrBps, 999, start.Add(3*time.Hour))
-
-	closed, err := CloseBatch(ctx, pool, merchantID, businessDate)
-	if err != nil {
-		t.Fatalf("CloseBatch: %v", err)
+	// Three events, so per-event fees must be summed (the amounts make that
+	// differ from rating the total).
+	amounts := []money.Fils{4750, 1333, 999}
+	for i, a := range amounts {
+		insertCaptureEvent(t, pool, merchantID, originalMdrBps, a, start.Add(time.Duration(i+1)*time.Hour))
 	}
+	tier := currentTierBonusBps(t, pool)
+	var gross, oldFee, wantFee money.Fils
+	for _, a := range amounts {
+		gross += a
+		oldFee += feeAt(a, originalMdrBps, tier)
+		wantFee += feeAt(a, newMdrBps, tier)
+	}
+	batchID := insertOpenBatch(t, pool, merchantID, businessDate, gross, oldFee)
 
-	// Finance negotiates the rate up by 50bps and asks for the historical
-	// batch to reflect it.
-	const newMdrBps = 300
 	if _, err := pool.Exec(ctx, `UPDATE merchants SET mdr_bps = $2 WHERE id = $1`, merchantID, newMdrBps); err != nil {
 		t.Fatalf("update mdr_bps: %v", err)
 	}
-
 	from, to := recalcWindow(businessDate)
 	result, err := RecalculateMDR(ctx, pool, merchantID, from, to)
 	if err != nil {
 		t.Fatalf("RecalculateMDR: %v", err)
 	}
-
-	if result.BatchesConsidered != 1 {
-		t.Fatalf("BatchesConsidered = %d, want 1", result.BatchesConsidered)
+	if result.BatchesConsidered != 1 || len(result.Adjusted) != 1 {
+		t.Fatalf("considered %d, adjusted %d; want 1, 1", result.BatchesConsidered, len(result.Adjusted))
 	}
-	if len(result.Adjusted) != 1 {
-		t.Fatalf("len(Adjusted) = %d, want 1", len(result.Adjusted))
-	}
-
-	// The expected fee is ComputeSettlementFee per event at the NEW rate,
-	// summed — the same per-event-then-sum discipline CloseBatch step 8
-	// uses.
-	wantFee := ComputeSettlementFee(4750, newMdrBps, 0) +
-		ComputeSettlementFee(1333, newMdrBps, 0) +
-		ComputeSettlementFee(999, newMdrBps, 0)
-
 	adj := result.Adjusted[0]
-	if adj.BatchID != closed.BatchID {
-		t.Errorf("adjusted BatchID = %s, want %s", adj.BatchID, closed.BatchID)
-	}
-	if adj.OldFeeFils != closed.FeeFils {
-		t.Errorf("OldFeeFils = %d, want %d", adj.OldFeeFils, closed.FeeFils)
-	}
-	if adj.NewFeeFils != wantFee {
-		t.Errorf("NewFeeFils = %d, want %d", adj.NewFeeFils, wantFee)
-	}
-	if adj.DiffFils != wantFee-closed.FeeFils {
-		t.Errorf("DiffFils = %d, want %d", adj.DiffFils, wantFee-closed.FeeFils)
+	if adj.BatchID != batchID || adj.OldFeeFils != oldFee || adj.NewFeeFils != wantFee || adj.DiffFils != wantFee-oldFee {
+		t.Errorf("adjustment = %+v, want batch %s old %d new %d", adj, batchID, oldFee, wantFee)
 	}
 
-	// net_payout_fils must move in lockstep with the new fee.
-	var gotFee, gotNet int64
-	err = pool.QueryRow(ctx, `
-		SELECT fee_fils, net_payout_fils FROM settlement_batches WHERE id = $1
-	`, closed.BatchID).Scan(&gotFee, &gotNet)
-	if err != nil {
-		t.Fatalf("read recalculated batch: %v", err)
+	var gotGross, gotFee, gotNet int64
+	var status string
+	if err := pool.QueryRow(ctx, `SELECT status, gross_fils, fee_fils, net_payout_fils FROM settlement_batches WHERE id = $1`, batchID).
+		Scan(&status, &gotGross, &gotFee, &gotNet); err != nil {
+		t.Fatalf("read batch: %v", err)
 	}
-	if gotFee != int64(wantFee) {
-		t.Errorf("persisted fee_fils = %d, want %d", gotFee, wantFee)
+	if status != "open" || gotGross != int64(gross) || gotFee != int64(wantFee) || gotNet != int64(NetPayableFils(gross, wantFee)) {
+		t.Errorf("batch = %s %d/%d/%d, want open %d/%d/%d", status, gotGross, gotFee, gotNet, gross, wantFee, NetPayableFils(gross, wantFee))
 	}
-	if gotNet != int64(closed.GrossFils)-int64(wantFee) {
-		t.Errorf("persisted net_payout_fils = %d, want %d", gotNet, int64(closed.GrossFils)-int64(wantFee))
+	if n := countRecalcLedgerLegs(t, pool, merchantID); n != 0 {
+		t.Errorf("posted %d ledger legs; a preview posts none", n)
 	}
 }
 
-// YA: the 0007 trigger also rejects UPDATE/DELETE on ledger_entries, so these groups can't be edited afterwards
-func TestRecalculateMDR_AdjustmentLedgerGroupBalances(t *testing.T) {
+func TestRecalculateMDR_LeavesClosedAndPaidBatchesAlone(t *testing.T) {
 	pool := mustPool(t)
 	ctx := context.Background()
-	const originalMdrBps = 200
-	merchantID := insertActiveMerchant(t, pool, originalMdrBps)
+	merchantID := insertActiveMerchant(t, pool, 200)
 
-	businessDate := time.Date(2026, 4, 3, 0, 0, 0, 0, time.UTC)
-	start, _ := BusinessDayWindow(businessDate)
-	insertCaptureEvent(t, pool, merchantID, originalMdrBps, 20_000, start.Add(time.Hour))
-
-	if _, err := CloseBatch(ctx, pool, merchantID, businessDate); err != nil {
+	closedDate := time.Date(2026, 4, 3, 0, 0, 0, 0, time.UTC)
+	paidDate := time.Date(2026, 4, 4, 0, 0, 0, 0, time.UTC)
+	for _, d := range []time.Time{closedDate, paidDate} {
+		start, _ := BusinessDayWindow(d)
+		insertCaptureEvent(t, pool, merchantID, 200, 20_000, start.Add(time.Hour))
+	}
+	closed, err := CloseBatch(ctx, pool, merchantID, closedDate)
+	if err != nil {
 		t.Fatalf("CloseBatch: %v", err)
+	}
+	paid, err := CloseBatch(ctx, pool, merchantID, paidDate)
+	if err != nil {
+		t.Fatalf("CloseBatch: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE settlement_batches SET status = 'paid' WHERE id = $1`, paid.BatchID); err != nil {
+		t.Fatalf("mark paid: %v", err)
 	}
 	if _, err := pool.Exec(ctx, `UPDATE merchants SET mdr_bps = 275 WHERE id = $1`, merchantID); err != nil {
 		t.Fatalf("update mdr_bps: %v", err)
 	}
 
-	from, to := recalcWindow(businessDate)
-	if _, err := RecalculateMDR(ctx, pool, merchantID, from, to); err != nil {
+	result, err := RecalculateMDR(ctx, pool, merchantID, closedDate, paidDate.AddDate(0, 0, 1))
+	if err != nil {
 		t.Fatalf("RecalculateMDR: %v", err)
 	}
-
-	// Every adjustment group this pass posted must sum debits - credits = 0.
-	rows, err := pool.Query(ctx, `
-		SELECT entry_group_id,
-		       SUM(CASE WHEN direction = 'debit' THEN amount_fils ELSE -amount_fils END) AS net
-		  FROM ledger_entries
-		 WHERE merchant_id = $1 AND description = 'MDR recalculation adjustment'
-		 GROUP BY entry_group_id
-	`, merchantID)
-	if err != nil {
-		t.Fatalf("query adjustment groups: %v", err)
+	if result.BatchesConsidered != 0 || len(result.Adjusted) != 0 {
+		t.Errorf("considered %d, adjusted %d; finalized batches must not be selected", result.BatchesConsidered, len(result.Adjusted))
 	}
-	defer rows.Close()
-
-	groups := 0
-	for rows.Next() {
-		var groupID uuid.UUID
-		var net int64
-		if err := rows.Scan(&groupID, &net); err != nil {
-			t.Fatalf("scan adjustment group: %v", err)
+	for _, b := range []BatchResult{closed, paid} {
+		var fee int64
+		if err := pool.QueryRow(ctx, `SELECT fee_fils FROM settlement_batches WHERE id = $1`, b.BatchID).Scan(&fee); err != nil {
+			t.Fatalf("read batch: %v", err)
 		}
-		groups++
-		if net != 0 {
-			t.Errorf("adjustment group %s nets %d fils, want 0", groupID, net)
+		if fee != int64(b.FeeFils) {
+			t.Errorf("batch %s fee_fils = %d, want %d (unchanged)", b.BatchID, fee, b.FeeFils)
 		}
 	}
-	if err := rows.Err(); err != nil {
-		t.Fatalf("iterate adjustment groups: %v", err)
-	}
-	if groups != 1 {
-		t.Errorf("posted %d adjustment groups, want 1", groups)
+	if n := countRecalcLedgerLegs(t, pool, merchantID); n != 0 {
+		t.Errorf("posted %d ledger legs, want 0", n)
 	}
 }
 
@@ -155,16 +183,12 @@ func TestRecalculateMDR_UnchangedRateAdjustsNothing(t *testing.T) {
 	const mdrBps = 250
 	merchantID := insertActiveMerchant(t, pool, mdrBps)
 
-	businessDate := time.Date(2026, 4, 4, 0, 0, 0, 0, time.UTC)
+	businessDate := time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC)
 	start, _ := BusinessDayWindow(businessDate)
 	insertCaptureEvent(t, pool, merchantID, mdrBps, 7_500, start.Add(time.Hour))
+	tier := currentTierBonusBps(t, pool)
+	insertOpenBatch(t, pool, merchantID, businessDate, 7_500, feeAt(7_500, mdrBps, tier))
 
-	if _, err := CloseBatch(ctx, pool, merchantID, businessDate); err != nil {
-		t.Fatalf("CloseBatch: %v", err)
-	}
-
-	// No rate change: the recomputation must land on exactly the figure the
-	// batch already froze, so nothing is posted and nothing is rewritten.
 	from, to := recalcWindow(businessDate)
 	result, err := RecalculateMDR(ctx, pool, merchantID, from, to)
 	if err != nil {
@@ -176,18 +200,6 @@ func TestRecalculateMDR_UnchangedRateAdjustsNothing(t *testing.T) {
 	if len(result.Adjusted) != 0 {
 		t.Errorf("len(Adjusted) = %d, want 0 (an unchanged rate is a no-op)", len(result.Adjusted))
 	}
-
-	var adjustmentCount int64
-	err = pool.QueryRow(ctx, `
-		SELECT COUNT(*) FROM ledger_entries
-		 WHERE merchant_id = $1 AND description = 'MDR recalculation adjustment'
-	`, merchantID).Scan(&adjustmentCount)
-	if err != nil {
-		t.Fatalf("count adjustments: %v", err)
-	}
-	if adjustmentCount != 0 {
-		t.Errorf("posted %d adjustment legs, want 0", adjustmentCount)
-	}
 }
 
 func TestRecalculateMDR_OutOfRangeBatchUntouched(t *testing.T) {
@@ -196,41 +208,33 @@ func TestRecalculateMDR_OutOfRangeBatchUntouched(t *testing.T) {
 	const originalMdrBps = 250
 	merchantID := insertActiveMerchant(t, pool, originalMdrBps)
 
-	inRangeDate := time.Date(2026, 4, 5, 0, 0, 0, 0, time.UTC)
+	inRangeDate := time.Date(2026, 4, 7, 0, 0, 0, 0, time.UTC)
 	outOfRangeDate := time.Date(2026, 4, 9, 0, 0, 0, 0, time.UTC)
-
-	inStart, _ := BusinessDayWindow(inRangeDate)
-	outStart, _ := BusinessDayWindow(outOfRangeDate)
-	insertCaptureEvent(t, pool, merchantID, originalMdrBps, 6_000, inStart.Add(time.Hour))
-	insertCaptureEvent(t, pool, merchantID, originalMdrBps, 6_000, outStart.Add(time.Hour))
-
-	if _, err := CloseBatch(ctx, pool, merchantID, inRangeDate); err != nil {
-		t.Fatalf("CloseBatch(in range): %v", err)
+	tier := currentTierBonusBps(t, pool)
+	for _, d := range []time.Time{inRangeDate, outOfRangeDate} {
+		start, _ := BusinessDayWindow(d)
+		insertCaptureEvent(t, pool, merchantID, originalMdrBps, 6_000, start.Add(time.Hour))
 	}
-	outBatch, err := CloseBatch(ctx, pool, merchantID, outOfRangeDate)
-	if err != nil {
-		t.Fatalf("CloseBatch(out of range): %v", err)
-	}
+	insertOpenBatch(t, pool, merchantID, inRangeDate, 6_000, feeAt(6_000, originalMdrBps, tier))
+	outID := insertOpenBatch(t, pool, merchantID, outOfRangeDate, 6_000, feeAt(6_000, originalMdrBps, tier))
 
 	if _, err := pool.Exec(ctx, `UPDATE merchants SET mdr_bps = 400 WHERE id = $1`, merchantID); err != nil {
 		t.Fatalf("update mdr_bps: %v", err)
 	}
-
 	from, to := recalcWindow(inRangeDate)
 	result, err := RecalculateMDR(ctx, pool, merchantID, from, to)
 	if err != nil {
 		t.Fatalf("RecalculateMDR: %v", err)
 	}
-	if result.BatchesConsidered != 1 {
-		t.Errorf("BatchesConsidered = %d, want 1 (the out-of-range batch must not be selected)", result.BatchesConsidered)
+	if result.BatchesConsidered != 1 || len(result.Adjusted) != 1 {
+		t.Errorf("considered %d, adjusted %d; want 1, 1", result.BatchesConsidered, len(result.Adjusted))
 	}
-
 	var gotFee int64
-	if err := pool.QueryRow(ctx, `SELECT fee_fils FROM settlement_batches WHERE id = $1`, outBatch.BatchID).Scan(&gotFee); err != nil {
+	if err := pool.QueryRow(ctx, `SELECT fee_fils FROM settlement_batches WHERE id = $1`, outID).Scan(&gotFee); err != nil {
 		t.Fatalf("read out-of-range batch: %v", err)
 	}
-	if gotFee != int64(outBatch.FeeFils) {
-		t.Errorf("out-of-range batch fee_fils = %d, want %d (unchanged)", gotFee, outBatch.FeeFils)
+	if gotFee != int64(feeAt(6_000, originalMdrBps, tier)) {
+		t.Errorf("out-of-range batch fee_fils = %d, want unchanged %d", gotFee, feeAt(6_000, originalMdrBps, tier))
 	}
 }
 

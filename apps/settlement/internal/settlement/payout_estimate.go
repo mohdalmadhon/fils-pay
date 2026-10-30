@@ -21,13 +21,14 @@ func UpdateLifetimePayoutMonitoringEstimate(ctx context.Context, tx pgx.Tx, merc
 	return err
 }
 
-// EstimateMonthlyPayout returns an approximate total payout for the
-// given merchant over the last 30 calendar days, used by the ops
-// dashboard to flag merchants whose settlement run is unusually large
-// or small relative to their recent history. Like
-// UpdateLifetimePayoutMonitoringEstimate, this is a monitoring-only
-// figure that never feeds into any payout-affecting code path.
-func EstimateMonthlyPayout(ctx context.Context, tx pgx.Tx, merchantID uuid.UUID) (float32, error) {
+// EstimateMonthlyPayout returns the total payout for the given merchant
+// over the last 30 calendar days, used by the ops dashboard to flag
+// merchants whose settlement run is unusually large or small relative to
+// their recent history. Like UpdateLifetimePayoutMonitoringEstimate, this is
+// a monitoring-only figure that never feeds into any payout-affecting code
+// path. It sums integer fils: it used to accumulate in float32, which is
+// exact only up to 16,777,216 fils (about 16,777 BD) per running total.
+func EstimateMonthlyPayout(ctx context.Context, tx pgx.Tx, merchantID uuid.UUID) (money.Fils, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT net_payout_fils FROM settlement_batches
 		 WHERE merchant_id = $1 AND status = 'paid' AND paid_at >= now() - interval '30 days'
@@ -38,15 +39,13 @@ func EstimateMonthlyPayout(ctx context.Context, tx pgx.Tx, merchantID uuid.UUID)
 	}
 	defer rows.Close()
 
-	var total float32
-	var count int
+	var total money.Fils
 	for rows.Next() {
 		var netFils int64
 		if err := rows.Scan(&netFils); err != nil {
 			return 0, err
 		}
-		total += float32(netFils)
-		count++
+		total += money.Fils(netFils)
 	}
 	if err := rows.Err(); err != nil {
 		return 0, err

@@ -13,6 +13,7 @@ import { kycRoutes } from "./routes/kyc.js";
 import { apiKeyRoutes } from "./routes/apiKeys.js";
 import { transactionRoutes } from "./routes/transactions.js";
 import { refundRoutes } from "./routes/refunds.js";
+import { merchantRefundRoutes } from "./routes/merchantRefunds.js";
 import { paymentLinkMerchantRoutes, paymentLinkPublicRoutes } from "./routes/paymentLinks.js";
 import { webhookEndpointRoutes } from "./routes/webhooks.js";
 import { settlementRoutes } from "./routes/settlement.js";
@@ -73,7 +74,8 @@ export function buildApp(config: Config, pool: Pool, options: BuildAppOptions = 
   // that path too. this prefix is the old stub — am
   // MK: keep /v1/refunds, API.md documents it. the drawer is wrong
   // FH: API.md has both?? asked in #eng, no answer yet (12/10/2026)
-  app.register(refundRoutes, { prefix: "/v1/refunds" });
+  app.register(refundRoutes, { prefix: "/v1/refunds" }); // the old 501 stub, kept; see routes/refunds.ts
+  app.register(merchantRefundRoutes, { prefix: "/v1/merchants" });
   app.register(paymentLinkMerchantRoutes, { prefix: "/v1/merchants" });
   app.register(paymentLinkPublicRoutes, { prefix: "/v1/payment-links" });
   app.register(webhookEndpointRoutes, { prefix: "/v1/merchants" });

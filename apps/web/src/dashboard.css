@@ -449,8 +449,8 @@
 :root[data-costume="halloween"] .dash-button-primary,
 :root[data-costume="halloween"] .dash-button-link {
   background-image: var(--hw-gradient);
-  border-color: transparent;
-  box-shadow: 0 6px 20px -8px rgba(255, 180, 162, 0.7);
+  border-color: #05030a;
+  box-shadow: var(--hw-pixel-shadow);
 }
 
 .dash-button-quiet {
@@ -921,10 +921,12 @@
 }
 
 :root[data-costume="halloween"] .dash-login-aside {
-  background-color: #100a0d;
+  /* A pixel grid on the night sky, with an orange margin rule. */
+  background-color: #0a0612;
   background-image:
-    linear-gradient(90deg, transparent 63px, rgba(255, 180, 162, 0.5) 63px, rgba(255, 180, 162, 0.5) 64px, transparent 64px),
-    repeating-linear-gradient(180deg, transparent 0 31px, rgba(255, 205, 178, 0.05) 31px 32px);
+    linear-gradient(90deg, transparent 62px, rgba(255, 122, 26, 0.55) 62px, rgba(255, 122, 26, 0.55) 64px, transparent 64px),
+    repeating-linear-gradient(90deg, transparent 0 15px, rgba(180, 92, 240, 0.06) 15px 16px),
+    repeating-linear-gradient(180deg, transparent 0 15px, rgba(180, 92, 240, 0.06) 15px 16px);
 }
 
 .dash-login-aside .fp-wordmark {
@@ -1018,7 +1020,7 @@
 }
 
 :root[data-costume="halloween"] .dash-login-points svg {
-  color: var(--hw-salmon);
+  color: var(--hw-pumpkin);
 }
 
 .dash-login-foot {

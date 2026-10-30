@@ -28,7 +28,7 @@ export async function getCurrentFeeScheduleForDisplay(
     `SELECT mdr_bps, effective_from, created_at
        FROM fee_schedules
       WHERE merchant_id = $1 AND effective_from <= $2
-      ORDER BY effective_from DESC, created_at DESC
+      ORDER BY effective_from DESC, created_at DESC, id DESC
       LIMIT 1`,
     [merchantId, asOf],
   );

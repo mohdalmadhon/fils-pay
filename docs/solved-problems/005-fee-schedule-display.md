@@ -95,7 +95,7 @@ The original implementation and removed comments can be inspected with
 | [Merchant-detail frontend](../../apps/admin/src/pages/merchants/MerchantDetailPage.tsx#L263) | Renders the fallback MDR separately from the negotiated schedule's rate and effective date |
 | [Original frontend type comment](../../apps/admin/src/types.ts#L152) at baseline `a1a8978` | Describes the display as newest-entered and acknowledges that it need not govern billing |
 | [Capture implementation](../../apps/api/src/payments/capture.ts#L162) | Resolves MDR at capture time, applies any platform-volume reduction, and posts the resulting fee to the ledger |
-| [Settlement fee schedule](../../apps/settlement/internal/settlement/fee_schedule.go) | Resolves schedules against each event's effective time rather than the last entered row; equal-effective-date ordering is not changed by this display fix |
+| [Settlement fee schedule](../../apps/settlement/internal/settlement/fee_schedule.go) | Resolves schedules against each event's effective time rather than the last entered row; equal-effective-date ordering was not changed by this display fix; since [improvement 07](../improvements/07-fee-schedule-tie-break.md) it breaks ties by `created_at`, then `id`, like the API |
 | [Architecture settlement description](../ARCHITECTURE.md#settlement) | Identifies fee schedules with merchant MDR fallback as the source of settlement rates |
 | [Settlement v2 fee description](../design/settlement-v2.md#L102) | Describes rates as effective at the event time; it is design context, not proof of a deployed v2 system |
 

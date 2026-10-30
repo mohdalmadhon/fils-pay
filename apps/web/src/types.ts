@@ -4,7 +4,7 @@
  * style elsewhere.
  */
 
-export type PublicPaymentLinkStatus = "active" | "processing" | "paid" | "expired" | "canceled";
+export type PublicPaymentLinkStatus = "active" | "processing" | "paid" | "expired" | "canceled" | "unavailable";
 
 /** Public shape. The server must never add API-key fields to this response. */
 export interface PaymentLinkPublicDto {

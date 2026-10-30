@@ -12,8 +12,8 @@
 # file), so without `env_file:` the containers ran with NODE_ENV unset and
 # development defaults. See docs/cyper/03-insecure-defaults.md.
 #
-# — M?: Dockerfile.node / Dockerfile.go live next to this file. if they're
-# missing for you, pull main again.
+# ops/Dockerfile.node (migrate, seed, api, reporting) and ops/Dockerfile.go
+# (settlement) build the images; the repo root is the build context.
 #
 # Run from the repo root: `docker compose -f ops/docker-compose.yml up`.
 
@@ -59,11 +59,17 @@ services:
       postgres:
         condition: service_healthy
 
-  # One-off: deterministic seed data. Re-run any time; db/seed/index.ts
-  # resets and regenerates from scratch on every invocation.
-  # AM: the seed only truncates its own fixture tables, so pointing this at a
-  # shared database is fine. MK: correct. (see RUNBOOK)
+  # One-off: deterministic demo data. NOT part of a normal `up`: the seed
+  # TRUNCATEs merchants, transactions, the ledger, batches and admin users
+  # (CASCADE), i.e. it empties the database, and it used to run on every
+  # `docker compose up`, including on the hosted box. (An old note here said
+  # it only truncated its own fixture tables and was safe on a shared
+  # database; it wasn't.) Run it on purpose, on a local database:
+  #   docker compose -f ops/docker-compose.yml --profile seed run --rm seed
+  # It refuses NODE_ENV=production and any database with merchants it didn't
+  # create (db/seed/guard.ts). docs/improvements/12.
   seed:
+    profiles: ["seed"]
     build:
       context: ..
       dockerfile: ops/Dockerfile.node
@@ -77,6 +83,32 @@ services:
       postgres:
         condition: service_healthy
 
+  # One-off, after migrate: (re)applies ops/db/service-roles.sql, so each
+  # service connects as its own least-privilege role instead of the owner
+  # (docs/improvements/13). Idempotent; runs on every up, which also covers
+  # tables added by new migrations.
+  db-roles:
+    image: postgres:16-alpine
+    command:
+      - sh
+      - -c
+      - >-
+        psql "postgres://filspay:$${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable"
+        -v api_password="$${API_DB_PASSWORD}"
+        -v settlement_password="$${SETTLEMENT_DB_PASSWORD}"
+        -v reporting_password="$${REPORTING_DB_PASSWORD}"
+        -f /ops-db/service-roles.sql
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      API_DB_PASSWORD: ${API_DB_PASSWORD:?set API_DB_PASSWORD}
+      SETTLEMENT_DB_PASSWORD: ${SETTLEMENT_DB_PASSWORD:?set SETTLEMENT_DB_PASSWORD}
+      REPORTING_DB_PASSWORD: ${REPORTING_DB_PASSWORD:?set REPORTING_DB_PASSWORD}
+    volumes:
+      - ./db:/ops-db:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
   api:
     build:
       context: ..
@@ -87,13 +119,9 @@ services:
     # NODE_ENV, ACQUIRER_CALLBACK_SIGNING_SECRET, ... (see ops/README.md).
     env_file: .env.docker
     environment:
-      # One application role (filspay) owns the whole database in this
-      # environment. Every service here, and the one-off migrate/seed jobs
-      # above, authenticate as that same role, which keeps local
-      # onboarding to a single password instead of provisioning per-service
-      # grants by hand.
-      DATABASE_URL: postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable
-      # TODO(YA, Jan): give the api its own role before anything is hosted.
+      # Its own role (ops/db/service-roles.sql), not the owner: read/write,
+      # no DDL, ledger INSERT-only. Only migrate and seed use the owner.
+      DATABASE_URL: postgres://filspay_api:${API_DB_PASSWORD:?set API_DB_PASSWORD}@postgres:5432/filspay?sslmode=disable
       SETTLEMENT_INTERNAL_URL: http://settlement:8091
       # The browser apps' origins (apps/web, apps/admin dev servers). Without
       # this the API answers no CORS and the browser blocks every request.
@@ -102,9 +130,15 @@ services:
       # one file compose reads for ${...}); compose refuses to start without.
       WEBHOOK_SECRET_ENCRYPTION_KEY: ${WEBHOOK_SECRET_ENCRYPTION_KEY:?set WEBHOOK_SECRET_ENCRYPTION_KEY (32 random bytes, base64)}
       SETTLEMENT_INTERNAL_TOKEN: ${SETTLEMENT_INTERNAL_TOKEN:?set SETTLEMENT_INTERNAL_TOKEN}
+    # KYC uploads live in /app/data/kyc (KYC_UPLOAD_DIR default); keep them
+    # across container restarts and rebuilds.
+    volumes:
+      - filspay_kyc:/app/data/kyc
     depends_on:
       postgres:
         condition: service_healthy
+      db-roles:
+        condition: service_completed_successfully
 
   settlement:
     build:
@@ -115,15 +149,17 @@ services:
     command: ["./settlement", "daemon"]
     environment:
       SETTLEMENT_INTERNAL_TOKEN: ${SETTLEMENT_INTERNAL_TOKEN:?set SETTLEMENT_INTERNAL_TOKEN}
-      DATABASE_URL: postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable
+      DATABASE_URL: postgres://filspay_settlement:${SETTLEMENT_DB_PASSWORD:?set SETTLEMENT_DB_PASSWORD}@postgres:5432/filspay?sslmode=disable
       # Batch close and scheme export get their own pool so a long close
       # can't starve the API's connections.
       # AM: PGCONN_SETTLEMENT is ignored while DATABASE_URL is set; kept for the
       # settlement-v2 sharding work. safe to leave.
-      PGCONN_SETTLEMENT: postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable
+      PGCONN_SETTLEMENT: postgres://filspay_settlement:${SETTLEMENT_DB_PASSWORD}@postgres:5432/filspay?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
+      db-roles:
+        condition: service_completed_successfully
 
   reporting:
     build:
@@ -132,10 +168,13 @@ services:
     # No subcommand = `worker`. (MK)
     command: ["npx", "tsx", "apps/reporting/src/index.ts"]
     environment:
-      DATABASE_URL: postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable
+      DATABASE_URL: postgres://filspay_reporting:${REPORTING_DB_PASSWORD:?set REPORTING_DB_PASSWORD}@postgres:5432/filspay?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
+      db-roles:
+        condition: service_completed_successfully
 
 volumes:
   filspay_pgdata:
+  filspay_kyc:

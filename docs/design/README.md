@@ -22,8 +22,8 @@ lines and a margin rule) with one figure on it: `0.001 BHD`, one fils.
 
 | Group | Tokens | Notes |
 |---|---|---|
-| Neutrals | `--c-bg`, `--c-surface`, `--c-surface-2/3`, `--c-line`, `--c-line-2`, `--c-ink` … `--c-ink-4` | paper `#f6f5f2`, ink `#18181b` |
-| Action | `--c-primary`, `--c-primary-hover`, `--c-on-primary` | ink buttons; in night mode they invert |
+| Neutrals | `--c-bg`, `--c-surface`, `--c-surface-2/3`, `--c-line`, `--c-line-2`, `--c-ink` … `--c-ink-4` | parchment `#e9e5db` page, `#f3f0e8` cards, ink `#1c1a17`; night is navy `#070b14` |
+| Action | `--c-primary`, `--c-primary-hover`, `--c-on-primary` | ink buttons; saffron in night |
 | Accent | `--c-accent` `#d97a1e`, `--c-accent-ink`, `--c-accent-soft` | current page, focus, chart line, the BHD tag |
 | Meaning | `--c-good`, `--c-warn`, `--c-danger` with `-soft` fills | status pills always pair a dot with a word |
 | Type | `--font-sans` Geist, `--font-mono` Geist Mono, `--text-xs` … `--text-3xl` | 14px base; headings 22–28px, never oversized |
@@ -34,8 +34,24 @@ lines and a margin rule) with one figure on it: `0.001 BHD`, one fils.
 
 There are three looks, all on the same tokens:
 
-- **Light**: the default.
-- **Night** (`data-theme="night"` on `<html>`): toggled from the sidebar or the command palette. It is remembered per browser; otherwise it follows the system.
+- **Light**, the default: warm parchment, never pure white, so the page
+  doesn't glare. Cards `#F3F0E8` on a `#E9E5DB` page, ink actions, the
+  saffron accent. Every text colour is at least 5:1 on the darkest surface.
+- **Night** (`data-theme="night"` on `<html>`): the ledger at midnight. A deep
+  navy (`#070B14` page, `#0D1320` to `#172033` surfaces) with saffron primary
+  buttons. It has its own depth, in the "Night depth" section of `theme.css`:
+  - a warm lamp glow and cool moonlight in opposite corners, with faint
+    ledger ruling, fixed behind the page
+  - a gradient sidebar with a saffron-to-blue hairline on its edge
+  - cards, tables, filter panels and the overview tiles lit from the top
+    with a highlight on their top edge
+  - a glowing saffron marker on the current page, lit buttons that glow on
+    hover, inset fields that light up on focus, and a midnight-blue card on
+    checkout
+
+  Toggled from the sidebar or the command palette. It is remembered per
+  browser; otherwise it follows the system. These styles are scoped to night
+  without the costume, which paints its own sky.
 - **Halloween costume**: see below.
 
 ## Building blocks
@@ -60,29 +76,59 @@ pick up the system without changes:
 
 ## Halloween costume
 
-A pumpkin button (bottom right, or a tab on the right edge on phones) dresses
-the whole site, both consoles and checkout, for Halloween. The palette moves
-to peach and rose:
+A pixel jack-o'-lantern button (bottom right, or a tab on the right edge on
+phones) dresses the whole site, both consoles and checkout, as a pixel-art
+Halloween night. Switching in or out spreads from the pumpkin as a circle (a
+View Transition where the browser supports it).
 
-- `#FFCDB2`, `#FFB4A2`, `#E5989B` and `#B5828C` on a near-black plum night
-- headings and the name take a slow peach-to-rose sheen
-- primary buttons glow like lanterns
+**Look.** Pumpkin orange `#FF7A1A`, witch purple `#B45CF0`, slime green
+`#8FE36B` and candy yellow `#FFD23F` on a purple-black sky `#0C0814`:
 
-Switching in or out spreads from the pumpkin as a circle (a View Transition
-where the browser supports it).
+- corners go square and shadows become hard pixel offsets (the radius and
+  shadow tokens change, so every component follows)
+- headings and the name are set in **Pixelify Sans** (bundled from
+  `@fontsource/pixelify-sans`, OFL; it only downloads when the costume is on),
+  orange with a purple pixel shadow
+- primary buttons are two-tone orange with a black pixel shadow
+- every text colour is at least 4.5:1, and `npm run e2e:a11y` audits the
+  costume on every page
 
-It is interactive:
+**Pixel art.** Every decoration is a sprite stored as a grid of characters in
+`components/kit/pixelArt.tsx` and drawn by `PixelArt` as crisp SVG squares.
+Sprites are shown at whole-number scales (2x, 3x, 4x) so every pixel is the
+same size; animations step between frames rather than easing.
 
-- a lantern glow follows the pointer
-- cobwebs and a full moon sit in the corners
-- bats wander the sky and flee from the pointer; catch one and it vanishes in a puff, and a counter keeps score
+| Sprite | Size | Where |
+|---|---|---|
+| jack-o'-lantern (lit / dark) | 18x16 | the button; the graveyard |
+| bat (wings up / down) | 20x10 | flying |
+| ghost (two hem frames) | 16x18 | haunting |
+| spider | 15x12 | on its thread |
+| moon, cobweb | 18x18, 36x36 | top corners |
+| witch on a broom | 28x15 | across the sky |
+| tombstone, cross | 10x10, 9x9 | the graveyard |
+
+To add or change one, edit its grid (each row the same length; colours are
+the letters in `PIXEL_PALETTE`).
+
+**Behind the page** (z-index -1, never over text or a click): twinkling stars,
+a witch who crosses the sky every 24 seconds, a graveyard of tombstones and
+flickering jack-o'-lanterns, and faint fog. In costume the page backgrounds
+turn transparent so the sky shows through.
+
+**Over the page** (never takes a click, except the spider):
+
+- bats wander the sky and flee from the pointer; touch one and it breaks up,
+  and a counter keeps score
 - a spider hangs on a thread and can be pulled down; it springs back
-- a little ghost trails the pointer and says "Boo!" if you catch it
-- the pumpkin's eyes follow the pointer
+- **the ghost haunts on its own**: it drifts slowly between random spots and
+  every 9 to 16 seconds fades out and reappears elsewhere. It does not follow
+  the pointer. Touch it and it says boo, shakes and vanishes.
+- a soft lantern glow sits under the pointer
 
-Bats and the ghost never take clicks, so the page underneath always works.
-Under `prefers-reduced-motion` the decorations stay still. It is also in the
-Ctrl+K palette, and the choice is remembered per browser.
+Under `prefers-reduced-motion` nothing moves and the witch stays home; the
+rest of the scenery stays, still. It is also in the Ctrl+K palette, and the
+choice is remembered per browser.
 
 ## Errors and empty states
 

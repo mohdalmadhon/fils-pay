@@ -28,7 +28,7 @@ export async function getEffectiveMdrBps(
   const result = await client.query<{ mdr_bps: number }>(
     `SELECT mdr_bps FROM fee_schedules
       WHERE merchant_id = $1 AND effective_from <= $2
-      ORDER BY effective_from DESC, created_at DESC
+      ORDER BY effective_from DESC, created_at DESC, id DESC
       LIMIT 1`,
     [merchantId, asOf],
   );

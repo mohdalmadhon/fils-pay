@@ -39,6 +39,8 @@ The batch row lock serializes it with closing; the update also requires
   platform volume change before closing. A preview is not a payout promise.
 - Approved historical corrections require a separate explicit adjustment
   process. This change does not implement one or repair previous rewrites.
-- Existing tests asserting finalized-batch recalculation remain unchanged
-  and conflict with the corrected behavior; verification records this
-  rather than reporting a green suite.
+- The tests that asserted finalized-batch recalculation were replaced on
+  2026-10-30 by tests of this decision
+  (`apps/settlement/internal/settlement/recalculate_mdr_test.go`): open
+  batches are refreshed, closed and paid batches are left alone, and no
+  ledger entries are posted. See `docs/improvements/02-recalculate-mdr-tests.md`.

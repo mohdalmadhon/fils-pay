@@ -40,6 +40,12 @@ with one payment settled and one pending.
 These need a product or finance decision on which side is right, so they are
 recorded rather than fixed:
 
+> **Update 2026-10-30:** items 1 and 2 are fixed in
+> [`docs/improvements/06`](../improvements/06-negotiated-discount-consistency.md)
+> (the capture fee now includes the discount, computed like settlement, on
+> every capture path). Item 3 is fixed in
+> [`docs/improvements/07`](../improvements/07-fee-schedule-tie-break.md).
+
 1. **Payment-link captures never get the negotiated discount posted.**
    `applyCaptureDiscountAdjustment` runs only in the API capture route
    (`routes/transactions.ts`), not in `paymentLinks/pay.ts`. There is a note:
@@ -51,7 +57,7 @@ recorded rather than fixed:
    fee: `rate(rate(amount, mdr), discount)`. At settlement it comes off the
    amount first: `rate(amount − rate(amount, discount), mdr)`. These can differ
    by a fil through rounding.
-3. **Fee schedule ties are not broken the same way.** CloseBatch loads
+3. **(Fixed, improvement 07)** **Fee schedule ties are not broken the same way.** CloseBatch loads
    schedules ordered by `effective_from` only. The API breaks ties on
    `created_at`. Two rows with the same `effective_from` could resolve
    differently on each side.

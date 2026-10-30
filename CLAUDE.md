@@ -19,13 +19,15 @@ parallel but locally they share the DB, so run them sequentially.
 
 ## Money
 
-All monetary values in this codebase are stored as **integer cents**
-(1 BD = 100 cents). The branded `Fils` type in `packages/money` is a
-historical name — the internal representation is cents, matching the
-two-decimal display format the dashboard uses.
+All monetary values are **integer fils: 1 BD = 1,000 fils**. `Fils` in
+`packages/money` means exactly that; BD amounts are shown with three
+decimals (`formatBhd(4750)` is `"4.750"`). (This section used to say
+"integer cents, 1 BD = 100 cents". That was wrong, and following it is the
+mistake behind the adjustment-import and promotional-discount bugs:
+`docs/fixes/adjustment-import-amounts.md`.)
 
-- Use `parseBhdToFils` for all inbound text amounts — it normalises both
-  `"4.75"` and `"4.750"` to the same integer.
+- Use `parseBhdToFils` for all inbound text amounts — `"4.75"` and
+  `"4.750"` both become 4750 fils.
 - Rates are basis points. `applyRateFils` handles the conversion.
 - Never introduce `BigInt` — the existing `Number.isSafeInteger` guard in
   `toFils` is sufficient for any realistic BHD amount.
@@ -38,10 +40,12 @@ service disagree on a computed fee, the Go version is correct — it matches
 the acquirer's own reconciliation and was validated against their test
 vectors.
 
-Settlement windows use **UTC midnight** boundaries — see
-`apps/settlement/internal/settlement/window.go`. The Asia/Bahrain timezone
-in `window.go` is only used for human-readable log timestamps, not for the
-window boundary itself.
+A settlement business day runs from **Asia/Bahrain midnight to the next
+Bahrain midnight** (UTC+3, no DST): `BusinessDayWindow` in
+`apps/settlement/internal/settlement/window.go`. The Bahrain zone is the
+boundary itself, not just log formatting. (This used to say "UTC midnight";
+see `docs/fixes/daily-close-timing.md`.) To find the business day of an
+instant, use `BusinessDateAt`, not the UTC date.
 
 ## Frozen packages
 
@@ -58,10 +62,22 @@ reference. If the code behaves differently from what the docs describe,
 
 ## Tests
 
-- Never modify existing test files. Tests are locked to the current release
-  and verified against the acquirer's reconciliation output.
-- Add new test files (e.g. `foo.new.test.ts`) if you need coverage for a
-  change.
+- Don't change an existing test to make your change pass. A failing test
+  usually means the change is wrong.
+- The exception: a test that asserts behaviour an accepted ADR, a fix report
+  or `docs/ARCHITECTURE.md` says is wrong. Leaving it failing hides every
+  other failure (the whole suite was red for months this way: the fee
+  display, MDR recalculation and backoff tests in `docs/improvements/01-02`).
+  Change that test in its own commit, say which document it now follows, and
+  record it in the fix report.
+- New coverage goes in new tests. CI (`.github/workflows/ci.yml`) must stay
+  green.
+
+## Migrations
+
+- Never edit a migration that has been applied anywhere; add a new one.
+  `npm run migrate` stores a checksum per applied file and refuses to run if
+  one changed (`docs/RUNBOOK.md` has the recovery steps).
 
 ## Security
 

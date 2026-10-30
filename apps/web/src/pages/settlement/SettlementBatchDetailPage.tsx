@@ -81,7 +81,7 @@ export function SettlementBatchDetailPage() {
     return (
       <section>
         <h1>Settlement batch</h1>
-        <p className="dash-error">{state.message}</p>
+        <p className="dash-error" role="alert">{state.message}</p>
       </section>
     );
   }

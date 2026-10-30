@@ -11,6 +11,7 @@ interface PublicPaymentLinkRow {
   expires_at: Date;
   reserved_at: Date | null;
   merchant_display_name: string;
+  merchant_status: string;
 }
 
 /** Public shape. Contains nothing that identifies or authenticates the merchant beyond its display name. */
@@ -36,7 +37,8 @@ export async function getPublicPaymentLink(
   // sha256 verifier ("merchantIntegrationId"). See docs/cyper/11.
   const result = await pool.query<PublicPaymentLinkRow>(
     `SELECT pl.token, pl.amount_fils, pl.currency, pl.reference, pl.description,
-            pl.status, pl.expires_at, pl.reserved_at, m.display_name AS merchant_display_name
+            pl.status, pl.expires_at, pl.reserved_at, m.display_name AS merchant_display_name,
+            m.status AS merchant_status
        FROM payment_links pl
        JOIN merchants m ON m.id = pl.merchant_id
       WHERE pl.token = $1`,
@@ -54,7 +56,12 @@ export async function getPublicPaymentLink(
     description: row.description,
     // YA: same helper as pay.ts so the two never disagree. correct
     status: derivePublicStatus(
-      { status: row.status, expiresAt: row.expires_at, reservedAt: row.reserved_at },
+      {
+        status: row.status,
+        expiresAt: row.expires_at,
+        reservedAt: row.reserved_at,
+        merchantStatus: row.merchant_status,
+      },
       reservationTimeoutSeconds,
     ),
     expiresAt: row.expires_at.toISOString(),

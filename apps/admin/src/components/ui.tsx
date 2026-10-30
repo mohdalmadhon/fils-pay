@@ -24,7 +24,10 @@ export function Amount({ fils, className, currency = true }: { fils: number; cla
   const text = formatBhd(toFils(fils, { allowNegative: true }));
   const [bd, fl] = text.split(".");
   return (
-    <span className={["fp-amount", className].filter(Boolean).join(" ")} aria-label={`${text} BHD`}>
+    // Screen readers read the hidden whole, not the styled parts. (aria-label
+    // on a plain span is ignored, so amounts used to be read as nothing.)
+    <span className={["fp-amount", className].filter(Boolean).join(" ")}>
+      <span className="fp-visually-hidden">{`${text} BHD`}</span>
       <span className="fp-amount-bd" aria-hidden>
         {bd}
       </span>

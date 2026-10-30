@@ -22,14 +22,19 @@ type FeeScheduleRow struct {
 }
 
 // LoadFeeSchedules reads a merchant's full fee-schedule history once, in
-// ascending effective_from order, so CloseBatch's per-event loop (which may
+// ascending effective_from order, ties broken by created_at (then id) so
+// that EffectiveMdrBpsAt, which takes the last applicable row, picks the
+// later-entered correction: the same rule as the API's getEffectiveMdrBps
+// (ORDER BY effective_from DESC, created_at DESC). It used to order by
+// effective_from alone, leaving ties to Postgres. docs/improvements/07.
+// It reads the history so CloseBatch's per-event loop (which may
 // need a different row per event, one per calendar day at most in
 // practice) never runs one query per event.
 func LoadFeeSchedules(ctx context.Context, tx pgx.Tx, merchantID uuid.UUID) ([]FeeScheduleRow, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT effective_from, mdr_bps FROM fee_schedules
 		 WHERE merchant_id = $1
-		 ORDER BY effective_from ASC
+		 ORDER BY effective_from ASC, created_at ASC, id ASC
 	`, merchantID)
 	if err != nil {
 		return nil, err

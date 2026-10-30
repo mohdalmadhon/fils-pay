@@ -53,6 +53,9 @@
   margin: 0 0 var(--sp-3);
   font-size: var(--text-md);
   font-weight: 500;
+  /* An h1 now; keep the paragraph's spacing. */
+  letter-spacing: normal;
+  line-height: inherit;
   color: var(--c-ink-2);
 }
 
@@ -178,10 +181,11 @@
 }
 
 :root[data-costume="halloween"] .checkout-card {
+  /* A pixel-dithered purple card. */
   background:
-    linear-gradient(135deg, rgba(255, 205, 178, 0.25), transparent 50%),
-    linear-gradient(160deg, #3a2028, #1a0f14);
-  box-shadow: 0 20px 40px -18px rgba(255, 180, 162, 0.35), inset 0 0 0 1px rgba(255, 205, 178, 0.18);
+    repeating-conic-gradient(rgba(255, 255, 255, 0.04) 0 25%, transparent 0 50%) 0 0 / 4px 4px,
+    linear-gradient(180deg, #4b2470 0 50%, #2c1446 50% 100%);
+  box-shadow: 4px 4px 0 #05030a, inset 0 0 0 2px rgba(255, 122, 26, 0.5);
 }
 
 /* A slow sheen crosses the card once a brand is recognised. */
@@ -355,7 +359,8 @@
 
 :root[data-costume="halloween"] .checkout-form button[type="submit"] {
   background-image: var(--hw-gradient);
-  box-shadow: 0 10px 28px -10px rgba(255, 180, 162, 0.8);
+  border: 2px solid #05030a;
+  box-shadow: var(--hw-pixel-shadow);
 }
 
 .checkout-form button[type="submit"]:active {
@@ -541,4 +546,15 @@
   .checkout-form-row label:last-child {
     grid-column: span 2;
   }
+}
+
+/* The payee line is the page's h1 for screen readers, but it is styled as a
+   line of text: the Halloween costume's gradient h1 treatment doesn't apply
+   to it (it didn't when it was a <p>). */
+:root[data-costume="halloween"] .checkout-payee {
+  background: none;
+  color: var(--c-ink-2);
+  -webkit-background-clip: border-box;
+  background-clip: border-box;
+  animation: none;
 }

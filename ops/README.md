@@ -9,7 +9,7 @@ demo instance uses the same compose file with a different `.env`.
 ```
 docker compose -f ops/docker-compose.yml up -d postgres
 docker compose -f ops/docker-compose.yml run --rm migrate
-docker compose -f ops/docker-compose.yml run --rm seed
+docker compose -f ops/docker-compose.yml --profile seed run --rm seed   # local only: empties the database
 docker compose -f ops/docker-compose.yml up api settlement reporting
 ```
 
@@ -37,34 +37,64 @@ what a passing run looks like, are in
 | File | Purpose |
 |---|---|
 | `docker-compose.yml` | the stack |
-| `.env.docker` | shared service settings, loaded by compose for every service |
-| `Dockerfile.node` | image for api, reporting, migrate and seed (`node:20`, full install) |
+| `.env.docker` | api settings, loaded with `env_file:` (create it from `.env.docker.example`) |
+| `Dockerfile.node` | image for api, reporting, migrate and seed (Node 22, dev dependencies for tsx) |
 | `Dockerfile.go` | multi-stage build of `apps/settlement` |
 
-> **AM (July):** the two Dockerfiles aren't in the repo for me. built my own
->
-> **MK:** they were in the initial ops commit. check you're on main
+The two Dockerfiles were missing from the repo until 2026-10-30
+(`docs/improvements/09`); they had never been committed.
 
 ## Database
 
-Every service, plus the one-off `migrate`/`seed` jobs, connects with the
-same `filspay` role and the same `DATABASE_URL`
-(`postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable`,
-with the password from `ops/.env`).
-One role keeps local setup to a single password instead of hand-rolling
-per-service grants for a stack this size. `sslmode=disable` is safe here:
-Postgres and every service run on the same Docker Compose bridge network,
-which never carries traffic outside the host, so there's no untrusted hop
-for a connection to cross.
+Each service connects as its own least-privilege role
+(`ops/db/service-roles.sql`, docs/improvements/13):
+
+| Role | Used by | Can |
+|---|---|---|
+| `filspay` (owner) | migrate, seed, `db-roles` | everything |
+| `filspay_api` | api | read/write all tables; no DDL; `TRUNCATE` only on the two reporting rollups; `ledger_entries` insert-only |
+| `filspay_settlement` | settlement | read everything; write only batches, ledger inserts, scheme lines, splits, balances, platform volume, capture-event claims |
+| `filspay_reporting` | reporting | read the outbox and the few tables it uses; write only its rollups and cursor |
+
+The `db-roles` job applies the script after every `migrate`, so tables added
+by new migrations get the api's default privileges. A new table that
+settlement or reporting must use needs a grant added to the script.
+`sslmode=disable` is safe here: the services and Postgres share the compose
+network and Postgres is only published on `127.0.0.1`.
+
+Outside compose, run the script yourself as the owner:
+
+```bash
+psql "$OWNER_DATABASE_URL" -v api_password=... -v settlement_password=... \
+  -v reporting_password=... -f ops/db/service-roles.sql
+```
 
 The settlement worker can be given a second connection string,
 `PGCONN_SETTLEMENT`, for its batch-close pool. It only takes effect when
 `DATABASE_URL` is unset.
 
-To reset the database to a clean, freshly-seeded state at any point, re-run
-the `seed` job above — `db/seed/index.ts` truncates and regenerates its
-fixture tables on every invocation; it doesn't need the volume removed
-first.
+To reset a **local** database to the demo data, run the `seed` job above.
+It empties the whole database first (it does not only touch its own tables),
+refuses `NODE_ENV=production`, and refuses a database with merchants it
+didn't create unless `SEED_RESET_CONFIRM=<database name>` is set
+(`docs/improvements/12`).
+
+## Building the images
+
+Compose builds two images from the repo root:
+
+| Image | Used by | Notes |
+|---|---|---|
+| `ops/Dockerfile.node` | migrate, seed, api, reporting | Node 22; runs TypeScript with tsx; non-root `node` user; KYC uploads in the `filspay_kyc` volume |
+| `ops/Dockerfile.go` | settlement | static binary on distroless, non-root; `GO_VERSION` build arg (default 1.24) |
+
+```bash
+docker compose -f ops/docker-compose.yml build
+docker compose -f ops/docker-compose.yml up
+```
+
+`.dockerignore` keeps `.git`, `node_modules` and every `.env*` file (except
+`*.example`) out of the images; secrets reach the containers at run time.
 
 ## Required settings per service
 
@@ -84,6 +114,9 @@ Before the first `up`, create the two env files. Both are gitignored.
 ```bash
 cp ops/.env.docker.example ops/.env.docker   # then set the acquirer secret
 echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)" >> ops/.env
+echo "API_DB_PASSWORD=$(openssl rand -hex 24)" >> ops/.env
+echo "SETTLEMENT_DB_PASSWORD=$(openssl rand -hex 24)" >> ops/.env
+echo "REPORTING_DB_PASSWORD=$(openssl rand -hex 24)" >> ops/.env
 echo "WEBHOOK_SECRET_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> ops/.env
 echo "SETTLEMENT_INTERNAL_TOKEN=$(openssl rand -hex 32)" >> ops/.env
 ```

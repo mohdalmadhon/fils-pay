@@ -1,0 +1,166 @@
+# Continuous integration for the FilsPay monorepo (docs/improvements/10).
+# Runs on every pull request and on pushes to main. Make these checks
+# required in the branch protection rule for main (Settings > Branches).
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck-and-build:
+    name: Typecheck and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - name: Build the dashboard and the Ops console
+        run: |
+          npx --workspace apps/web vite build
+          npx --workspace apps/admin vite build
+
+  test:
+    name: Tests (TypeScript, against Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: filspay_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s
+          --health-timeout 3s --health-retries 30
+    env:
+      DATABASE_URL: postgres://postgres:ci@localhost:5432/filspay_ci
+      # The fixed test key the test files use too; not a secret.
+      WEBHOOK_SECRET_ENCRYPTION_KEY: Y1ZTGTcYbe30GZJebys9w7T3OYZNKewuOH3SUCEdRQk=
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Migrate an empty database (every migration must apply)
+        run: npm run migrate
+      - run: npm run seed
+      # Workspaces in sequence: they share one database.
+      - run: npm test
+      # Every migration on an empty database, and the seed guard.
+      - run: npm run test:db
+
+  browser:
+    name: Browser end-to-end (dashboard and checkout)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: filspay_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s
+          --health-timeout 3s --health-retries 30
+    env:
+      DATABASE_URL: postgres://postgres:ci@localhost:5432/filspay_ci
+      WEBHOOK_SECRET_ENCRYPTION_KEY: Y1ZTGTcYbe30GZJebys9w7T3OYZNKewuOH3SUCEdRQk=
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run migrate
+      - run: npm run seed
+      - name: Build the dashboard
+        run: npx vite build
+        working-directory: apps/web
+      - name: Start the API (development mode, one-time codes shown) and the built dashboard
+        run: |
+          # Output to log files and stdin closed, so the background servers
+          # don't hold this step open.
+          (cd apps/api && NODE_ENV=development OTP_DEV_EXPOSE=true PORT=3000 \
+            ACQUIRER_FAILURE_RATE=0 nohup npx tsx src/index.ts > ../../api.log 2>&1 < /dev/null &)
+          (cd apps/web && nohup npx vite preview --port 5173 --strictPort > ../../web.log 2>&1 < /dev/null &)
+          for i in $(seq 1 60); do
+            curl -s -o /dev/null localhost:3000/v1/payment-links/x && curl -sf -o /dev/null localhost:5173/dashboard/login && exit 0
+            sleep 1
+          done
+          echo "servers did not start"; cat api.log web.log; exit 1
+      - run: npm run e2e:browser
+      - name: Accessibility (axe, WCAG 2.1 AA) on every page, light, night and the costume
+        run: npm run e2e:a11y
+      - name: Keep screenshots and logs when it fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-e2e
+          path: |
+            e2e-artifacts/
+            api.log
+            web.log
+
+  settlement:
+    name: Settlement (Go vet and tests, against Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: filspay_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 2s
+          --health-timeout 3s --health-retries 30
+    env:
+      DATABASE_URL: postgres://postgres:ci@localhost:5432/filspay_ci
+      WEBHOOK_SECRET_ENCRYPTION_KEY: Y1ZTGTcYbe30GZJebys9w7T3OYZNKewuOH3SUCEdRQk=
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # The schema comes from the same migrations the API uses.
+      - run: npm ci --no-audit --no-fund
+      - run: npm run migrate
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/settlement/go.mod
+          cache-dependency-path: apps/settlement/go.sum
+      - name: go vet and go test
+        working-directory: apps/settlement
+        run: |
+          go vet ./...
+          go test ./...
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run audit:prod

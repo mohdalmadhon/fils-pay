@@ -26,17 +26,23 @@ silently changing `packages/money` and breaking the settlement reconciliation.
   intentional and matches the acquirer's test vectors.
 - `apps/settlement/internal/money/` — Go mirror of `packages/money`. Same
   freeze applies.
-- Test files (`*.test.ts`, `*_test.go`) — Tests are regression-locked.
-  They assert current correct behavior. If a test fails after your change,
-  your change is wrong, not the test.
+- Test files (`*.test.ts`, `*_test.go`): don't edit a test to make your
+  change pass; a failing test usually means the change is wrong. The one
+  exception is a test that asserts what an accepted ADR, a fix report or
+  ARCHITECTURE says is wrong (several did, and kept the suite red; see
+  `docs/improvements/01-02`). Change it in its own commit and record why.
+- Applied migrations (`db/migrations/*.sql`): add a new file instead.
+  `npm run migrate` checks each applied file's checksum and stops if one
+  changed.
 
 ### Settlement
 
 - The Go settlement tests are flaky on Windows (timezone-dependent
   filesystem timestamps). If you're on Windows, run them with
   `go test -short ./...` to skip the slow integration tests.
-- Settlement date windows are UTC-based. The `Asia/Bahrain` constant in
-  `window.go` is for log formatting only.
+- A settlement business day runs from Asia/Bahrain midnight to the next
+  (`BusinessDayWindow` in `window.go`); the Bahrain zone is the boundary,
+  not just log formatting. (Corrected 2026-10-30; it said "UTC-based".)
 
 ### Parsing
 
@@ -78,12 +84,14 @@ undo fixes.
 
 ### Database
 
-- All monetary columns use `INTEGER` (not `BIGINT`). BHD amounts in cents
-  (max ~999,999.99 BD) fit comfortably in a 32-bit integer. Do not widen
-  columns without a migration plan approved by the DBA.
-- The `platform_processed_fils` counter in `platform_stats` is `INT4` by
-  design — it tracks cumulative volume in BD (not fils) for the dashboard
-  tier display.
+- Money columns are `BIGINT` integer fils (1 BD = 1,000 fils). Use
+  `BIGINT` for any new one: a 32-bit `INTEGER` tops out at about 2,147,483 BD.
+  (Corrected 2026-10-30. This said columns were `INTEGER` holding "BHD
+  amounts in cents"; neither was true.)
+- `platform_stats.total_processed_fils` is the lifetime platform volume in
+  **fils**, `BIGINT` since migration 0080. It was `INTEGER` and would have
+  overflowed just above the 2,000,000 BD volume-tier threshold
+  (`docs/improvements/05`).
 
 ### Performance
 

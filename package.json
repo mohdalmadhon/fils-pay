@@ -12,13 +12,18 @@
     "test": "npm run test --workspaces --if-present && tsx --test scripts/*.test.ts",
     "migrate": "tsx db/migrate.ts",
     "seed": "tsx db/seed/index.ts",
-    "audit:prod": "npm audit --omit=dev --audit-level=moderate"
+    "audit:prod": "npm audit --omit=dev --audit-level=moderate",
+    "e2e:browser": "node scripts/e2e/browser-check.mjs",
+    "e2e:a11y": "node scripts/e2e/a11y-check.mjs",
+    "test:db": "tsx --test db/migrate.integration.test.ts db/migrateChecksum.test.ts db/seed/guard.test.ts"
   },
   "devDependencies": {
     "@types/node": "^24.5.2",
     "@types/pg": "^8.11.6",
-    "typescript": "^5.6.3",
-    "tsx": "^4.19.1"
+    "axe-core": "4.11.0",
+    "playwright": "1.63.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
   },
   "dependencies": {
     "pg": "^8.13.1"

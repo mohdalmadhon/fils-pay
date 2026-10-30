@@ -59,18 +59,24 @@ export async function initiateMerchantRefund(
 ): Promise<ProcessRefundResult> {
   await assertRefundsNotOnHold(pool, input.merchantId);
 
-  const result = await pool.query<{ id: string; merchant_id: string }>(
-    `SELECT id, merchant_id FROM transactions WHERE id = $1`,
-    [input.transactionId],
-  );
-  const txn = result.rows[0];
-  if (!txn) {
+  // Always the CALLER's merchant. This used to look the transaction up by id
+  // alone and pass the transaction's own merchant_id on, which made
+  // processRefund's merchant-scoped lookup match any merchant's transaction:
+  // merchant A could refund merchant B's payment. processRefund now gets the
+  // caller's merchant and answers 404 for anyone else's transaction, the same
+  // as capture. docs/improvements/08. The ownership check here keeps this
+  // module's contract (an unknown transaction throws NotFoundError).
+  const owned = await pool.query(`SELECT 1 FROM transactions WHERE id = $1 AND merchant_id = $2`, [
+    input.transactionId,
+    input.merchantId,
+  ]);
+  if (owned.rowCount === 0) {
     throw new NotFoundError("transaction_not_found");
   }
 
   return processRefund(pool, acquirer, {
-    transactionId: txn.id,
-    merchantId: txn.merchant_id,
+    transactionId: input.transactionId,
+    merchantId: input.merchantId,
     amountFils: input.amountFils,
     idempotencyKey: input.idempotencyKey,
     actor: input.actor,

@@ -51,6 +51,34 @@ SELECT filename FROM schema_migrations WHERE filename LIKE '005%' ORDER BY 1;
 `db/migrate.integration.test.ts` applies every migration to an empty
 database; run it before shipping a new migration.
 
+## `npm run migrate` says a migration "changed after it was applied"
+
+The runner stores a sha256 of every migration it applies
+(`schema_migrations.checksum`) and, before applying anything, checks every
+applied file still matches. If one was edited, it stops, names the file and
+applies nothing: this database ran the old text, so it no longer matches a
+new database built from the same files.
+
+1. See what changed: `git log -p -- db/migrations/<file>`.
+2. Usually: restore the file (`git checkout <last good commit> -- db/migrations/<file>`)
+   and put the change in a new, higher-numbered migration.
+3. If the edit is reviewed and harmless for databases that already ran it
+   (a comment, or a fix that makes the file idempotent like 0054/0055 above),
+   accept it once:
+
+   ```bash
+   MIGRATE_ACCEPT_CHANGED=<file>[,<file>...] npm run migrate
+   ```
+
+   The new checksum is recorded and later runs need no flag.
+
+Line endings don't count: a Windows checkout with `core.autocrlf` has the same
+checksum. Databases migrated before checksums existed record each file's
+current checksum on their next run (`RECORD` lines in the output). That
+first run trusts the files on disk, so do it from `main`, not from a branch
+that edits an applied migration. Only one `migrate` runs at a time per
+database (an advisory lock); a second one waits.
+
 ## Is the money flow healthy end to end?
 
 `node scripts/e2e/payment-check.mjs` (see `docs/verification/`) takes one
@@ -131,6 +159,32 @@ If `readModelAsOf` is `null` after a fresh seed, restart the worker; it
 usually needs a couple of restarts while Postgres warms up.
 
 > **MK:** stop the worker before catch-up. two consumers on one cursor double-apply.
+
+### Dashboards stopped updating: a malformed outbox event
+
+A reporting pass applies a batch of events and moves the watermark in one
+transaction, all or nothing. If one event can't be applied (for example a
+`transaction.captured` with no `merchantId`, which real producers never write
+but a test or a hand-written INSERT can), every pass fails on it and the
+dashboards stop moving. The worker log and `catch-up` show
+`null value in column "merchant_id" of relation "merchant_daily_volume"`.
+
+Find the offending rows:
+
+```sql
+SELECT id, event_type, payload, created_at
+  FROM outbox_events
+ WHERE event_type IN ('transaction.captured', 'transaction.voided', 'settlement.batch_closed')
+   AND payload->>'merchantId' IS NULL
+   AND id > (SELECT last_processed_id FROM reporting_outbox_cursor WHERE consumer_name = 'reporting')
+ ORDER BY id;
+```
+
+On a development or test database these are leftovers from tests, and can be
+deleted. Before 2026-10-30 the API's `largeExport` and `archiveReplay` tests
+left about 25,000 of them per run (docs/improvements/03). On production,
+don't delete: find out which code wrote the event, and fix its payload with
+finance before the next pass.
 
 ## Webhooks aren't arriving
 
@@ -295,9 +349,21 @@ See [the fix, references, audit query, and verification](solved-problems/012-mar
 npm run migrate && npm run seed
 ```
 
-The seed truncates and regenerates the fixture tables it owns and
-self-checks the result. It prints `REAL FAIL` lines if anything doesn't
-come out as expected — don't ignore them. It won't touch other tables, so
-it's safe against a shared staging database.
+**The seed empties the database.** It starts with one `TRUNCATE ... CASCADE`
+over merchants, transactions, the ledger, settlement batches, the outbox,
+admin users and more, then regenerates the demo data and self-checks it. It
+prints `REAL FAIL` lines if anything doesn't come out as expected; don't
+ignore them. (This section used to say it only touched its own tables and was
+safe on a shared staging database. It wasn't: see the note below.)
+
+Since 2026-10-30 (`docs/improvements/12`) it refuses:
+
+- `NODE_ENV=production`, always;
+- a database holding any merchant the seed didn't create, unless you name the
+  database: `SEED_RESET_CONFIRM=<database name> npm run seed`.
+
+A new or already-seeded database seeds without a flag. In compose, the seed is
+behind a profile and no longer runs on `up`:
+`docker compose -f ops/docker-compose.yml --profile seed run --rm seed`.
 
 > **AM (Sept):** check DATABASE_URL before seeding. staging-2 got reset this way

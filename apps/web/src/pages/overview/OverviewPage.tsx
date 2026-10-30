@@ -173,7 +173,9 @@ export function OverviewPage() {
             <th>Captured</th>
             <th>Gross</th>
             <th>Voided</th>
-            <th />
+            <th>
+              <span className="fp-visually-hidden">Gross, as a share of the busiest day</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -187,6 +189,7 @@ export function OverviewPage() {
                 {/* A plain CSS bar, scaled to the window's own peak — no
                     charting library, no new dependency. */}
                 <span
+                  aria-hidden
                   className="dash-bar"
                   style={{ width: `${(point.capturedGrossFils / peakGross) * 100}%` }}
                 />
