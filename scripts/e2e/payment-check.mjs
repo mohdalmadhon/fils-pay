@@ -163,8 +163,8 @@ try {
       [txnId],
     );
     const leg = (a, d) => legs.rows.filter((r) => r.account_id === a && r.direction === d).reduce((s, r) => s + r.amount, 0);
-    check("capture legs: gross to merchant payable", leg("card_scheme_clearing", "debit") === AMOUNT && leg("merchant_payable", "credit") === AMOUNT);
-    check("capture legs: fee matches the timeline", leg("platform_fee_revenue", "credit") === feeFils, `fee ${feeFils}`);
+    check("capture legs: net payable equals gross less fee", leg("card_scheme_clearing", "debit") === AMOUNT && leg("merchant_payable", "credit") - leg("merchant_payable", "debit") === AMOUNT - feeFils);
+    check("capture legs: net fee matches the timeline", leg("platform_fee_revenue", "credit") - leg("platform_fee_revenue", "debit") === feeFils, `fee ${feeFils}`);
   } else {
     console.log("SKIP  ledger checks (set DATABASE_URL)");
   }

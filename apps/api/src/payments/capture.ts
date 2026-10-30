@@ -1,3 +1,4 @@
+import { applyPayableCacheDelta } from "./balanceCache.js";
 import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { ZERO_FILS, addFils, compareFils, subtractFils, toFils, type Fils } from "@filspay/money";
@@ -257,6 +258,8 @@ export async function captureTransactionWithClient(
     );
   }
 
+  await applyPayableCacheDelta(client, input.merchantId, requestedAmount - feeFils);
+
   // Hold lifecycle: released exactly when nothing remains outstanding.
   if (newStatus === "captured") {
     await client.query(`UPDATE holds SET status = 'released' WHERE transaction_id = $1 AND status = 'active'`, [
@@ -282,7 +285,7 @@ export async function captureTransactionWithClient(
     eventType: newStatus === "captured" ? "captured" : "partially_captured",
     amountFils: requestedAmount,
     actor: input.actor,
-    metadata: { feeFils, acquirerReference: acquirerResult.acquirerReference },
+    metadata: { feeFils, negotiatedDiscountBps: merchant.negotiated_discount_bps, chargedMdrBps: Math.max(0, effectiveMdrBps - volumeTierBonusBps), acquirerReference: acquirerResult.acquirerReference },
   });
 
   const body = serializeTransaction(updatedTxn);

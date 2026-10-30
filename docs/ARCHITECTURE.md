@@ -37,6 +37,11 @@ has no `_fils` suffix; it is not
 BD. It does not feed payout calculations and excludes split payouts.
 See [the precision fix and migration plan](solved-problems/009-lifetime-payout-estimate.md).
 
+The platform-wide `platform_stats.total_processed_fils` counter also holds
+integer fils. Migration 0080 widens it to BIGINT so cumulative volume cannot
+wrap at INT4 and remove the pricing tier; see
+[the counter fix and deployment plan](future-fixes/05.md).
+
 ## The ledger
 
 `ledger_entries` is the record of money movements. Every movement is a group
@@ -47,6 +52,11 @@ the effective date of the period they correct.
 `merchant_balances` is a cache; `settlement rebuild-balances` refreshes it.
 The daemon also refreshes it at 02:00 Bahrain time, and the console's
 **Rebuild cached balances** button triggers the same refresh on demand.
+Capture and negotiated-discount ledger postings update the cache in the same
+transaction. Batch close records batch metadata; it does not credit payable
+again. Payout applies the matching debit. See
+[the cache lifecycle fix](future-fixes/07.md) for coordinated deployment and
+the historical rebuild requirement.
 
 ## Settlement
 
@@ -68,7 +78,13 @@ amount the MDR is charged on.
 ## Events
 
 An outbox row is inserted in the same transaction as the write that produced
-it. Each consumer keeps its own cursor, advanced transactionally. Webhook
+it. Reporting records each applied event in `reporting_processed_events` in
+the same transaction as its rollups. A locked consumer cursor serializes
+passes and records the largest observed ID for freshness; it is not an
+eligibility cutoff because sequence IDs do not establish commit order.
+Rebuilds coordinate with that cursor and the receipts; see
+[the reporting fixes](audits/future-fixes-disposition.md).
+Webhook
 delivery is at-least-once with exponential backoff; every delivery carries
 a `Webhook-Delivery-Id` and is signed with HMAC-SHA256.
 
@@ -94,6 +110,10 @@ Payment links are single-use. Expiry is checked against the database clock
 only; the pay endpoint is public, so nothing the client sends (including the
 old `submittedAt` field) can change whether a link has expired.
 Tokens are 128-bit, from `crypto.randomBytes`.
+Checkout's capture, negotiated-discount credit and paid-link finalization
+commit together. The new capture timeline/outbox carry the net fee; the
+timeline also retains the original fee and discount amount. See
+[the checkout discount fix](fixes/payment-link-negotiated-discount.md).
 
 ## The admin plane
 

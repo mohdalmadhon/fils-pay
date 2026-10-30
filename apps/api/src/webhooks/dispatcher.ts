@@ -228,7 +228,7 @@ async function attemptDueDeliveries(pool: Pool, transport: WebhookTransport, con
     `SELECT wd.id, wd.endpoint_id, wd.event_type, wd.delivery_event_id, wd.payload, wd.attempt_count, we.url, we.secret_ciphertext
        FROM webhook_deliveries wd
        JOIN webhook_endpoints we ON we.id = wd.endpoint_id
-      WHERE wd.status = 'pending' AND wd.next_attempt_at <= now()
+      WHERE wd.status = 'pending' AND wd.next_attempt_at <= now() AND we.status = 'active'
       ORDER BY wd.next_attempt_at ASC
       LIMIT $1`,
     [STEP_B_BATCH_LIMIT],
@@ -236,6 +236,10 @@ async function attemptDueDeliveries(pool: Pool, transport: WebhookTransport, con
 
   for (const row of dueResult.rows) {
     try {
+      // A pause may have committed since the batch SELECT. Do not begin
+      // another send from that stale snapshot. In-flight HTTP cannot be recalled.
+      const active = await pool.query(`SELECT 1 FROM webhook_endpoints WHERE id = $1 AND status = 'active'`, [row.endpoint_id]);
+      if (!active.rows[0]) continue;
       await attemptOneDelivery(pool, transport, config, row);
     } catch (err: unknown) {
       // A single row throwing before/around the transport call (e.g. a

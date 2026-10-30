@@ -134,6 +134,7 @@ refunds are wired, or credit them.
   double-clicks makes two attempts. The second now gets `409 processing`
   instead of a second charge.
 - Payment-link captures don't apply the merchant's negotiated discount; only
-  the `/v1/transactions/:id/capture` route does.
+  the `/v1/transactions/:id/capture` route does. **Resolved later:**
+  [atomic checkout discount fix](payment-link-negotiated-discount.md).
 - Payment-link tokens still come from `Math.random()` (`create.ts`), and the
   public link read exposes the merchant's API key prefix and hash.

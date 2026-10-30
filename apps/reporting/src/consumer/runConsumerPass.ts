@@ -19,21 +19,9 @@ export const REPORTING_EVENT_TYPES: readonly EventType[] = [
  */
 export const CONSUMER_NAME = "reporting";
 
-/**
- * The one function both the NOTIFY handler and the poll timer call.
- * Everything — the read of due outbox_events, every rollup
- * upsert `applyEvent` performs, and the watermark advance — happens inside
- * one `withTransaction` call: either the whole batch of up-to-
- * `consumerBatchLimit` events is applied *and* the watermark moves past all
- * of them, atomically, or (on any error) nothing in this pass is applied
- * and the watermark is untouched — the next pass simply re-selects the
- * identical event range and retries. This is the exact property that makes
- * the watermark alone sufficient for exactly-once application, with no
- * separate per-event dedup table the way webhook_deliveries needs one.
- *
- * The `SELECT` below is a plain, unlocked read — no row lock, no
- * `FOR UPDATE`, no mutation of any outbox_events column — identical
- * posture to webhooks/dispatcher.ts's Step A.
+/** Apply visible, unreceipted events atomically with their receipts and rollups.
+ * A lower ID that commits later is still eligible. The cursor is retained as
+ * the largest observed ID and a freshness signal, not an eligibility cutoff.
  */
 export async function runConsumerPass(
   pool: Pool,
@@ -42,21 +30,30 @@ export async function runConsumerPass(
   return withTransaction(pool, async (client) => {
     const cursor = await readCursor(client, CONSUMER_NAME);
 
-    // MK 2026-06: ids come from a sequence, they're monotonic. fine for now.
+    // Receipts, not sequence allocation order, establish application progress.
     const eventsResult = await client.query<OutboxEventRow>(
       `SELECT id, event_type, aggregate_id, payload, created_at
          FROM outbox_events
-        WHERE id > $1
+        WHERE NOT EXISTS (SELECT 1 FROM reporting_processed_events done
+          WHERE done.consumer_name = $1 AND done.outbox_event_id = outbox_events.id)
           AND event_type = ANY($2::text[])
         ORDER BY id ASC
         LIMIT $3`,
-      [cursor.lastProcessedId.toString(), REPORTING_EVENT_TYPES, config.consumerBatchLimit],
+      [CONSUMER_NAME, REPORTING_EVENT_TYPES, config.consumerBatchLimit],
     );
 
     // FH: redundant with ORDER BY id ASC (last row is max). harmless
     let maxId = cursor.lastProcessedId;
+    let processedCount = 0;
     for (const row of eventsResult.rows) {
+      const claimed = await client.query(
+        `INSERT INTO reporting_processed_events (consumer_name, outbox_event_id)
+         VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING outbox_event_id`,
+        [CONSUMER_NAME, row.id.toString()],
+      );
+      if (!claimed.rows[0]) continue;
       await applyEvent(client, row);
+      processedCount += 1;
       const rowId = BigInt(row.id);
       if (rowId > maxId) maxId = rowId;
     }
@@ -65,6 +62,6 @@ export async function runConsumerPass(
       await advanceCursor(client, CONSUMER_NAME, maxId);
     }
 
-    return { processedCount: eventsResult.rows.length };
+    return { processedCount };
   });
 }
