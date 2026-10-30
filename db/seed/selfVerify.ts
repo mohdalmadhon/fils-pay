@@ -1,4 +1,4 @@
-import { allocateRemainder, toFils } from "@filspay/money";
+import { allocateRemainder, applyRateFils, toFils } from "@filspay/money";
 import type { Pool } from "pg";
 import { computeLedgerChecksum, generate, type SeedSummary } from "./generate.js";
 
@@ -94,6 +94,40 @@ export function buildAssertions(
         );
         const count = Number(result.rows[0]?.count ?? "0");
         return { pass: count === 0, detail: count === 0 ? undefined : `${count} non-quantized row(s)` };
+      },
+    },
+    {
+      id: "capture-fees-follow-fee-schedules",
+      description:
+        "Every seeded capture's fee leg is its amount at the rate in effect when it happened (fee_schedules, else mdr_bps), for merchants without a negotiated discount",
+      status: "real",
+      run: async () => {
+        // The same rate rule as apps/api/src/fees/feeSchedule.ts.
+        const result = await pool.query<{ entry_group_id: string; gross: string; fee: string; bps: number }>(`
+          WITH g AS (
+            SELECT le.entry_group_id, le.merchant_id, max(le.occurred_at) AS at,
+                   SUM(le.amount_fils) FILTER (WHERE le.account_id = 'card_scheme_clearing' AND le.direction = 'debit') AS gross,
+                   COALESCE(SUM(le.amount_fils) FILTER (WHERE le.account_id = 'platform_fee_revenue' AND le.direction = 'credit'), 0) AS fee
+              FROM ledger_entries le
+             WHERE le.description LIKE 'capture %'
+          GROUP BY le.entry_group_id, le.merchant_id
+          )
+          SELECT g.entry_group_id, g.gross::text AS gross, g.fee::text AS fee,
+                 COALESCE((SELECT fs.mdr_bps FROM fee_schedules fs
+                            WHERE fs.merchant_id = g.merchant_id AND fs.effective_from <= g.at
+                         ORDER BY fs.effective_from DESC, fs.created_at DESC, fs.id DESC LIMIT 1), m.mdr_bps) AS bps
+            FROM g JOIN merchants m ON m.id = g.merchant_id
+           WHERE m.negotiated_discount_bps = 0 AND g.gross IS NOT NULL
+        `);
+        const wrong = result.rows.filter((r) => Number(applyRateFils(toFils(Number(r.gross)), r.bps)) !== Number(r.fee));
+        return {
+          pass: result.rows.length > 0 && wrong.length === 0,
+          detail:
+            result.rows.length === 0
+              ? "no capture ledger groups found"
+              : `${wrong.length} of ${result.rows.length} capture fee(s) differ, e.g. group ${wrong[0]?.entry_group_id}: ` +
+                `${wrong[0]?.fee} fils on ${wrong[0]?.gross} at ${wrong[0]?.bps} bps`,
+        };
       },
     },
     {
