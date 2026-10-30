@@ -9,7 +9,8 @@ import { CommandPalette, useCommandPaletteShortcut, type Command } from "./kit/C
 import { useTheme } from "./kit/theme.js";
 import { useCostume } from "./kit/Halloween.js";
 import { SidebarNav, visibleNavLinks } from "./nav/SidebarNav.js";
-import { loadNavOrder, type NavId } from "./nav/navOrder.js";
+import { NavOrderEditor } from "./nav/NavOrderEditor.js";
+import { isDefaultNavOrder, loadNavOrder, moveNavItem, moveNavItemTo, saveNavOrder, type NavId } from "./nav/navOrder.js";
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 export const shortcutLabel = isMac ? "⌘K" : "Ctrl K";
@@ -29,8 +30,25 @@ export function DashboardLayout() {
   const { theme, setTheme, toggle: toggleTheme } = useTheme();
   const { on: costume, toggle: toggleCostume } = useCostume();
   const openPalette = useCallback(() => setPaletteOpen(true), []);
-  const [navOrder] = useState<NavId[] | null>(() => loadNavOrder());
+  const [navOrder, setNavOrder] = useState<NavId[] | null>(() => loadNavOrder());
+  const [editingNav, setEditingNav] = useState(false);
   const navLinks = useMemo(() => visibleNavLinks(me?.role, navOrder), [me?.role, navOrder]);
+
+  // Edit layout. The order is kept for every link, including ones this role
+  // doesn't see, so a link hidden today keeps its place if it comes back.
+  const changeNavOrder = useCallback(
+    (reorder: (visible: NavId[]) => NavId[]) => {
+      const visible = navLinks.map((link) => link.id);
+      const next = reorder(visible);
+      const hidden = visibleNavLinks(undefined, navOrder)
+        .map((link) => link.id)
+        .filter((id) => !visible.includes(id));
+      const full = [...next, ...hidden];
+      setNavOrder(isDefaultNavOrder(full) ? null : full);
+      saveNavOrder(full);
+    },
+    [navLinks, navOrder],
+  );
   useCommandPaletteShortcut(openPalette);
 
   // Close the drawer whenever the page changes, and on Escape.
@@ -94,6 +112,17 @@ export function DashboardLayout() {
     }
     list.push(
       go("settings", "Settings", "/dashboard/settings", icons.settings, "appearance design theme layout compact cobalt lagoon saffron"),
+      {
+        id: "edit-layout",
+        label: "Edit layout (reorder the navigation)",
+        group: "Actions",
+        icon: icons.menu,
+        keywords: "reorder rearrange sidebar navigation menu order customise customize",
+        run: () => {
+          setEditingNav(true);
+          setNavOpen(true);
+        },
+      },
       {
         id: "theme",
         label: theme === "night" ? "Switch to light mode" : "Switch to dark mode",
@@ -163,7 +192,21 @@ export function DashboardLayout() {
           <kbd className="fp-kbd">{shortcutLabel}</kbd>
         </button>
 
-        <SidebarNav links={navLinks} />
+        {editingNav ? (
+          <NavOrderEditor
+            links={navLinks}
+            onMove={(id, delta) => changeNavOrder((order) => moveNavItem(order, id, delta))}
+            onMoveTo={(id, index) => changeNavOrder((order) => moveNavItemTo(order, id, index))}
+            onReset={() => {
+              setNavOrder(null);
+              saveNavOrder(null);
+            }}
+            canReset={navOrder !== null}
+            onDone={() => setEditingNav(false)}
+          />
+        ) : (
+          <SidebarNav links={navLinks} />
+        )}
 
         <div className="dash-sidebar-foot">
           <div className="fp-segment" role="group" aria-label="Theme">
@@ -176,6 +219,15 @@ export function DashboardLayout() {
               Dark
             </button>
           </div>
+          <button
+            type="button"
+            className="dash-signout dash-edit-layout"
+            aria-pressed={editingNav}
+            onClick={() => setEditingNav((on) => !on)}
+          >
+            {icons.menu}
+            {editingNav ? "Done editing" : "Edit layout"}
+          </button>
           <button type="button" className="dash-signout" onClick={() => void handleSignOut()}>
             {icons.logout}
             Log out
