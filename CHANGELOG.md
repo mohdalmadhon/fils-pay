@@ -100,6 +100,13 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
   retained 9 existing fixes and fixed 15 remaining issues in separate commits.
   Per-problem explanations, source references, verification and migration
   requirements: `docs/audits/future-fixes-disposition.md`.
+- **Deployment:** `ops/deploy.sh` deploys the checked-out commit to the
+  hosted box over SSH in one command; Caddy serves the dashboard, checkout
+  and Ops console with HTTPS (sslip.io host names, no domain needed) in
+  front of the api, which is now on loopback only. Settings are generated
+  once on the server and kept outside the code. Sign-in codes still have
+  no delivery channel in production, so dashboard and Ops sign-in don't
+  work there yet: `docs/deploy.md`.
 - **AI setup and submission:** how the AI assistant was set up and used
   (`ai-setup/`: standing instructions, commit and bundle helpers, offline Go
   and screenshot helpers) and `docs/SUBMISSION.md` with three annotated

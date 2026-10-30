@@ -17,6 +17,14 @@ apps/web and apps/admin aren't part of this compose file — they're plain
 Vite dev servers that talk to apps/api over HTTP (`npm run dev` inside
 each package), not services with their own database connection.
 
+## Deploying to the hosted box
+
+From your machine, in Git Bash: `ops/deploy.sh` (add `SEED=1` the first
+time). It sends the committed code over SSH and runs `ops/remote-deploy.sh`
+there, which keeps the settings in `~/fils-pay-config` and starts the stack
+with `docker-compose.prod.yml` (Caddy with HTTPS in front of the api).
+Details, rollback and what works there: `docs/deploy.md`.
+
 ## Checking a deployment end to end
 
 After deploying (or after `migrate` + `seed` locally), run the payment check
@@ -40,6 +48,9 @@ what a passing run looks like, are in
 | `.env.docker` | api settings, loaded with `env_file:` (create it from `.env.docker.example`) |
 | `Dockerfile.node` | image for api, reporting, migrate and seed (Node 22, dev dependencies for tsx) |
 | `Dockerfile.go` | multi-stage build of `apps/settlement` |
+| `docker-compose.prod.yml` | the hosted box: adds Caddy (`web`) and the api's public settings |
+| `Dockerfile.web`, `Caddyfile` | the built dashboard, checkout and Ops console behind Caddy |
+| `deploy.sh`, `remote-deploy.sh` | deploy from your machine; the part that runs on the server |
 
 The two Dockerfiles were missing from the repo until 2026-10-30
 (`docs/improvements/09`); they had never been committed.
