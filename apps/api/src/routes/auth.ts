@@ -3,7 +3,7 @@ import { verifyPassword } from "../auth/passwords.js";
 import { attemptOtp, consumeOtpChallenge, issueChallenge } from "../auth/otp.js";
 import { requireSession } from "../auth/middleware.js";
 import { sendOtpCode } from "../auth/notifier.js";
-import { assertLoginAllowed, merchantAccountKey, recordAuthFailure } from "../auth/throttle.js";
+import { canonicalMerchantId, merchantAccountKey, recordAuthFailure, releaseLoginAttempt, reserveLoginAttempt } from "../auth/throttle.js";
 import {
   createPendingSession,
   lookupPendingSession,
@@ -52,16 +52,22 @@ interface MerchantUserRow {
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   /** POST /v1/auth/login — step 1. */
   app.post<{ Body: LoginBody }>("/login", async (request, reply) => {
-    const { merchantId, email, password } = request.body ?? {};
-    if (!merchantId || !email || !password) {
+    const { merchantId: rawMerchantId, email, password } = request.body ?? {};
+    if (!rawMerchantId || !email || !password) {
       throw new BadRequestError("invalid_request", "merchantId, email and password are required");
+    }
+    // One spelling per merchant, so the failure budget below can't be
+    // multiplied by writing the same UUID in upper case, with braces, etc.
+    const merchantId = canonicalMerchantId(rawMerchantId);
+    if (!merchantId) {
+      throw new UnauthorizedError("invalid_credentials");
     }
 
     // Throttle before anything else, for real and unknown accounts alike,
     // so the right password doesn't get past it and the limit reveals
     // nothing about which accounts exist.
     const accountKey = merchantAccountKey(merchantId, email);
-    await assertLoginAllowed(app.db, app.config, accountKey, request.ip);
+    const attemptId = await reserveLoginAttempt(app.db, app.config, { plane: "merchant", accountKey, ipAddress: request.ip });
 
     const userResult = await app.db.query<MerchantUserRow>(
       `SELECT mu.id, mu.merchant_id, mu.email, mu.role, mu.password_hash
@@ -78,9 +84,10 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     // The same generic message in every failure case (no row, or wrong
     // password) — the response never discloses which part was wrong.
     if (!user || !passwordOk) {
-      await recordAuthFailure(app.db, app.config, { plane: "merchant", kind: "password", accountKey, ipAddress: request.ip });
+      // The reserved attempt stays recorded as a failure.
       throw new UnauthorizedError("invalid_credentials");
     }
+    await releaseLoginAttempt(app.db, attemptId);
 
     // The challenge and session belong to the user whose password was just
     // checked: the (merchantId, email) row above. Emails are only unique per

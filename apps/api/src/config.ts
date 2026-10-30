@@ -26,9 +26,8 @@ export interface Config {
   /** Failed password/OTP attempts per account within the window before
    *  login answers 429 (auth/throttle.ts). */
   loginMaxFailures: number;
-  /** Same, per client IP; 0 turns the IP limit off. Defaults to 0 outside
-   *  production (tests and local runs all come from one address). Only
-   *  meaningful with TRUST_PROXY set correctly behind a load balancer. */
+  /** Same, per client IP; 0 (the default) turns the IP limit off. Turn it
+   *  on only with TRUST_PROXY set correctly behind a load balancer. */
   loginMaxFailuresPerIp: number;
   loginFailureWindowMinutes: number;
   /** Fastify trustProxy: false (default, request.ip is the socket peer),
@@ -289,7 +288,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     otpMaxAttempts: parseIntEnv(env.OTP_MAX_ATTEMPTS, 5),
     otpDevExpose: parseOtpDevExpose(env.OTP_DEV_EXPOSE, nodeEnv),
     loginMaxFailures: parseIntEnv(env.LOGIN_MAX_FAILURES, 10),
-    loginMaxFailuresPerIp: parseIntEnv(env.LOGIN_MAX_FAILURES_PER_IP, nodeEnv === "production" ? 100 : 0),
+    // Off unless set: behind a proxy without TRUST_PROXY every client shares
+    // one address, and a per-IP limit would lock everyone out at once.
+    loginMaxFailuresPerIp: parseIntEnv(env.LOGIN_MAX_FAILURES_PER_IP, 0),
     loginFailureWindowMinutes: parseIntEnv(env.LOGIN_FAILURE_WINDOW_MINUTES, 15),
     trustProxy: parseTrustProxy(env.TRUST_PROXY),
 

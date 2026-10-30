@@ -3,7 +3,7 @@ import { verifyPassword } from "../adminAuth/passwords.js";
 import { issueAdminChallenge } from "../adminAuth/otp.js";
 import { attemptOtp, consumeOtpChallenge } from "../auth/otp.js";
 import { sendAdminOtpCode } from "../adminAuth/notifier.js";
-import { adminAccountKey, assertLoginAllowed, recordAuthFailure } from "../auth/throttle.js";
+import { adminAccountKey, recordAuthFailure, releaseLoginAttempt, reserveLoginAttempt } from "../auth/throttle.js";
 import { requireAdminSession } from "../adminAuth/middleware.js";
 import {
   createPendingAdminSession,
@@ -61,7 +61,7 @@ export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
 
     // Same throttle as merchant login, checked before the password.
     const accountKey = adminAccountKey(email);
-    await assertLoginAllowed(app.db, app.config, accountKey, request.ip);
+    const attemptId = await reserveLoginAttempt(app.db, app.config, { plane: "admin", accountKey, ipAddress: request.ip });
 
     const userResult = await app.db.query<AdminUserRow>(
       `SELECT id, email, role, password_hash FROM admin_users WHERE email = $1 AND status = 'active'`,
@@ -74,9 +74,10 @@ export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
     // The same generic error in every failure case (no row, disabled
     // account, or wrong password) — the response never discloses which.
     if (!user || !passwordOk) {
-      await recordAuthFailure(app.db, app.config, { plane: "admin", kind: "password", accountKey, ipAddress: request.ip });
+      // The reserved attempt stays recorded as a failure.
       throw new UnauthorizedError("invalid_credentials");
     }
+    await releaseLoginAttempt(app.db, attemptId);
 
     const { code, expiresAt, rawToken } = await withTransaction(app.db, async (client) => {
       const challenge = await issueAdminChallenge(client, {

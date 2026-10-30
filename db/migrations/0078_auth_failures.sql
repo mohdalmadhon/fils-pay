@@ -22,3 +22,4 @@ CREATE TABLE auth_failures (
 
 CREATE INDEX idx_auth_failures_account ON auth_failures (account_key, created_at);
 CREATE INDEX idx_auth_failures_ip ON auth_failures (ip_address, created_at);
+CREATE INDEX idx_auth_failures_created ON auth_failures (created_at);

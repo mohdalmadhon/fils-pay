@@ -2,13 +2,19 @@
  * Sign-in throttling, shared by the merchant and admin planes. Backed by
  * auth_failures (0078) so every API instance sees the same counts.
  *
- * - recordAuthFailure: one row per failed password check or wrong OTP.
- * - assertLoginAllowed: before a password is even checked, refuse with 429
- *   when the account (or, if enabled, the client IP) has reached its limit
- *   within the window. The check runs whether or not the account exists, and
- *   the right password doesn't bypass it.
+ * - reserveLoginAttempt: before a password is checked, under a per-account
+ *   advisory lock, refuse with 429 when the account (or, if enabled, the
+ *   client IP) has reached its limit, otherwise record this attempt as a
+ *   failure up front. Counting and recording under one lock means a burst of
+ *   parallel requests can't all pass the count before any is recorded.
+ *   The check runs whether or not the account exists, and the right password
+ *   doesn't bypass it.
+ * - releaseLoginAttempt: the password was right, so the reserved row is
+ *   removed and a correct login never uses up the budget.
+ * - recordAuthFailure: one row per wrong OTP code.
  */
 import type { Pool, PoolClient } from "pg";
+import { withTransaction } from "../db/withTransaction.js";
 import type { Config } from "../config.js";
 import { sha256Hex } from "../lib/crypto.js";
 import { TooManyRequestsError } from "../lib/errors.js";
@@ -20,6 +26,16 @@ type ThrottleConfig = Pick<Config, "loginMaxFailures" | "loginMaxFailuresPerIp" 
 /** Same key whether or not the account exists. Emails compare as typed at
  *  login (the lookup is exact), lower-cased here so case variants share one
  *  budget. */
+const CANONICAL_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The merchant id in its one canonical spelling (lower-case, hyphenated),
+ *  or null. Postgres accepts the same UUID in many spellings (upper case,
+ *  braces, no hyphens); each used to get its own failure budget. */
+export function canonicalMerchantId(raw: unknown): string | null {
+  return typeof raw === "string" && CANONICAL_UUID.test(raw) ? raw.toLowerCase() : null;
+}
+
+/** Call with a canonical merchant id (canonicalMerchantId). */
 export function merchantAccountKey(merchantId: string, email: string): string {
   return sha256Hex(`merchant:${merchantId}:${email.trim().toLowerCase()}`);
 }
@@ -28,7 +44,7 @@ export function adminAccountKey(email: string): string {
   return sha256Hex(`admin:${email.trim().toLowerCase()}`);
 }
 
-export async function assertLoginAllowed(
+async function countRecentFailures(
   db: Pool | PoolClient,
   config: ThrottleConfig,
   accountKey: string,
@@ -51,6 +67,38 @@ export async function assertLoginAllowed(
   }
 }
 
+/** Checks the limit and records this attempt as a failure, atomically per
+ *  account. Returns the row id; pass it to releaseLoginAttempt when the
+ *  password turns out to be right. */
+export async function reserveLoginAttempt(
+  pool: Pool,
+  config: ThrottleConfig,
+  entry: { plane: AuthPlane; accountKey: string; ipAddress: string | null },
+): Promise<string> {
+  const id = await withTransaction(pool, async (client) => {
+    await client.query(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, [entry.accountKey]);
+    await countRecentFailures(client, config, entry.accountKey, entry.ipAddress);
+    const inserted = await client.query<{ id: string }>(
+      `INSERT INTO auth_failures (plane, kind, account_key, ip_address) VALUES ($1, 'password', $2, $3) RETURNING id`,
+      [entry.plane, entry.accountKey, entry.ipAddress],
+    );
+    return inserted.rows[0]!.id;
+  });
+  await pruneOldFailures(pool, config);
+  return id;
+}
+
+export async function releaseLoginAttempt(db: Pool | PoolClient, attemptId: string): Promise<void> {
+  await db.query(`DELETE FROM auth_failures WHERE id = $1`, [attemptId]);
+}
+
+async function pruneOldFailures(db: Pool | PoolClient, config: Pick<Config, "loginFailureWindowMinutes">): Promise<void> {
+  // Rows past the window are never needed again (idx_auth_failures_created).
+  await db.query(`DELETE FROM auth_failures WHERE created_at < now() - make_interval(mins => $1 * 4)`, [
+    config.loginFailureWindowMinutes,
+  ]);
+}
+
 export async function recordAuthFailure(
   db: Pool | PoolClient,
   config: Pick<Config, "loginFailureWindowMinutes">,
@@ -60,10 +108,5 @@ export async function recordAuthFailure(
     `INSERT INTO auth_failures (plane, kind, account_key, ip_address) VALUES ($1, $2, $3, $4)`,
     [entry.plane, entry.kind, entry.accountKey, entry.ipAddress],
   );
-  // Keep the table small: rows past the window are never needed again.
-  // Cheap with the created_at-ordered indexes; failures are rare.
-  await db.query(
-    `DELETE FROM auth_failures WHERE created_at < now() - make_interval(mins => $1 * 4)`,
-    [config.loginFailureWindowMinutes],
-  );
+  await pruneOldFailures(db, config);
 }
