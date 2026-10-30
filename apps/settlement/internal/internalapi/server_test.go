@@ -364,6 +364,21 @@ func TestRunBatch_MalformedDate(t *testing.T) {
 	}
 }
 
+// Today's or a future business day cannot be closed yet: 400, and
+// RunDailyBatch is never reached (the nil pool would panic if it were).
+func TestRunBatch_RejectsTodayAndFutureDates(t *testing.T) {
+	server := newTestServer(t, nil)
+	today := settlement.BusinessDateAt(time.Now())
+	for _, date := range []time.Time{today, today.AddDate(0, 0, 1)} {
+		resp := post(t, server, "/internal/run-batch", "Bearer "+testToken, `{"date":"`+date.Format("2006-01-02")+`"}`)
+		var body errorResponse
+		decodeJSON(t, resp, &body)
+		if resp.StatusCode != http.StatusBadRequest || body.Error != "business_day_not_over" {
+			t.Errorf("%s: status = %d, error = %q; want 400 business_day_not_over", date.Format("2006-01-02"), resp.StatusCode, body.Error)
+		}
+	}
+}
+
 func TestRunBatch_MalformedMerchantID(t *testing.T) {
 	server := newTestServer(t, nil)
 	resp := post(t, server, "/internal/run-batch", "Bearer "+testToken, `{"date":"2026-04-10","merchantId":"not-a-uuid"}`)

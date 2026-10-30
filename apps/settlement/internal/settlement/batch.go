@@ -22,6 +22,24 @@ import (
 // (RunDailyBatch) already filters merchants before ever calling it.
 var ErrMerchantNotEligible = errors.New("settlement: merchant not found or not eligible for settlement")
 
+// ErrBusinessDayNotOver is returned by CloseBatch and RunDailyBatch when
+// asked to close today's (or a future) Asia/Bahrain business day. A batch
+// is closed once and never reopened, so closing a day that is still running
+// would freeze it before the rest of its captures arrive.
+var ErrBusinessDayNotOver = errors.New("settlement: business day has not ended yet")
+
+// CheckBusinessDayOver rejects a businessDate that is today's or a later
+// Asia/Bahrain business date at the instant `now`.
+func CheckBusinessDayOver(businessDate, now time.Time) error {
+	date := time.Date(businessDate.Year(), businessDate.Month(), businessDate.Day(), 0, 0, 0, 0, time.UTC)
+	today := BusinessDateAt(now)
+	if !date.Before(today) {
+		return fmt.Errorf("%w: %s is not before today's business date %s (Asia/Bahrain)",
+			ErrBusinessDayNotOver, date.Format("2006-01-02"), today.Format("2006-01-02"))
+	}
+	return nil
+}
+
 // BatchResult is CloseBatch's return value.
 type BatchResult struct {
 	BatchID       uuid.UUID
@@ -57,8 +75,17 @@ type eligibleEvent struct {
 // Every capture-type transaction_events row it selects is marked with this
 // batch's id inside the same transaction that freezes the batch's totals,
 // so a row can never be picked up by two batches.
+//
+// Only a business day that has already ended can be closed (see
+// ErrBusinessDayNotOver). The batch takes every still-unbatched capture
+// that happened before the end of its day, not only the ones inside it: a
+// capture whose transaction committed after its own day's batch was closed
+// is swept into the next batch instead of being left out forever.
 func CloseBatch(ctx context.Context, db *pgxpool.Pool, merchantID uuid.UUID, businessDate time.Time) (BatchResult, error) {
-	start, end := BusinessDayWindow(businessDate)
+	if err := CheckBusinessDayOver(businessDate, time.Now()); err != nil {
+		return BatchResult{}, err
+	}
+	_, end := BusinessDayWindow(businessDate)
 	batchDateOnly := time.Date(businessDate.Year(), businessDate.Month(), businessDate.Day(), 0, 0, 0, 0, time.UTC)
 
 	tx, err := db.Begin(ctx)
@@ -140,9 +167,13 @@ func CloseBatch(ctx context.Context, db *pgxpool.Pool, merchantID uuid.UUID, bus
 	}
 	tierBonusBps := VolumeTierMdrBonusBps(platformProcessedFils)
 
-	// Step 6: select and lock eligible events for the whole window. The
-	// join is transaction_events (many) -> transactions (one) — the safe
-	// direction. Every amount is read from te.amount_fils — the exact
+	// Step 6: select and lock every eligible event up to the end of the
+	// window. There is deliberately no lower bound: an event from an earlier
+	// day that is still unbatched (its transaction committed after that
+	// day's batch had closed, or that day was never closed) belongs in this
+	// batch, and settlement_batch_id IS NULL already stops any event from
+	// being claimed twice. The join is transaction_events (many) ->
+	// transactions (one) — the safe direction. Every amount is read from te.amount_fils — the exact
 	// incremental delta capture.ts already recorded for that one real
 	// event — never from transactions.captured_fils (a running total).
 	rows, err := tx.Query(ctx, `
@@ -152,10 +183,10 @@ func CloseBatch(ctx context.Context, db *pgxpool.Pool, merchantID uuid.UUID, bus
 		 WHERE t.merchant_id = $1
 		   AND te.event_type IN ('captured', 'partially_captured')
 		   AND te.settlement_batch_id IS NULL
-		   AND te.occurred_at >= $2 AND te.occurred_at < $3
+		   AND te.occurred_at < $2
 		 ORDER BY te.transaction_id, te.occurred_at
 		 FOR UPDATE OF te
-	`, merchantID, start, end)
+	`, merchantID, end)
 	if err != nil {
 		return BatchResult{}, fmt.Errorf("settlement: CloseBatch: select eligible events: %w", err)
 	}
@@ -422,6 +453,13 @@ type MerchantBatchOutcome struct {
 // between concurrent goroutines each trying to FOR UPDATE a
 // settlement_batches row.
 func RunDailyBatch(ctx context.Context, db *pgxpool.Pool, businessDate time.Time, onlyMerchant *uuid.UUID) (DailyBatchReport, error) {
+	// Refuse today or a future date before touching any merchant. The
+	// run-batch CLI and the internal API (behind the admin console) both
+	// come through here.
+	if err := CheckBusinessDayOver(businessDate, time.Now()); err != nil {
+		return DailyBatchReport{BusinessDate: businessDate}, err
+	}
+
 	var merchantIDs []uuid.UUID
 	if onlyMerchant != nil {
 		merchantIDs = []uuid.UUID{*onlyMerchant}

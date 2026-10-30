@@ -67,6 +67,11 @@ interface GrantIdParams {
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Today's Asia/Bahrain business date (fixed UTC+3), as YYYY-MM-DD. */
+function bahrainTodayDateString(now: Date = new Date()): string {
+  return new Date(now.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 /**
  * Registered with prefix '/v1/admin'. Mounts the admin auth routes under
  * '/auth' and the merchant-scoped admin routes under '/merchants', and
@@ -117,6 +122,15 @@ export async function adminRoutes(app: FastifyInstance, options: AdminRoutesOpti
       const { date, merchantId } = request.body ?? {};
       if (!date || !ISO_DATE_RE.test(date)) {
         throw new BadRequestError("invalid_request", "date is required, formatted YYYY-MM-DD");
+      }
+      // A closed batch is never reopened, so closing a day that is still
+      // running would leave its later captures out. apps/settlement refuses
+      // this too; checking here gives the admin a 400 instead of a 500.
+      if (date >= bahrainTodayDateString()) {
+        throw new BadRequestError(
+          "business_day_not_over",
+          "date must be a business day that has already ended (before today in Asia/Bahrain)",
+        );
       }
       if (merchantId !== undefined && !UUID_RE.test(merchantId)) {
         throw new BadRequestError("invalid_request", "merchantId, if given, must be a UUID");

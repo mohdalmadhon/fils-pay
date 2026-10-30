@@ -149,8 +149,10 @@ function addOneCalendarDay(dateStr: string): string {
 
 /**
  * Replicates apps/settlement's CloseBatch then PayoutBatch directly in SQL: selects unbatched
- * captured/partially_captured transaction_events for merchantId within
- * businessDate's Asia/Bahrain window, recomputes fee PER EVENT (via the
+ * captured/partially_captured transaction_events for merchantId that
+ * happened before the end of businessDate's Asia/Bahrain window (no lower
+ * bound, so a late capture from an earlier day is swept in, as CloseBatch
+ * does), recomputes fee PER EVENT (via the
  * same `applyRateFils` capture.ts and CloseBatch both use) then sums,
  * freezes the batch, marks events batched, writes truncated
  * scheme_export_lines, and posts the payout ledger legs.
@@ -201,9 +203,9 @@ async function closeAndPayoutBatch(
       WHERE t.merchant_id = $1
         AND te.event_type IN ('captured', 'partially_captured')
         AND te.settlement_batch_id IS NULL
-        AND te.occurred_at >= $2 AND te.occurred_at < $3
+        AND te.occurred_at < $2
       ORDER BY te.transaction_id, te.occurred_at`,
-    [merchantId, start, end],
+    [merchantId, end],
   );
 
   const grossByTxn = new Map<string, number>();

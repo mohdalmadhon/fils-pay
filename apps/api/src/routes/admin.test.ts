@@ -1358,6 +1358,26 @@ test("settlement run-batch validates its input before writing an audit row or ca
   assert.equal((await auditRowsFor(finance.id, "settlement_run_batch")).length, 0);
 });
 
+test("settlement run-batch refuses today's or a future business day before auditing or calling settlement", async () => {
+  const finance = await signedInAdmin("finance", "runbatch-today");
+  settlementSpy.runBatchCalls = [];
+
+  const today = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const tomorrow = new Date(Date.now() + 27 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  for (const date of [today, tomorrow]) {
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/admin/settlement/run-batch",
+      headers: { cookie: finance.cookie },
+      payload: { date },
+    });
+    assert.equal(res.statusCode, 400, `${date}: ${res.body}`);
+    assert.equal(res.json().error, "business_day_not_over");
+  }
+  assert.equal(settlementSpy.runBatchCalls.length, 0);
+  assert.equal((await auditRowsFor(finance.id, "settlement_run_batch")).length, 0);
+});
+
 // stubbed settlement client, so this says nothing about what the Go side computes — FH
 test("balance rebuild: calls the settlement client, surfaces only changed rows, and audits before/after", async () => {
   const admin = await signedInAdmin("super_admin", "rebuild");

@@ -222,6 +222,12 @@ func handleRunBatch(pool *pgxpool.Pool) http.Handler {
 			writeJSON(w, http.StatusBadRequest, errorResponse{Error: "invalid_date"})
 			return
 		}
+		// Today or a future date: the day is still taking captures, and a
+		// closed batch is never reopened.
+		if err := settlement.CheckBusinessDayOver(businessDate, time.Now()); err != nil {
+			writeJSON(w, http.StatusBadRequest, errorResponse{Error: "business_day_not_over"})
+			return
+		}
 
 		var onlyMerchant *uuid.UUID
 		if body.MerchantID != "" {
@@ -235,6 +241,10 @@ func handleRunBatch(pool *pgxpool.Pool) http.Handler {
 
 		report, err := settlement.RunDailyBatch(r.Context(), pool, businessDate, onlyMerchant)
 		if err != nil {
+			if errors.Is(err, settlement.ErrBusinessDayNotOver) {
+				writeJSON(w, http.StatusBadRequest, errorResponse{Error: "business_day_not_over"})
+				return
+			}
 			log.Printf("settlement internal api: run-batch(%s) failed: %v", body.Date, err)
 			writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "run_batch_failed"})
 			return
