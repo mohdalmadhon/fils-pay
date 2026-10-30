@@ -42,17 +42,41 @@ export interface AuthorizeResult {
  * no 'declined' value) — the only durable trace of such an attempt is its
  * idempotency_keys row.
  */
+/**
+ * The idempotency fingerprint stored in idempotency_keys.request_hash.
+ *
+ * It covers the amount, the reference, the card's expiry and only the last
+ * four digits of the card number, never the full number or the CVV. The
+ * stored hash used to be an unsalted sha256 over the whole request; with the
+ * BIN, last digits, amount and reference known, the rest of the card number
+ * and the CVV could be brute-forced from it offline, and keeping CVV-derived
+ * data after authorization is not allowed under the card rules (PCI DSS).
+ *
+ * Trade-off: two different cards with the same last four digits and expiry
+ * on the same key, amount and reference look like the same request, so the
+ * second would get the first one's replayed result instead of a 422. A
+ * client reusing an idempotency key for a different card is already
+ * misusing it.
+ */
+export function authorizeRequestHash(input: Pick<AuthorizeInput, "amountFils" | "card" | "reference">): string {
+  return hashRequest({
+    amountFils: input.amountFils,
+    card: {
+      last4: String(input.card.pan).slice(-4),
+      expiryMonth: input.card.expiryMonth,
+      expiryYear: input.card.expiryYear,
+    },
+    reference: input.reference ?? null,
+  });
+}
+
 export async function authorizeTransaction(
   pool: Pool,
   acquirer: AcquirerSimulator,
   input: AuthorizeInput,
 ): Promise<AuthorizeResult> {
   const actor = input.actor ?? { type: "system" as const, id: null };
-  const requestHash = hashRequest({
-    amountFils: input.amountFils,
-    card: input.card,
-    reference: input.reference ?? null,
-  });
+  const requestHash = authorizeRequestHash(input);
 
   return withTransaction(pool, async (client) => {
     const claim = await claimIdempotencyKey(client, {
