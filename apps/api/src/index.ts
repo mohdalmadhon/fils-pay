@@ -3,6 +3,7 @@ import { loadConfig } from "./config.js";
 import { createPool } from "./db/pool.js";
 import { markDbConnectedOnce } from "./health/state.js";
 import { formatIsoDate } from "./lib/dateFormat.js";
+import { startWatchdog } from "./lib/watchdog.js";
 import { startWebhookDispatcher, type WebhookDispatcherHandle } from "./webhooks/dispatcher.js";
 import { createFetchTransport } from "./webhooks/transport.js";
 
@@ -30,6 +31,10 @@ async function main(): Promise<void> {
   // am: we only run one replica anyway (512mb). fine
   const dispatcher: WebhookDispatcherHandle = startWebhookDispatcher(pool, webhookTransport, config);
 
+  // A frozen event loop kills the process so the container restarts it
+  // (lib/watchdog.ts). WATCHDOG_STALL_MS=0 turns it off.
+  const stopWatchdog = startWatchdog(Number(process.env.WATCHDOG_STALL_MS ?? 30_000));
+
   let shuttingDown = false;
   /**
    * Graceful shutdown: stop the dispatcher (waits for the in-flight pass),
@@ -40,6 +45,14 @@ async function main(): Promise<void> {
     if (shuttingDown) return;
     shuttingDown = true;
     console.log(`[index] received ${signal}, shutting down`);
+    stopWatchdog();
+    // In-flight requests get time to finish (app.close waits for them), but
+    // a shutdown that hangs must not keep a dead process around: Docker
+    // sends SIGKILL after stop_grace_period anyway; exit first, non-zero.
+    setTimeout(() => {
+      console.error("[index] shutdown did not finish in 20 s; exiting");
+      process.exit(1);
+    }, 20_000).unref();
     dispatcher
       .stop()
       .then(() => app.close())
