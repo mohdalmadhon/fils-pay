@@ -7,6 +7,7 @@ import { RequireRole } from "../../auth/RequireRole.js";
 import { bhd, dash, dateTime } from "../../format.js";
 import type { PaymentLinkDto } from "../../types.js";
 import { Loading, StatePanel, statusLabel } from "../../components/ui.js";
+import { canCancelLink, displayedLinkStatus } from "./linkStatus.js";
 
 /** The list endpoint's own maximum page size. */
 const LOOKUP_LIMIT = 100;
@@ -111,6 +112,7 @@ export function PaymentLinkDetailPage() {
   }
 
   const { link } = state;
+  const shownStatus = displayedLinkStatus(link);
 
   return (
     <section>
@@ -126,7 +128,7 @@ export function PaymentLinkDetailPage() {
         <dd>{link.currency}</dd>
         <dt>Status</dt>
         <dd>
-          <span className={`dash-status dash-status-${link.status}`}>{statusLabel(link.status)}</span>
+          <span className={`dash-status dash-status-${shownStatus}`}>{statusLabel(shownStatus)}</span>
         </dd>
         <dt>Reference</dt>
         <dd>{dash(link.reference)}</dd>
@@ -165,7 +167,7 @@ export function PaymentLinkDetailPage() {
 
       {actionError ? <p className="dash-error" role="alert">{actionError}</p> : null}
 
-      {link.status === "active" ? (
+      {canCancelLink(link) ? (
         <RequireRole allow={["owner", "finance"]}>
           <button
             type="button"
