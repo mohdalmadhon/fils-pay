@@ -12,6 +12,8 @@
 #   OPS_HOST    Ops console host (default: ops.<SITE_HOST>)
 #   HTTP_ONLY=1 serve plain HTTP (no certificate; cookies not marked Secure)
 #   SEED=1      load the demo data, only into an empty database
+#   SHOW_OTP=0  don't show sign-in codes on screen (default: shown, because
+#               there is no email delivery yet; docs/deploy.md)
 #
 # Settings live in ~/fils-pay-config (.env and .env.docker), outside the
 # code, so a new deploy never loses them; they are copied into ops/ each run.
@@ -83,8 +85,16 @@ ensure "$CONF/.env" PUBLIC_OPS_URL "$scheme://$ops_host"
 ensure "$CONF/.env.docker" NODE_ENV production
 ensure "$CONF/.env.docker" PORT 3000
 ensure "$CONF/.env.docker" ACQUIRER_CALLBACK_SIGNING_SECRET "$(rand)"
-# Development-only switches the api refuses in production.
-sed -i '/^OTP_DEV_EXPOSE=/d; /^WEBHOOK_ALLOW_PRIVATE_HOSTS=/d' "$CONF/.env.docker"
+# A development-only switch the api refuses in production.
+sed -i '/^WEBHOOK_ALLOW_PRIVATE_HOSTS=/d' "$CONF/.env.docker"
+# Sign-in codes have no delivery channel yet, so by default the hosted demo
+# shows them on the sign-in page (both switches are needed in production;
+# apps/api/src/config.ts). The password alone then signs in, so the demo
+# data's public passwords are replaced below.
+sed -i '/^OTP_DEV_EXPOSE=/d; /^OTP_SHOW_IN_PRODUCTION=/d' "$CONF/.env.docker"
+if [ "${SHOW_OTP:-1}" = 1 ]; then
+  printf 'OTP_DEV_EXPOSE=true\nOTP_SHOW_IN_PRODUCTION=true\n' >> "$CONF/.env.docker"
+fi
 
 cp "$CONF/.env" ops/.env
 cp "$CONF/.env.docker" ops/.env.docker
@@ -122,9 +132,21 @@ if ! curl -fsS --max-time 2 http://127.0.0.1:3000/healthz >/dev/null; then
 fi
 
 # 4. Demo data (optional) ------------------------------------------------------
+# Secrets printed below are also kept in $CONF (owner-only), since they are
+# shown only once.
 if [ "${SEED:-0}" = 1 ]; then
   say "Loading demo data (refused if the database already has merchants it didn't create)"
-  "${COMPOSE[@]}" --profile seed run --rm seed || echo "seed refused or failed; the database was left as it was"
+  if "${COMPOSE[@]}" --profile seed run --rm seed 2>&1 | tee "$CONF/seed-output.txt"; then
+    chmod 600 "$CONF/seed-output.txt"
+    echo "(the API keys above are saved in $CONF/seed-output.txt)"
+  else
+    echo "seed refused or failed; the database was left as it was"
+  fi
+fi
+if [ "${SHOW_OTP:-1}" = 1 ]; then
+  say "Replacing the demo data's public passwords (sign-in codes are shown on screen)"
+  touch "$CONF/demo-passwords.txt" && chmod 600 "$CONF/demo-passwords.txt"
+  "${COMPOSE[@]}" run --rm --no-deps migrate npx tsx db/seed/replaceDemoPasswords.ts | tee -a "$CONF/demo-passwords.txt"
 fi
 
 # 5. Report ----------------------------------------------------------------------
@@ -138,6 +160,9 @@ echo "Dashboard:  $site_url/dashboard"
 echo "Checkout:   $site_url/pay/<token>"
 echo "Ops:        $ops_url"
 echo "API:        $site_url/v1   (health: $site_url/healthz)"
+if [ "${SHOW_OTP:-1}" = 1 ]; then
+  echo "Sign-in:    the code is shown on the sign-in page. Demo passwords: $CONF/demo-passwords.txt"
+fi
 echo
 echo "Ports 80 and 443 must be open to the internet (the certificate is issued over them)."
 if [ "$scheme" = https ]; then
