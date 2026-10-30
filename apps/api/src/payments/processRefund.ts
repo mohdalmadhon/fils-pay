@@ -6,6 +6,7 @@ import { withTransaction } from "../db/withTransaction.js";
 import type { AcquirerSimulator } from "../acquirer/types.js";
 import { claimIdempotencyKey, completeIdempotencyKey, failIdempotencyKey, hashRequest } from "./idempotency.js";
 import { recordTransactionEvent } from "../transactions/events.js";
+import { applyPayableCacheDelta } from "./balanceCache.js";
 import { nextStatusAfterRefund } from "./refundState.js";
 import { validateRefundRequest } from "./refundValidation.js";
 import { ConflictError, UnprocessableEntityError } from "../lib/errors.js";
@@ -252,6 +253,11 @@ export async function processRefund(
         [entryGroupId, txn.merchant_id, txn.id, feeReversedFils],
       );
     }
+
+    // The cached payable balance moves with the ledger legs above, as it
+    // does for captures, credits and imports: refunds used to leave it too
+    // high by (refund - fee reversed) until a rebuild. docs/bugs/014.
+    await applyPayableCacheDelta(client, txn.merchant_id, Number(feeReversedFils) - Number(requestedAmount));
 
     // The timeline records what this refund did to the captured amount, so
     // it stays readable regardless of what the status column ends up

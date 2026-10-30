@@ -31,3 +31,4 @@ more detail, with how to reproduce it.
 | [011](011-tampered-page-cursor-500.md) | A tampered page cursor on the transactions, payment-links or settlement lists returns a 500 | API: lists | Low |
 | [012](012-malformed-path-id-500.md) | A malformed id in the URL of transaction, settlement-batch or payment-link routes returns a 500 | API: transactions, settlement, payment links | Low |
 | [013](013-acquirer-callback-values-not-validated.md) | The acquirer callback stores any outcome and retries errors that can never succeed | API: acquirer callbacks | Low |
+| [014](014-refund-leaves-balance-cache-stale.md) | A refund leaves the merchant's cached payable balance too high | API: refunds | Medium |

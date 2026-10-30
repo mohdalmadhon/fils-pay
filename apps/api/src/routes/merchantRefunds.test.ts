@@ -217,3 +217,24 @@ test("capturing the rest after a refund keeps the status in line with the refund
   );
   assert.deepEqual(events.rows.map((r) => r.event_type).sort(), ["captured", "partially_captured"]);
 });
+
+test("a refund moves the cached payable balance with the ledger (docs/bugs/014)", async () => {
+  const m = await createApprovedMerchantWithApiKey("refund-cache");
+  const txn = await capturedTransaction(m.rawKey, 10_000);
+  const res = await refund(m.merchantId, { authorization: `Bearer ${m.rawKey}`, "idempotency-key": randomUUID() }, {
+    transactionId: txn,
+    amountFils: 4_000,
+  });
+  assert.equal(res.statusCode, 200, res.body);
+
+  const ledger = await pool.query<{ net: string }>(
+    `SELECT COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount_fils ELSE -amount_fils END), 0)::text AS net
+       FROM ledger_entries WHERE merchant_id = $1 AND account_id = 'merchant_payable'`,
+    [m.merchantId],
+  );
+  const cache = await pool.query<{ v: string }>(
+    `SELECT cached_payable_fils::text AS v FROM merchant_balances WHERE merchant_id = $1`,
+    [m.merchantId],
+  );
+  assert.equal(Number(cache.rows[0]!.v), Number(ledger.rows[0]!.net));
+});
