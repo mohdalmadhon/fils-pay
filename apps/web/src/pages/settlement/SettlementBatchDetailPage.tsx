@@ -4,6 +4,7 @@ import { getSettlementBatch, getSettlementBatchTransactions } from "../../api/se
 import { ApiError, describeError } from "../../api/client.js";
 import { bhd, dash, dateTime } from "../../format.js";
 import type { SettlementBatchDetailDto, SettlementBatchTransactionDto } from "../../types.js";
+import { EmptyState, Loading, StatePanel, statusLabel } from "../../components/ui.js";
 
 type LoadState =
   | { kind: "loading" }
@@ -59,16 +60,21 @@ export function SettlementBatchDetailPage() {
     };
   }, [id]);
 
-  if (state.kind === "loading") return <p>Loading...</p>;
+  if (state.kind === "loading") return <Loading />;
   if (state.kind === "not_found") {
     return (
-      <section>
-        <h1>Settlement batch not found</h1>
-        <p>
-          No settlement batch with this id exists on your account.{" "}
-          <Link to="/dashboard/settlement">Back to settlement batches</Link>
-        </p>
-      </section>
+      <StatePanel
+        scene="lost"
+        code="Not found"
+        title="Settlement batch not found"
+        actions={
+          <Link className="dash-button dash-button-primary" to="/dashboard/settlement">
+            Back to settlement batches
+          </Link>
+        }
+      >
+        <p>No settlement batch with this id exists on your account.</p>
+      </StatePanel>
     );
   }
   if (state.kind === "error") {
@@ -87,8 +93,8 @@ export function SettlementBatchDetailPage() {
     <section>
       <h1>Settlement batch {batch.batchDate}</h1>
       {batch.status === "closed" && (
-        <div className="dash-progress-bar" style={{ width: "100%", background: "#e0e0e0", height: 6, borderRadius: 3 }}>
-          <div style={{ width: `${Math.min(displayProgress, 100)}%`, background: "#2563eb", height: 6, borderRadius: 3 }} />
+        <div className="dash-progress-bar">
+          <div className="dash-progress-fill" style={{ width: `${Math.min(displayProgress, 100)}%` }} />
         </div>
       )}
       <p className="dash-muted">
@@ -98,7 +104,7 @@ export function SettlementBatchDetailPage() {
       <dl className="dash-dl">
         <dt>Status</dt>
         <dd>
-          <span className={`dash-status dash-status-${batch.status}`}>{batch.status}</span>
+          <span className={`dash-status dash-status-${batch.status}`}>{statusLabel(batch.status)}</span>
         </dd>
         <dt>Gross</dt>
         <dd>{bhd(batch.grossFils)}</dd>
@@ -157,7 +163,9 @@ export function SettlementBatchDetailPage() {
           ))}
           {lines.length === 0 ? (
             <tr>
-              <td colSpan={7}>No scheme export lines in this batch.</td>
+              <td colSpan={7} className="fp-empty-cell">
+                <EmptyState title="No scheme export lines in this batch." />
+              </td>
             </tr>
           ) : null}
         </tbody>

@@ -14,6 +14,7 @@ import { BadRequestError, NotFoundError, UnauthorizedError } from "../lib/errors
 import { recordKycReviewInTx } from "../onboarding/review.js";
 import { createWebhookDeliveryArchive, replayWebhookDeliveryArchive } from "../webhooks/archiveReplay.js";
 import { DEFAULT_REPLAY_STATUSES, replayWebhookDeliveriesBatch } from "../webhooks/replayBatch.js";
+import { parseLimitParam } from "../lib/queryParams.js";
 
 interface MerchantIdParams {
   id: string;
@@ -97,7 +98,7 @@ export async function adminMerchantRoutes(app: FastifyInstance): Promise<void> {
           : Array.isArray(q.onboardingStatus)
             ? q.onboardingStatus
             : [q.onboardingStatus];
-      const limit = q.limit !== undefined ? Number.parseInt(q.limit, 10) : undefined;
+      const limit = parseLimitParam(q.limit);
 
       return listMerchantsForAdmin(app.db, {
         q: q.q ?? null,

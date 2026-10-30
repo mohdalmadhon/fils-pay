@@ -61,8 +61,32 @@ function sortKeysDeep(value: unknown): unknown {
   return value;
 }
 
-/** sha256Hex(canonicalJson(body)). */
+/** Keys that must never reach an unsalted, stored hash. */
+const FORBIDDEN_HASH_KEYS = new Set(["pan", "cvv", "cvc", "cardNumber", "card_number", "password"]);
+
+function assertNoSensitiveKeys(value: unknown, path: string): void {
+  if (Array.isArray(value)) {
+    value.forEach((v, i) => assertNoSensitiveKeys(v, `${path}[${i}]`));
+    return;
+  }
+  if (value !== null && typeof value === "object") {
+    for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
+      if (FORBIDDEN_HASH_KEYS.has(key)) {
+        throw new Error(`hashRequest: refusing to hash sensitive field ${path}.${key}; fingerprint it first`);
+      }
+      assertNoSensitiveKeys(v, `${path}.${key}`);
+    }
+  }
+}
+
+/**
+ * sha256Hex(canonicalJson(body)). Unsalted, and stored in
+ * idempotency_keys.request_hash, so anything hashed here can be brute-forced
+ * back when its search space is small. Card numbers, CVVs and passwords
+ * are refused; see authorizeRequestHash for how a card is fingerprinted.
+ */
 export function hashRequest(body: unknown): string {
+  assertNoSensitiveKeys(body, "body");
   return createHash("sha256").update(canonicalJson(body)).digest("hex");
 }
 

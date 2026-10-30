@@ -71,7 +71,7 @@ async function signedInAdmin(role: AdminRole, label: string) {
   });
   assert.equal(loginRes.statusCode, 200, loginRes.body);
   const loginBody = loginRes.json() as { devOtpCode?: string };
-  const cookie = parseCookie(loginRes.headers["set-cookie"], config.adminCookieName);
+  let cookie = parseCookie(loginRes.headers["set-cookie"], config.adminCookieName);
   const verifyRes = await app.inject({
     method: "POST",
     url: "/v1/admin/auth/otp/verify",
@@ -79,6 +79,8 @@ async function signedInAdmin(role: AdminRole, label: string) {
     payload: { code: loginBody.devOtpCode },
   });
   assert.equal(verifyRes.statusCode, 200, verifyRes.body);
+  // OTP verify issues a new session token; the pending one is dead.
+  cookie = (([] as string[]).concat(verifyRes.headers["set-cookie"] ?? [])[0] ?? "").split(";")[0]!;
 
   return { id: inserted.rows[0]!.id, email, cookie };
 }

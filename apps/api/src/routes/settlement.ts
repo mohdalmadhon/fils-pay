@@ -1,3 +1,4 @@
+import { parseLimitParam } from "../lib/queryParams.js";
 import type { FastifyInstance } from "fastify";
 import { requireMerchantAuth, requireMerchantRole } from "../auth/requireMerchantAuth.js";
 import { NotFoundError, BadRequestError } from "../lib/errors.js";
@@ -41,7 +42,7 @@ export async function settlementRoutes(app: FastifyInstance): Promise<void> {
     async (request) => {
       const q = request.query;
       const status = q.status === undefined ? undefined : Array.isArray(q.status) ? q.status : [q.status];
-      const limit = q.limit !== undefined ? Number.parseInt(q.limit, 10) : undefined;
+      const limit = parseLimitParam(q.limit);
 
       return listSettlementBatches(app.db, {
         merchantId: request.merchantAuth!.merchantId,

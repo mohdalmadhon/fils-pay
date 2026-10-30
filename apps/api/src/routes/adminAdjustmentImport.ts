@@ -8,6 +8,7 @@ import {
 import { parseAdjustmentCsv } from "../admin/adjustmentCsvParsing.js";
 import { UUID_RE } from "../admin/merchants.js";
 import { BadRequestError, NotFoundError, UnauthorizedError } from "../lib/errors.js";
+import { parseLimitParam } from "../lib/queryParams.js";
 
 interface ImportIdParams {
   id: string;
@@ -95,7 +96,7 @@ export async function adminAdjustmentImportRoutes(app: FastifyInstance): Promise
     "/",
     { preHandler: [requireAdminSession] },
     async (request) => {
-      const limit = request.query.limit !== undefined ? Number.parseInt(request.query.limit, 10) : undefined;
+      const limit = parseLimitParam(request.query.limit);
       return listAdjustmentImports(app.db, {
         limit: Number.isFinite(limit) ? limit : undefined,
         cursor: request.query.cursor ?? null,

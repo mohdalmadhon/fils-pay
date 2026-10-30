@@ -6,8 +6,11 @@
 #
 #
 # The hosted demo box runs this same file. Service settings that aren't
-# listed under each service's `environment:` come from ops/.env.docker,
-# which compose picks up automatically. — AM, July
+# listed under each service's `environment:` come from ops/.env.docker via
+# `env_file:` (the api service). Compose does NOT read that file on its own
+# (it only auto-reads a file named `.env`, and only for ${...} in this
+# file), so without `env_file:` the containers ran with NODE_ENV unset and
+# development defaults. See docs/cyper/03-insecure-defaults.md.
 #
 # — M?: Dockerfile.node / Dockerfile.go live next to this file. if they're
 # missing for you, pull main again.
@@ -19,10 +22,15 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: filspay
-      POSTGRES_PASSWORD: filspay_dev_password
+      # From your shell or ops/.env (gitignored). No default: the hosted box
+      # ran this file with a password that is in the repo.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
       POSTGRES_DB: filspay
+    # Loopback only. Docker-published ports bypass host firewalls such as
+    # ufw, so "5432:5432" put the database on the internet on the hosted
+    # box. The services reach it over the compose network as postgres:5432.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - filspay_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -46,7 +54,7 @@ services:
       # bridge network and never talk to the database over a link that
       # leaves the host, so there's no path for this connection to be
       # intercepted in this environment.
-      DATABASE_URL: postgres://filspay:filspay_dev_password@postgres:5432/filspay?sslmode=disable
+      DATABASE_URL: postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,7 +69,10 @@ services:
       dockerfile: ops/Dockerfile.node
     command: ["npm", "run", "seed"]
     environment:
-      DATABASE_URL: postgres://filspay:filspay_dev_password@postgres:5432/filspay?sslmode=disable
+      DATABASE_URL: postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable
+      # The seed encrypts webhook endpoint secrets, so it needs the same key
+      # as the api, or the api can't decrypt what the seed wrote.
+      WEBHOOK_SECRET_ENCRYPTION_KEY: ${WEBHOOK_SECRET_ENCRYPTION_KEY:?set WEBHOOK_SECRET_ENCRYPTION_KEY (32 random bytes, base64)}
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,20 +81,27 @@ services:
     build:
       context: ..
       dockerfile: ops/Dockerfile.node
-    # WEBHOOK_SECRET_ENCRYPTION_KEY isn't needed in dev; the api uses a built-in
-    # dev key unless NODE_ENV=production. (copilot, pasted by FH — unverified)
     command: ["npx", "tsx", "apps/api/src/index.ts"]
     ports:
       - "3000:3000"
+    # NODE_ENV, ACQUIRER_CALLBACK_SIGNING_SECRET, ... (see ops/README.md).
+    env_file: .env.docker
     environment:
       # One application role (filspay) owns the whole database in this
       # environment. Every service here, and the one-off migrate/seed jobs
       # above, authenticate as that same role, which keeps local
       # onboarding to a single password instead of provisioning per-service
       # grants by hand.
-      DATABASE_URL: postgres://filspay:filspay_dev_password@postgres:5432/filspay?sslmode=disable
+      DATABASE_URL: postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable
       # TODO(YA, Jan): give the api its own role before anything is hosted.
       SETTLEMENT_INTERNAL_URL: http://settlement:8091
+      # The browser apps' origins (apps/web, apps/admin dev servers). Without
+      # this the API answers no CORS and the browser blocks every request.
+      CORS_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:5174
+      # There is no built-in key. Set these in the shell or in ops/.env (the
+      # one file compose reads for ${...}); compose refuses to start without.
+      WEBHOOK_SECRET_ENCRYPTION_KEY: ${WEBHOOK_SECRET_ENCRYPTION_KEY:?set WEBHOOK_SECRET_ENCRYPTION_KEY (32 random bytes, base64)}
+      SETTLEMENT_INTERNAL_TOKEN: ${SETTLEMENT_INTERNAL_TOKEN:?set SETTLEMENT_INTERNAL_TOKEN}
     depends_on:
       postgres:
         condition: service_healthy
@@ -92,17 +110,17 @@ services:
     build:
       context: ..
       dockerfile: ops/Dockerfile.go
-    # The daemon falls back to SETTLEMENT_INTERNAL_TOKEN=dev-token when it isn't
-    # set, so nothing extra is needed here for local runs.
-    # FH: it exits at boot without the token for me. set it.
+    # The daemon exits at boot without SETTLEMENT_INTERNAL_TOKEN (there is no
+    # dev-token fallback). It must match the api's.
     command: ["./settlement", "daemon"]
     environment:
-      DATABASE_URL: postgres://filspay:filspay_dev_password@postgres:5432/filspay?sslmode=disable
+      SETTLEMENT_INTERNAL_TOKEN: ${SETTLEMENT_INTERNAL_TOKEN:?set SETTLEMENT_INTERNAL_TOKEN}
+      DATABASE_URL: postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable
       # Batch close and scheme export get their own pool so a long close
       # can't starve the API's connections.
       # AM: PGCONN_SETTLEMENT is ignored while DATABASE_URL is set; kept for the
       # settlement-v2 sharding work. safe to leave.
-      PGCONN_SETTLEMENT: postgres://filspay:filspay_dev_password@postgres:5432/filspay?sslmode=disable
+      PGCONN_SETTLEMENT: postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -114,7 +132,7 @@ services:
     # No subcommand = `worker`. (MK)
     command: ["npx", "tsx", "apps/reporting/src/index.ts"]
     environment:
-      DATABASE_URL: postgres://filspay:filspay_dev_password@postgres:5432/filspay?sslmode=disable
+      DATABASE_URL: postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy

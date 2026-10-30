@@ -1,17 +1,95 @@
-import { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../auth/AdminAuthContext.js";
 import { describeError, WEB_BASE_URL } from "../api/client.js";
 import { ImpersonationBanner } from "./ImpersonationBanner.js";
+import { Wordmark } from "./art/Art.js";
+import { icons } from "./art/Icons.js";
+import { ErrorBanner, StatePanel } from "./ui.js";
+import { CommandPalette, useCommandPaletteShortcut, type Command } from "./kit/CommandPalette.js";
+import { useTheme } from "./kit/theme.js";
+import { useCostume } from "./kit/Halloween.js";
 
-/** Nav shell for every admin-plane screen: who you are signed in as, the
- *  section links, a logout, and — above all of it — the impersonation
- *  banner when a grant is live. */
+const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+const shortcutLabel = isMac ? "\u2318K" : "Ctrl K";
+
+/** Nav shell for every admin-plane screen: a quiet sidebar (drawer on
+ *  phones) with who you are signed in as, the section links and log out,
+ *  and above all of it the impersonation banner when a grant is live. */
 // YA: nav order per Huda's request (Credits first)
 export function AdminLayout() {
   const { admin, signOut, impersonation } = useAdminAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [error, setError] = useState<string | null>(null);
+  const [navOpen, setNavOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const { theme, setTheme, toggle: toggleTheme } = useTheme();
+  const { on: costume, toggle: toggleCostume } = useCostume();
+  const openPalette = useCallback(() => setPaletteOpen(true), []);
+  useCommandPaletteShortcut(openPalette);
+
+  const commands = useMemo<Command[]>(() => {
+    const go = (id: string, label: string, to: string, icon: React.ReactNode, keywords?: string): Command => ({
+      id,
+      label,
+      group: "Go to",
+      icon,
+      keywords,
+      run: () => navigate(to),
+    });
+    return [
+      go("merchants", "Merchants", "/merchants", icons.merchants, "onboarding kyc mdr"),
+      go("credits", "Credits", "/credits", icons.credits, "grant adjust"),
+      go("settlement", "Settlement ops", "/settlement", icons.settlement, "batches payouts"),
+      go("imports", "Import adjustments", "/adjustment-imports", icons.imports, "csv upload"),
+      go("webhooks", "Webhook replay", "/webhooks", icons.replay, "events deliveries"),
+      {
+        id: "theme",
+        label: theme === "night" ? "Switch to light theme" : "Switch to night theme",
+        group: "Actions",
+        icon: theme === "night" ? icons.sun : icons.moon,
+        keywords: "theme dark light mode",
+        run: toggleTheme,
+      },
+      {
+        id: "costume",
+        label: costume ? "Take off the Halloween costume" : "Put on the Halloween costume",
+        group: "Actions",
+        icon: icons.sparkle,
+        keywords: "halloween spooky pumpkin costume",
+        run: () => toggleCostume(),
+      },
+      { id: "logout", label: "Log out", group: "Actions", icon: icons.logout, keywords: "sign out exit", run: () => void handleSignOut() },
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme, toggleTheme, costume, toggleCostume, navigate]);
+
+  useEffect(() => {
+    setNavOpen(false);
+  }, [location.pathname]);
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setNavOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [navOpen]);
+
+  // Tab title follows the page heading: "Merchants | FilsPay Ops".
+  useEffect(() => {
+    const main = document.getElementById("main");
+    if (!main) return;
+    const sync = () => {
+      const heading = main.querySelector("h1")?.textContent?.trim();
+      document.title = heading ? `${heading} | FilsPay Ops` : "FilsPay Ops";
+    };
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(main, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, []);
 
   async function handleSignOut(): Promise<void> {
     setError(null);
@@ -24,54 +102,128 @@ export function AdminLayout() {
   }
 
   return (
-    <div className="admin-shell">
+    <div className="admin-shell" data-nav-open={navOpen}>
+      <a className="fp-skip" href="#main">
+        Skip to content
+      </a>
       <ImpersonationBanner />
 
-      <header className="admin-header">
-        <div className="admin-brand">FilsPay Admin</div>
-        <nav className="admin-nav">
-          <NavLink to="/merchants">Merchants</NavLink>
-          <NavLink to="/credits">Credits</NavLink>
-          <NavLink to="/settlement">Settlement ops</NavLink>
-          <NavLink to="/adjustment-imports">Import adjustments</NavLink>
-          <NavLink to="/webhooks">Webhook replay</NavLink>
-        </nav>
-        <div className="admin-identity">
-          {admin ? (
-            <span>
-              {admin.email} <span className="admin-role-chip">{admin.role}</span>
+      <header className="admin-topbar">
+        <Wordmark />
+        <button type="button" className="admin-icon-button admin-topbar-search" aria-label="Search" onClick={openPalette}>
+          {icons.search}
+        </button>
+        <button
+          type="button"
+          className="admin-icon-button"
+          aria-label={navOpen ? "Close menu" : "Open menu"}
+          aria-expanded={navOpen}
+          aria-controls="admin-sidebar"
+          onClick={() => setNavOpen((open) => !open)}
+        >
+          {navOpen ? icons.close : icons.menu}
+        </button>
+      </header>
+
+      <aside id="admin-sidebar" className="admin-sidebar" aria-label="Operations console">
+        <div className="admin-sidebar-head">
+          <Wordmark />
+        </div>
+        {admin ? (
+          <div className="admin-identity">
+            <span className="admin-identity-avatar" aria-hidden>
+              {admin.email.trim().charAt(0).toUpperCase()}
             </span>
-          ) : null}
-          <button type="button" onClick={() => void handleSignOut()}>
+            <span className="admin-identity-text">
+              <strong>{admin.email}</strong>
+              <span className="admin-role-chip">{admin.role.replace("_", " ")}</span>
+            </span>
+          </div>
+        ) : null}
+
+        <button type="button" className="fp-nav-search" onClick={openPalette}>
+          {icons.search}
+          <span>Search or jump to…</span>
+          <kbd className="fp-kbd">{shortcutLabel}</kbd>
+        </button>
+
+        <nav className="admin-nav" aria-label="Main">
+          <span className="admin-nav-label">Merchants</span>
+          <NavLink to="/merchants">
+            {icons.merchants}
+            Merchants
+          </NavLink>
+          <NavLink to="/credits">
+            {icons.credits}
+            Credits
+          </NavLink>
+          <span className="admin-nav-label">Money movement</span>
+          <NavLink to="/settlement">
+            {icons.settlement}
+            Settlement ops
+          </NavLink>
+          <NavLink to="/adjustment-imports">
+            {icons.imports}
+            Import adjustments
+          </NavLink>
+          <span className="admin-nav-label">Developers</span>
+          <NavLink to="/webhooks">
+            {icons.replay}
+            Webhook replay
+          </NavLink>
+        </nav>
+
+        <div className="admin-sidebar-foot">
+          <div className="fp-segment" role="group" aria-label="Theme">
+            <button type="button" aria-pressed={theme === "light"} onClick={() => setTheme("light")}>
+              {icons.sun}
+              Light
+            </button>
+            <button type="button" aria-pressed={theme === "night"} onClick={() => setTheme("night")}>
+              {icons.moon}
+              Night
+            </button>
+          </div>
+          <button type="button" className="admin-signout" onClick={() => void handleSignOut()}>
+            {icons.logout}
             Log out
           </button>
         </div>
-      </header>
+      </aside>
 
-      {error ? <p className="admin-error">{error}</p> : null}
+      <div className="admin-scrim" onClick={() => setNavOpen(false)} aria-hidden />
 
-      {impersonation ? (
-        // An explicit "exit view-as-merchant" action is required before
-        // admin-plane screens are shown again. This is a UX safeguard so the
-        // two modes are never confused on screen; the privilege boundary
-        // itself does not depend on it — /v1/admin/* never reads the
-        // impersonation cookie, and the merchant side never reads the admin
-        // session cookie.
-        <main className="admin-main">
-          <h1>Admin screens are paused</h1>
-          <p>
-            An impersonation grant is active. Use <strong>Exit impersonation</strong> above to end it
-            and return to the admin console.
-          </p>
-          <p>
-            Merchant screens are at <code>{WEB_BASE_URL}</code> while the grant lasts.
-          </p>
-        </main>
-      ) : (
-        <main className="admin-main">
-          <Outlet />
-        </main>
-      )}
+      <div className="admin-content">
+        {impersonation ? (
+          // An explicit "exit view-as-merchant" action is required before
+          // admin-plane screens are shown again. This is a UX safeguard so the
+          // two modes are never confused on screen; the privilege boundary
+          // itself does not depend on it: /v1/admin/* never reads the
+          // impersonation cookie, and the merchant side never reads the admin
+          // session cookie.
+          <main id="main" className="admin-main" tabIndex={-1}>
+            <StatePanel scene="locked" code="Viewing as a merchant" title="Admin screens are paused">
+              <p>
+                You&apos;re viewing a merchant&apos;s dashboard. Use <strong>Exit impersonation</strong>{" "}
+                in the red bar to end it and come back here.
+              </p>
+              <p>
+                The merchant&apos;s screens are at <a href={`${WEB_BASE_URL}/dashboard`}>{WEB_BASE_URL}</a>{" "}
+                while the grant lasts.
+              </p>
+            </StatePanel>
+          </main>
+        ) : (
+          <main id="main" className="admin-main" tabIndex={-1}>
+            {error ? <ErrorBanner message={error} /> : null}
+            <div key={location.pathname} className="fp-page-enter">
+              <Outlet />
+            </div>
+          </main>
+        )}
+      </div>
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} commands={commands} />
     </div>
   );
 }

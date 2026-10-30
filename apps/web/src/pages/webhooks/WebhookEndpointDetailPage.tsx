@@ -6,6 +6,7 @@ import { useDashboardAuth } from "../../auth/DashboardAuthContext.js";
 import { Pagination } from "../../components/Pagination.js";
 import { dash, dateTime } from "../../format.js";
 import type { WebhookDeliveryDto, WebhookDeliveryStatus, WebhookEndpointDto } from "../../types.js";
+import { EmptyState, ErrorBanner, Loading, StatePanel, statusLabel } from "../../components/ui.js";
 
 /** `webhook_deliveries.status`' four CHECK values. Note the dispatcher only
  *  ever writes `succeeded`/`exhausted` — a row awaiting its next attempt
@@ -108,13 +109,18 @@ export function WebhookEndpointDetailPage() {
 
   if (endpointMissing) {
     return (
-      <section>
-        <h1>Endpoint not found</h1>
-        <p>
-          No webhook endpoint with this id exists on your account.{" "}
-          <Link to="/dashboard/webhooks">Back to webhook endpoints</Link>
-        </p>
-      </section>
+      <StatePanel
+        scene="lost"
+        code="Not found"
+        title="Endpoint not found"
+        actions={
+          <Link className="dash-button dash-button-primary" to="/dashboard/webhooks">
+            Back to webhook endpoints
+          </Link>
+        }
+      >
+        <p>No webhook endpoint with this id exists on your account.</p>
+      </StatePanel>
     );
   }
 
@@ -132,7 +138,7 @@ export function WebhookEndpointDetailPage() {
           </dd>
           <dt>Status</dt>
           <dd>
-            <span className={`dash-status dash-status-${endpoint.status}`}>{endpoint.status}</span>
+            <span className={`dash-status dash-status-${endpoint.status}`}>{statusLabel(endpoint.status)}</span>
           </dd>
           <dt>Created at</dt>
           <dd>{dateTime(endpoint.createdAt)}</dd>
@@ -152,12 +158,12 @@ export function WebhookEndpointDetailPage() {
               checked={statuses.includes(status)}
               onChange={() => toggleStatus(status)}
             />
-            {status}
+            {statusLabel(status)}
           </label>
         ))}
       </fieldset>
 
-      {error ? <p className="dash-error">{error}</p> : null}
+      {error ? <ErrorBanner message={error} /> : null}
 
       <table className="dash-table">
         <thead>
@@ -232,13 +238,15 @@ export function WebhookEndpointDetailPage() {
           })}
           {deliveries.length === 0 && !loading && !error ? (
             <tr>
-              <td colSpan={9}>No deliveries match these filters.</td>
+              <td colSpan={9} className="fp-empty-cell">
+                <EmptyState title="No deliveries match these filters." />
+              </td>
             </tr>
           ) : null}
         </tbody>
       </table>
 
-      {loading ? <p>Loading...</p> : null}
+      {loading ? <Loading /> : null}
 
       <Pagination
         nextCursor={nextCursor}

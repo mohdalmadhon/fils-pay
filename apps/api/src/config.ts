@@ -23,6 +23,18 @@ export interface Config {
   otpCodeLength: number;
   otpMaxAttempts: number;
   otpDevExpose: boolean;
+  /** Failed password/OTP attempts per account within the window before
+   *  login answers 429 (auth/throttle.ts). */
+  loginMaxFailures: number;
+  /** Same, per client IP; 0 (the default) turns the IP limit off. Turn it
+   *  on only with TRUST_PROXY set correctly behind a load balancer. */
+  loginMaxFailuresPerIp: number;
+  loginFailureWindowMinutes: number;
+  /** Fastify trustProxy: false (default, request.ip is the socket peer),
+   *  true, or a comma list of proxy addresses/CIDRs (preferred over true). Set it to
+   *  the load balancer when there is one, or every request.ip (audit rows,
+   *  the per-IP login limit) is the balancer's address. */
+  trustProxy: boolean | string;
 
   argon2MemoryKib: number;
   argon2TimeCost: number;
@@ -38,6 +50,12 @@ export interface Config {
 
   cookieName: string;
   cookieSecure: boolean;
+
+  /** Browser origins allowed to call this API with credentials (CORS):
+   *  the merchant dashboard and the admin console. CORS_ALLOWED_ORIGINS,
+   *  comma-separated. Defaults to the two local dev servers outside
+   *  production, and to none in production, where it must be set. */
+  corsAllowedOrigins: string[];
 
   /** Cookie carrying an `admin_sessions` token. A completely separate name,
    *  table, and code path from `cookieName`/`sessions` — `requireAdminSession`
@@ -114,6 +132,10 @@ export interface Config {
   webhookPollIntervalMs: number;
   /** Per-delivery-attempt HTTP timeout passed to the transport, milliseconds. */
   webhookRequestTimeoutMs: number;
+  /** Deliver webhooks to loopback/private/link-local addresses. Defaults to
+   *  true outside production (local receivers), false in production; and it
+   *  is a boot error to turn it on in production. */
+  webhookAllowPrivateHosts: boolean;
 
   /** Shared secret the acquirer signs its async callbacks with
    *  (routes/acquirerCallbacks.ts). Platform-level, not per-merchant —
@@ -129,11 +151,43 @@ export interface Config {
   acquirerCallbackToleranceSeconds: number;
 }
 
+/** Unset means development (local runs). Any other value must be one of the
+ *  three exact names: a typo like "prod" or a name like "staging" must not
+ *  silently boot with development defaults on a hosted box. */
 function parseNodeEnv(value: string | undefined): Config["nodeEnv"] {
+  if (value === undefined || value === "") return "development";
   if (value === "production" || value === "test" || value === "development") {
     return value;
   }
-  return "development";
+  throw new Error(`loadConfig: NODE_ENV must be production, development or test, got "${value}"`);
+}
+
+function parseTrustProxy(value: string | undefined): boolean | string {
+  if (value === undefined || value === "" || value === "false") return false;
+  if (value === "true") return true;
+  return value;
+}
+
+/** Private webhook destinations: on by default only outside production, and
+ *  refused in production (the SSRF guard must not be switchable off there). */
+function parseWebhookAllowPrivateHosts(value: string | undefined, nodeEnv: Config["nodeEnv"]): boolean {
+  const on = parseBoolEnv(value, nodeEnv !== "production");
+  if (on && nodeEnv === "production") {
+    throw new Error("loadConfig: WEBHOOK_ALLOW_PRIVATE_HOSTS must not be set when NODE_ENV=production");
+  }
+  return on;
+}
+
+/** The OTP echo-back (devOtpCode in the login response, and the code in the
+ *  log) is off unless OTP_DEV_EXPOSE=true is set explicitly, and is refused
+ *  in production. It used to default to on whenever NODE_ENV was not
+ *  exactly "production", which included the hosted box. */
+function parseOtpDevExpose(value: string | undefined, nodeEnv: Config["nodeEnv"]): boolean {
+  const on = parseBoolEnv(value, false);
+  if (on && nodeEnv === "production") {
+    throw new Error("loadConfig: OTP_DEV_EXPOSE must not be set when NODE_ENV=production");
+  }
+  return on;
 }
 
 function parseIntEnv(value: string | undefined, fallback: number): number {
@@ -143,6 +197,22 @@ function parseIntEnv(value: string | undefined, fallback: number): number {
     throw new Error(`loadConfig: expected an integer, got "${value}"`);
   }
   return parsed;
+}
+
+/** Comma-separated exact origins ("https://dash.example.com"), no paths,
+ *  no wildcards: a credentialed CORS response must name one origin. */
+function parseOriginList(value: string | undefined, fallback: string[]): string[] {
+  if (value === undefined) return fallback;
+  const origins = value
+    .split(",")
+    .map((o) => o.trim().replace(/\/+$/, ""))
+    .filter((o) => o !== "");
+  for (const origin of origins) {
+    if (origin === "*" || !/^https?:\/\/[^/\s]+$/.test(origin)) {
+      throw new Error(`loadConfig: CORS_ALLOWED_ORIGINS entry "${origin}" must be an exact origin like https://dash.example.com`);
+    }
+  }
+  return origins;
 }
 
 function parseFloatEnv(value: string | undefined, fallback: number): number {
@@ -158,8 +228,6 @@ function parseBoolEnv(value: string | undefined, fallback: boolean): boolean {
   if (value === undefined || value === "") return fallback;
   return value === "true" || value === "1";
 }
-
-const DEV_FALLBACK_WEBHOOK_KEY_B64 = "dGVzdC1rZXktZm9yLWRldi1vbmx5LW5vdC1mb3ItcHJvZA==";
 
 const BASE64_RE = /^[A-Za-z0-9+/]+={0,2}$/;
 
@@ -218,7 +286,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     otpTtlMinutes: parseIntEnv(env.OTP_TTL_MINUTES, 5),
     otpCodeLength: parseIntEnv(env.OTP_CODE_LENGTH, 6),
     otpMaxAttempts: parseIntEnv(env.OTP_MAX_ATTEMPTS, 5),
-    otpDevExpose: parseBoolEnv(env.OTP_DEV_EXPOSE, nodeEnv !== "production"),
+    otpDevExpose: parseOtpDevExpose(env.OTP_DEV_EXPOSE, nodeEnv),
+    loginMaxFailures: parseIntEnv(env.LOGIN_MAX_FAILURES, 10),
+    // Off unless set: behind a proxy without TRUST_PROXY every client shares
+    // one address, and a per-IP limit would lock everyone out at once.
+    loginMaxFailuresPerIp: parseIntEnv(env.LOGIN_MAX_FAILURES_PER_IP, 0),
+    loginFailureWindowMinutes: parseIntEnv(env.LOGIN_FAILURE_WINDOW_MINUTES, 15),
+    trustProxy: parseTrustProxy(env.TRUST_PROXY),
 
     argon2MemoryKib: parseIntEnv(env.ARGON2_MEMORY_KIB, 19_456),
     argon2TimeCost: parseIntEnv(env.ARGON2_TIME_COST, 2),
@@ -237,6 +311,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 
     cookieName: env.COOKIE_NAME ?? "fp_sid",
     cookieSecure: parseBoolEnv(env.COOKIE_SECURE, nodeEnv === "production"),
+    corsAllowedOrigins: parseOriginList(
+      env.CORS_ALLOWED_ORIGINS,
+      nodeEnv === "production" ? [] : ["http://localhost:5173", "http://localhost:5174"],
+    ),
 
     adminCookieName: env.ADMIN_COOKIE_NAME ?? "fp_admin_sid",
     adminSessionTtlHours: parseIntEnv(env.ADMIN_SESSION_TTL_HOURS, 8),
@@ -257,14 +335,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     checkoutBaseUrl: env.CHECKOUT_BASE_URL ?? "http://localhost:5173",
     paymentLinkReservationTimeoutSeconds: parseIntEnv(env.PAYMENT_LINK_RESERVATION_TIMEOUT_SECONDS, 60),
 
-    webhookSecretEncryptionKey: parseWebhookSecretEncryptionKey(
-      env.WEBHOOK_SECRET_ENCRYPTION_KEY || (nodeEnv !== "production" ? DEV_FALLBACK_WEBHOOK_KEY_B64 : undefined),
-    ),
+    // No built-in fallback: a key that ships in the repo protects nothing.
+    webhookSecretEncryptionKey: parseWebhookSecretEncryptionKey(env.WEBHOOK_SECRET_ENCRYPTION_KEY),
     webhookMaxAttempts: parseIntEnv(env.WEBHOOK_MAX_ATTEMPTS, 8),
     webhookBackoffBaseMs: parseIntEnv(env.WEBHOOK_BACKOFF_BASE_MS, 30_000),
     webhookBackoffCapMs: parseIntEnv(env.WEBHOOK_BACKOFF_CAP_MS, 21_600_000),
     webhookPollIntervalMs: parseIntEnv(env.WEBHOOK_POLL_INTERVAL_MS, 5_000),
     webhookRequestTimeoutMs: parseIntEnv(env.WEBHOOK_REQUEST_TIMEOUT_MS, 10_000),
+    webhookAllowPrivateHosts: parseWebhookAllowPrivateHosts(env.WEBHOOK_ALLOW_PRIVATE_HOSTS, nodeEnv),
 
     acquirerCallbackSigningSecret,
     acquirerCallbackRequireSignature:

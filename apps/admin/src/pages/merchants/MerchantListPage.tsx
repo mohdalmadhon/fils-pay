@@ -5,6 +5,7 @@ import { bulkApproveKyc } from "../../api/merchantsBulk.js";
 import { describeError } from "../../api/client.js";
 import { RequireRole } from "../../auth/RequireRole.js";
 import type { AdminMerchantSummary, MerchantOnboardingStatus } from "../../types.js";
+import { EmptyState, ErrorBanner, Loading } from "../../components/ui.js";
 
 const ONBOARDING_STATUSES: MerchantOnboardingStatus[] = [
   "submitted",
@@ -137,7 +138,7 @@ export function MerchantListPage() {
         ))}
       </fieldset>
 
-      {error ? <p className="admin-error">{error}</p> : null}
+      {error ? <ErrorBanner message={error} /> : null}
       {bulkNotice ? <p className="admin-muted">{bulkNotice}</p> : null}
 
       {selectedIds.size > 0 ? (
@@ -202,13 +203,15 @@ export function MerchantListPage() {
           ))}
           {merchants.length === 0 && !loading ? (
             <tr>
-              <td colSpan={8}>No merchants match this search.</td>
+              <td colSpan={8} className="fp-empty-cell">
+                <EmptyState title="No merchants match this search." />
+              </td>
             </tr>
           ) : null}
         </tbody>
       </table>
 
-      {loading ? <p>Loading...</p> : null}
+      {loading ? <Loading /> : null}
 
       {nextCursor ? (
         <button type="button" disabled={loading} onClick={() => void load(nextCursor)}>

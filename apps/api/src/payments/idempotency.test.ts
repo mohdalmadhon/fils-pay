@@ -28,8 +28,8 @@ test("canonicalJson differs when values differ, even with identical key sets", (
 });
 
 test("hashRequest is stable across key-reordered but semantically identical bodies", () => {
-  const a = hashRequest({ amountFils: 4750, reference: "order-1", card: { pan: "1", cvv: "2" } });
-  const b = hashRequest({ card: { cvv: "2", pan: "1" }, reference: "order-1", amountFils: 4750 });
+  const a = hashRequest({ amountFils: 4750, reference: "order-1", card: { last4: "4242", expiryMonth: 12 } });
+  const b = hashRequest({ card: { expiryMonth: 12, last4: "4242" }, reference: "order-1", amountFils: 4750 });
   assert.equal(a, b);
 });
 

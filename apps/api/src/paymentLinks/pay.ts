@@ -88,6 +88,8 @@ export async function payPaymentLink(
        SELECT id FROM payment_links
         WHERE token = $1
           AND expires_at > now()
+          -- a suspended or closed merchant can't take payments
+          AND EXISTS (SELECT 1 FROM merchants m WHERE m.id = payment_links.merchant_id AND m.status = 'active')
           AND (
                status = 'active'
                OR (status = 'reserved' AND reserved_at < now() - ($2 || ' seconds')::interval)
@@ -239,14 +241,20 @@ async function classifyClaimFailure(
   pool: Pool,
   token: string,
 ): Promise<PayPaymentLinkResult> {
-  const result = await pool.query<LinkStatusRow>(
-    `SELECT status, expires_at <= now() AS expired FROM payment_links WHERE token = $1`,
+  const result = await pool.query<LinkStatusRow & { merchant_status: string }>(
+    `SELECT pl.status, pl.expires_at <= now() AS expired, m.status AS merchant_status
+       FROM payment_links pl
+       JOIN merchants m ON m.id = pl.merchant_id
+      WHERE pl.token = $1`,
     [token],
   );
   const row = result.rows[0];
 
   if (!row) {
     return { statusCode: 404, body: { error: "payment_link_not_found" } };
+  }
+  if (row.merchant_status !== "active" && row.status !== "paid") {
+    return { statusCode: 409, body: { error: "merchant_unavailable" } };
   }
   if (row.status === "paid") {
     return { statusCode: 409, body: { error: "payment_link_already_paid" } };

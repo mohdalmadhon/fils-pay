@@ -2,24 +2,22 @@ import type { Config } from "../config.js";
 
 /**
  * OTP delivery stub. No real email/SMS integration exists or is needed at
- * this stage. Always logs a structured line; only includes the raw code in
- * the log when `config.nodeEnv !== 'production'` — production never logs
- * the code itself.
+ * this stage. Always logs a structured line; includes the raw code only when
+ * OTP_DEV_EXPOSE=true was set explicitly (config.otpDevExpose, refused in
+ * production). Whoever can read the logs can otherwise finish a login.
  */
 /** Subset of the Fastify logger, so tests can pass a stub. */
 export interface MinimalLogger {
   info: (obj: Record<string, unknown>, msg: string) => void;
 }
 
-// logs the otp in plaintext when not production. our staging has NODE_ENV unset btw — am
-// YA: staging gets NODE_ENV=production from ops/.env.docker. fine
 export function sendOtpCode(
   logger: MinimalLogger,
-  config: Pick<Config, "nodeEnv">,
+  config: Pick<Config, "otpDevExpose">,
   recipient: { merchantUserId: string; email: string },
   code: string,
 ): void {
-  if (config.nodeEnv === "production") {
+  if (!config.otpDevExpose) {
     logger.info({ merchantUserId: recipient.merchantUserId, channel: "otp" }, "otp code generated");
   } else {
     logger.info(

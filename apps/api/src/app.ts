@@ -2,6 +2,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import type { Config } from "./config.js";
 import { createAcquirerSimulator } from "./acquirer/simulator.js";
+import { corsPlugin } from "./plugins/cors.js";
 import { cookiesPlugin } from "./plugins/cookies.js";
 import { multipartPlugin } from "./plugins/multipart.js";
 import { errorHandler } from "./plugins/errorHandler.js";
@@ -20,13 +21,15 @@ import { reportingRoutes } from "./routes/reporting.js";
 import { adminRoutes, type AdminRoutesOptions } from "./routes/admin.js";
 import { acquirerCallbackRoutes } from "./routes/acquirerCallbacks.js";
 import { createFetchTransport, type WebhookTransport } from "./webhooks/transport.js";
+import { requestLogSerializer } from "./lib/logRedaction.js";
+import { securityHeadersPlugin } from "./plugins/securityHeaders.js";
 
 export interface BuildAppOptions {
   /** Test seam for the admin plane's cross-process settlement calls only —
    *  see routes/admin.ts. Never set in production. */
   admin?: AdminRoutesOptions;
   /** The outbound HTTP sender the merchant-facing "send test event" route
-   *  uses (routes/webhooks.ts). Defaults to the same `createFetchTransport()`
+   *  uses (routes/webhooks.ts). Defaults to the same `createFetchTransport(...)`
    *  the dispatcher runs on; index.ts passes its own instance in so one
    *  process has exactly one transport. Tests inject a stub. */
   webhookTransport?: WebhookTransport;
@@ -39,13 +42,22 @@ export interface BuildAppOptions {
  * tests use `app.inject(...)` against this — no real socket needed.
  */
 export function buildApp(config: Config, pool: Pool, options: BuildAppOptions = {}): FastifyInstance {
-  const app = Fastify({ logger: true });
+  const app = Fastify({
+    // Request lines go through requestLogSerializer so payment link tokens
+    // (bearer credentials for the public pay page) never reach the logs.
+    logger: { serializers: { req: requestLogSerializer } },
+    trustProxy: config.trustProxy,
+  });
 
   app.decorate("db", pool);
   app.decorate("config", config);
   app.decorate("acquirer", createAcquirerSimulator(config));
-  app.decorate("webhookTransport", options.webhookTransport ?? createFetchTransport());
+  app.decorate("webhookTransport", options.webhookTransport ?? createFetchTransport({ allowPrivateHosts: config.webhookAllowPrivateHosts }));
 
+  // First, so the CORS headers (and preflight answers) are on every
+  // response, errors and 404s included.
+  app.register(corsPlugin);
+  app.register(securityHeadersPlugin, { config });
   app.register(cookiesPlugin);
   app.register(multipartPlugin, { config });
   app.setErrorHandler(errorHandler);

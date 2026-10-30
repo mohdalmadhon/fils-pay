@@ -17,6 +17,21 @@ apps/web and apps/admin aren't part of this compose file — they're plain
 Vite dev servers that talk to apps/api over HTTP (`npm run dev` inside
 each package), not services with their own database connection.
 
+## Checking a deployment end to end
+
+After deploying (or after `migrate` + `seed` locally), run the payment check
+against the API. It creates a link, pays it, follows the money through the
+ledger, settlement and payout, verifies the webhooks, and checks
+reconciliation is zero:
+
+```
+API_URL=https://<api host> WEBHOOK_URL=<public receiver> node scripts/e2e/payment-check.mjs
+```
+
+Use staging, not production; it creates real rows. The full options, and
+what a passing run looks like, are in
+`docs/verification/end-to-end-2026-10-30.md`.
+
 ## Files
 
 | File | Purpose |
@@ -34,7 +49,8 @@ each package), not services with their own database connection.
 
 Every service, plus the one-off `migrate`/`seed` jobs, connects with the
 same `filspay` role and the same `DATABASE_URL`
-(`postgres://filspay:filspay_dev_password@postgres:5432/filspay?sslmode=disable`).
+(`postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable`,
+with the password from `ops/.env`).
 One role keeps local setup to a single password instead of hand-rolling
 per-service grants for a stack this size. `sslmode=disable` is safe here:
 Postgres and every service run on the same Docker Compose bridge network,
@@ -55,13 +71,30 @@ first.
 | Service | Needs | Where it comes from in compose |
 |---|---|---|
 | api | `DATABASE_URL`, `SETTLEMENT_INTERNAL_URL` | `environment:` |
-| api | `WEBHOOK_SECRET_ENCRYPTION_KEY` | only outside dev; a dev key is used otherwise |
-| api | `ACQUIRER_CALLBACK_SIGNING_SECRET`, `NODE_ENV` | `.env.docker` |
+| api | `CORS_ALLOWED_ORIGINS` | `environment:`; defaults to `http://localhost:5173,http://localhost:5174` outside production, **required** in production (the dashboard's and admin console's real origins) |
+| api | `WEBHOOK_SECRET_ENCRYPTION_KEY` | **required everywhere**; from your shell or `ops/.env` via `${...}`. There is no built-in key. |
+| api, settlement | `SETTLEMENT_INTERNAL_TOKEN` | **required**, same value on both; from your shell or `ops/.env`. There is no `dev-token` fallback. |
+| api | `ACQUIRER_CALLBACK_SIGNING_SECRET`, `NODE_ENV` | `.env.docker`, loaded with `env_file:` |
+| api | `OTP_DEV_EXPOSE` | off unless set to `true`; refused when `NODE_ENV=production` |
 | settlement | `DATABASE_URL` | `environment:` |
-| settlement | `SETTLEMENT_INTERNAL_TOKEN` | defaults to `dev-token` |
 | reporting | `DATABASE_URL` | `environment:`; runs `worker` by default |
 
-> **MK:** the api won't boot without WEBHOOK_SECRET_ENCRYPTION_KEY in any environment. set it on the hosted box.
+Before the first `up`, create the two env files. Both are gitignored.
+
+```bash
+cp ops/.env.docker.example ops/.env.docker   # then set the acquirer secret
+echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)" >> ops/.env
+echo "WEBHOOK_SECRET_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> ops/.env
+echo "SETTLEMENT_INTERNAL_TOKEN=$(openssl rand -hex 32)" >> ops/.env
+```
+
+Compose reads `ops/.env` for the `${...}` values in the compose file; it
+does not inject it into containers. `ops/.env.docker` is injected into the
+api with `env_file:`.
+
+Postgres is published on `127.0.0.1:5432` only, for local tools. Don't change
+it to `5432:5432` on a hosted box: Docker's published ports bypass host
+firewalls such as ufw.
 
 ## Resource sizing
 

@@ -3,6 +3,7 @@ import { verifyPassword } from "../adminAuth/passwords.js";
 import { issueAdminChallenge } from "../adminAuth/otp.js";
 import { attemptOtp, consumeOtpChallenge } from "../auth/otp.js";
 import { sendAdminOtpCode } from "../adminAuth/notifier.js";
+import { adminAccountKey, recordAuthFailure, releaseLoginAttempt, reserveLoginAttempt } from "../auth/throttle.js";
 import { requireAdminSession } from "../adminAuth/middleware.js";
 import {
   createPendingAdminSession,
@@ -58,6 +59,10 @@ export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
       throw new BadRequestError("invalid_request", "email and password are required");
     }
 
+    // Same throttle as merchant login, checked before the password.
+    const accountKey = adminAccountKey(email);
+    const attemptId = await reserveLoginAttempt(app.db, app.config, { plane: "admin", accountKey, ipAddress: request.ip });
+
     const userResult = await app.db.query<AdminUserRow>(
       `SELECT id, email, role, password_hash FROM admin_users WHERE email = $1 AND status = 'active'`,
       [email],
@@ -69,8 +74,10 @@ export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
     // The same generic error in every failure case (no row, disabled
     // account, or wrong password) — the response never discloses which.
     if (!user || !passwordOk) {
+      // The reserved attempt stays recorded as a failure.
       throw new UnauthorizedError("invalid_credentials");
     }
+    await releaseLoginAttempt(app.db, attemptId);
 
     const { code, expiresAt, rawToken } = await withTransaction(app.db, async (client) => {
       const challenge = await issueAdminChallenge(client, {
@@ -136,6 +143,15 @@ export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
       throw new TooManyRequestsError("too_many_attempts");
     }
     if (attempt.outcome === "invalid_code") {
+      const who = await app.db.query<{ email: string }>(`SELECT email FROM admin_users WHERE id = $1`, [pending.adminUserId]);
+      if (who.rows[0]) {
+        await recordAuthFailure(app.db, app.config, {
+          plane: "admin",
+          kind: "otp",
+          accountKey: adminAccountKey(who.rows[0].email),
+          ipAddress: request.ip,
+        });
+      }
       throw new UnauthorizedError("invalid_code");
     }
 
@@ -144,22 +160,21 @@ export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
       if (!(await consumeOtpChallenge(client, "admin_otp_challenges", challengeId))) {
         throw new GoneError("otp_expired");
       }
-      await promoteAdminSession(client, pending.adminSessionId, app.config.adminSessionTtlHours);
+      const promoted = await promoteAdminSession(client, pending.adminSessionId, app.config.adminSessionTtlHours);
       const result = await client.query<{ role: AdminRole }>(
         `SELECT role FROM admin_users WHERE id = $1`,
         [pending.adminUserId],
       );
-      return result.rows[0];
+      const row = result.rows[0];
+      return row ? { ...row, rawToken: promoted.rawToken } : undefined;
     });
     if (!adminUser) {
       throw new Error("admin otp/verify: admin_users row disappeared mid-transaction");
     }
 
-    // Re-set the cookie so its browser-side lifetime matches the now-promoted
-    // session's full TTL rather than the short pending window.
-    // YA: why is the cookie set twice (login and verify)? Claude says remove one
-    // FH: the second one re-issues at the full session TTL. the merchant flow should do the same
-    reply.setCookie(app.config.adminCookieName, rawToken, {
+    // The new token (see promoteAdminSession), at the full session TTL rather
+    // than the short pending window. The pending token is now dead.
+    reply.setCookie(app.config.adminCookieName, adminUser.rawToken, {
       httpOnly: true,
       path: "/",
       sameSite: "lax",
@@ -191,6 +206,22 @@ export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
         throw new UnauthorizedError("unauthenticated");
       }
       await revokeAdminSession(app.db, auth.adminSessionId);
+      // End this admin's live "view as merchant" grants too. A grant is a
+      // separate cookie, so without this it kept working for the rest of its
+      // TTL (up to 15 minutes) after logout, on whatever machine held it.
+      await app.db.query(
+        `UPDATE admin_impersonation_grants
+            SET revoked_at = now()
+          WHERE admin_user_id = $1 AND revoked_at IS NULL AND ended_at IS NULL AND expires_at > now()`,
+        [auth.adminUserId],
+      );
+      reply.setCookie(app.config.impersonationCookieName, "", {
+        httpOnly: true,
+        path: "/",
+        sameSite: "lax",
+        secure: app.config.cookieSecure,
+        maxAge: 0,
+      });
       reply.setCookie(app.config.adminCookieName, "", {
         httpOnly: true,
         path: "/",

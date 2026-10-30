@@ -18,10 +18,18 @@ import (
 // nearest 10 fils (2dp granularity), matching the CHECK constraint on
 // scheme_export_lines.amount_fils.
 //
-// — YA: the scheme file only carries two decimals. where does the third go?
-// asked twice. told to leave it until after the audit.
+// The 0-9 fils it drops never reach the scheme. They are not lost: CloseBatch
+// journals them per line into scheme_rounding_residue (ADR 0002), using
+// SchemeRoundingResidue below.
 func TruncateToSchemeAmount(grossFils money.Fils) money.Fils {
 	return (grossFils / 10) * 10
+}
+
+// SchemeRoundingResidue is the part of a line's gross that the two-decimal
+// scheme file cannot carry: gross minus TruncateToSchemeAmount(gross),
+// always 0-9 fils for a non-negative gross.
+func SchemeRoundingResidue(grossFils money.Fils) money.Fils {
+	return grossFils - TruncateToSchemeAmount(grossFils)
 }
 
 // buildBatchClosedPayload builds the settlement.batch_closed outbox

@@ -8,6 +8,7 @@ import {
 } from "../admin/credits.js";
 import { UUID_RE } from "../admin/merchants.js";
 import { NotFoundError, UnauthorizedError } from "../lib/errors.js";
+import { parseLimitParam } from "../lib/queryParams.js";
 
 interface MerchantIdParams {
   id: string;
@@ -48,7 +49,7 @@ export async function adminCreditRoutes(app: FastifyInstance): Promise<void> {
         if (q.merchantId !== undefined) {
           assertUuidParam(q.merchantId, "merchant_not_found");
         }
-        const limit = q.limit !== undefined ? Number.parseInt(q.limit, 10) : undefined;
+        const limit = parseLimitParam(q.limit);
 
         return listCreditRequests(app.db, {
           status: q.status,

@@ -155,7 +155,11 @@ function addOneCalendarDay(dateStr: string): string {
  * freezes the batch, marks events batched, writes truncated
  * scheme_export_lines, and posts the payout ledger legs.
  */
-async function closeAndPayoutBatch(merchantId: string, businessDate: string): Promise<string> {
+async function closeAndPayoutBatch(
+  merchantId: string,
+  businessDate: string,
+  options: { payoutAt?: Date } = {},
+): Promise<string> {
   const start = bahrainLocalMidnightUtc(businessDate);
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
   // In real operation the daemon runs CloseBatch+PayoutBatch for a
@@ -169,7 +173,10 @@ async function closeAndPayoutBatch(merchantId: string, businessDate: string): Pr
   // scoped to exactly one business day sees only that day's capture
   // activity, not a same-day payout reversal it would never see in
   // production.
-  const payoutOccurredAt = new Date(end.getTime() + 12 * 60 * 60 * 1000);
+  // `options.payoutAt` lets a test put the payout exactly where it wants it
+  // (inside the window, or the next morning) to check reconciliation is not
+  // thrown by where the payout legs land.
+  const payoutOccurredAt = options.payoutAt ?? new Date(end.getTime() + 12 * 60 * 60 * 1000);
 
   await pool.query(
     `INSERT INTO settlement_batches (merchant_id, batch_date, status)
@@ -385,6 +392,75 @@ test("GET /v1/settlement/reconciliation reports gapFils === 0 for a fully-batche
   assert.equal(report.ledgerMerchantPayableNetFils, expectedNet);
 });
 
+test("GET /v1/settlement/reconciliation still explains to zero when the payout lands inside the period", async () => {
+  // A batch closed and paid on the same day (a manual run-batch, or the
+  // admin console's re-run) posts its payout legs inside the very window
+  // being reconciled. The payout is the settlement side of the comparison,
+  // not something the merchant earned, so it must not show up as a gap.
+  const { merchantId, rawKey } = await createApprovedMerchantWithApiKey("reconciliation-same-day-payout", 250);
+  const txn = await authorize(rawKey, 47_333);
+  await capture(rawKey, txn.id);
+
+  const businessDate = todayBahrainDateString();
+  await closeAndPayoutBatch(merchantId, businessDate, { payoutAt: new Date() });
+
+  const res = await app.inject({
+    method: "GET",
+    url: `/v1/settlement/reconciliation?from=${businessDate}&to=${addOneCalendarDay(businessDate)}`,
+    headers: authHeader(rawKey),
+  });
+  assert.equal(res.statusCode, 200, res.body);
+  const report = res.json() as { gapFils: number; explained: boolean; ledgerMerchantPayableNetFils: number; settlementNetPayoutFils: number };
+
+  const expectedNet = 47_333 - Number(applyRateFils(toFils(47_333), 250));
+  assert.equal(report.settlementNetPayoutFils, expectedNet);
+  assert.equal(report.ledgerMerchantPayableNetFils, expectedNet, "the payout debit is not part of what the merchant earned");
+  assert.equal(report.gapFils, 0);
+  assert.equal(report.explained, true);
+});
+
+test("GET /v1/settlement/reconciliation explains a multi-day period that includes the next morning's payout", async () => {
+  // The normal daily rhythm: day D's captures are paid by the daemon just
+  // after midnight, so the payout legs land on D+1. Reconciling D..D+2 used
+  // to count that payout against D's earnings and report it as a gap.
+  const { merchantId, rawKey } = await createApprovedMerchantWithApiKey("reconciliation-multi-day", 250);
+  const txn = await authorize(rawKey, 12_345);
+  await capture(rawKey, txn.id);
+
+  const businessDate = todayBahrainDateString();
+  const nextDay = addOneCalendarDay(businessDate);
+  const dayAfter = addOneCalendarDay(nextDay);
+  const nextMorning = new Date(new Date(`${nextDay}T00:15:00+03:00`).getTime());
+  await closeAndPayoutBatch(merchantId, businessDate, { payoutAt: nextMorning });
+
+  const expectedNet = 12_345 - Number(applyRateFils(toFils(12_345), 250));
+  for (const [from, to] of [
+    [businessDate, nextDay],
+    [businessDate, dayAfter],
+  ] as const) {
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/settlement/reconciliation?from=${from}&to=${to}`,
+      headers: authHeader(rawKey),
+    });
+    assert.equal(res.statusCode, 200, res.body);
+    const report = res.json() as { gapFils: number; explained: boolean; ledgerMerchantPayableNetFils: number; settlementNetPayoutFils: number };
+    assert.equal(report.ledgerMerchantPayableNetFils, expectedNet, `ledger figure for ${from}..${to}`);
+    assert.equal(report.settlementNetPayoutFils, expectedNet, `settlement figure for ${from}..${to}`);
+    assert.equal(report.gapFils, 0, `gap for ${from}..${to}`);
+  }
+
+  // And the payout day on its own has nothing earned and nothing settled.
+  const res = await app.inject({
+    method: "GET",
+    url: `/v1/settlement/reconciliation?from=${nextDay}&to=${dayAfter}`,
+    headers: authHeader(rawKey),
+  });
+  const report = res.json() as { gapFils: number; ledgerMerchantPayableNetFils: number };
+  assert.equal(report.ledgerMerchantPayableNetFils, 0);
+  assert.equal(report.gapFils, 0);
+});
+
 // merchant in this fixture has no discount and no schedule row, so the float path is exact here — MK
 test("GET /v1/settlement/reconciliation with an unbatched capture reports it as pendingUnbatchedFils, not an unexplained gap", async () => {
   const { rawKey } = await createApprovedMerchantWithApiKey("reconciliation-pending", 250);
@@ -410,6 +486,55 @@ test("GET /v1/settlement/reconciliation with an unbatched capture reports it as 
   assert.equal(report.pendingUnbatchedFils, expectedPending);
   assert.equal(report.gapFils, 0, "the ledger movement is fully attributed to pendingUnbatchedFils, so the gap is still zero");
   assert.equal(report.explained, true);
+});
+
+test("GET /v1/settlement/reconciliation prices a pending capture at the merchant's negotiated schedule", async () => {
+  // merchants.mdr_bps = 250 is only the fallback; the schedule says 225 bps
+  // since yesterday, and capture charges 225. Pending must use 225 too.
+  const { merchantId, rawKey } = await createApprovedMerchantWithApiKey("reconciliation-schedule", 250);
+  await pool.query(
+    `INSERT INTO fee_schedules (merchant_id, mdr_bps, effective_from) VALUES ($1, 225, now() - interval '1 day')`,
+    [merchantId],
+  );
+  const txn = await authorize(rawKey, 12_345);
+  await capture(rawKey, txn.id);
+
+  const businessDate = todayBahrainDateString();
+  const res = await app.inject({
+    method: "GET",
+    url: `/v1/settlement/reconciliation?from=${businessDate}&to=${addOneCalendarDay(businessDate)}`,
+    headers: authHeader(rawKey),
+  });
+  assert.equal(res.statusCode, 200, res.body);
+  const report = res.json() as { gapFils: number; explained: boolean; pendingUnbatchedFils: number; ledgerMerchantPayableNetFils: number };
+
+  const feeAt225 = Number(applyRateFils(toFils(12_345), 225)); // 278
+  assert.equal(report.ledgerMerchantPayableNetFils, 12_345 - feeAt225, "capture charged the schedule rate");
+  assert.equal(report.pendingUnbatchedFils, 12_345 - feeAt225, "pending uses the schedule rate, not merchants.mdr_bps");
+  assert.equal(report.gapFils, 0);
+  assert.equal(report.explained, true);
+});
+
+test("GET /v1/settlement/reconciliation rounds a half-fil fee the way the ledger does", async () => {
+  // 10,100 fils x 2.5% = 252.5 fils. Capture (applyRateFils) rounds half to
+  // even: 252. The old float estimate's Math.round gave 253 and a 1-fil gap.
+  const { rawKey } = await createApprovedMerchantWithApiKey("reconciliation-half-fil", 250);
+  const txn = await authorize(rawKey, 10_100);
+  await capture(rawKey, txn.id);
+
+  const businessDate = todayBahrainDateString();
+  const res = await app.inject({
+    method: "GET",
+    url: `/v1/settlement/reconciliation?from=${businessDate}&to=${addOneCalendarDay(businessDate)}`,
+    headers: authHeader(rawKey),
+  });
+  assert.equal(res.statusCode, 200, res.body);
+  const report = res.json() as { gapFils: number; pendingUnbatchedFils: number; ledgerMerchantPayableNetFils: number };
+
+  assert.equal(Number(applyRateFils(toFils(10_100), 250)), 252);
+  assert.equal(report.ledgerMerchantPayableNetFils, 10_100 - 252);
+  assert.equal(report.pendingUnbatchedFils, 10_100 - 252);
+  assert.equal(report.gapFils, 0);
 });
 
 test("GET /v1/settlement/summary sums captured amounts for transactions with a single capture event", async () => {

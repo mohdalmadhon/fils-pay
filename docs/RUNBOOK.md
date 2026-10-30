@@ -31,6 +31,32 @@ The most common cause so far has been sharp's in-process image cache when
 support pages through KYC thumbnails. Set `SHARP_CACHE=0` on the API
 container and restart.
 
+## `npm run migrate` stops at 0054 or 0055
+
+Fixed. Both files used to reference schema that never existed
+(`settlement_batch_events`; `chart_of_accounts.code`), so a fresh
+database stopped at 0054 and every later migration silently never ran.
+Databases built before the fix usually have 0054 and 0055 missing from
+`schema_migrations` (they were skipped by hand to get past the error).
+
+Pull and run `npm run migrate` again. Both files are now idempotent
+(`CREATE OR REPLACE VIEW`, `ON CONFLICT DO NOTHING`), so they apply cleanly
+whether they were skipped or not, and any later migrations that never ran
+apply after them. Check with:
+
+```sql
+SELECT filename FROM schema_migrations WHERE filename LIKE '005%' ORDER BY 1;
+```
+
+`db/migrate.integration.test.ts` applies every migration to an empty
+database; run it before shipping a new migration.
+
+## Is the money flow healthy end to end?
+
+`node scripts/e2e/payment-check.mjs` (see `docs/verification/`) takes one
+payment from link to payout on a dev or staging stack and prints PASS/FAIL
+for each step: ledger balance, residue, payout, webhooks, reconciliation.
+
 ## Settlement didn't run for a day
 
 The daemon only catches up the most recent business day on restart. For

@@ -5,6 +5,7 @@ import { describeError } from "../../api/client.js";
 import { useDashboardAuth } from "../../auth/DashboardAuthContext.js";
 import { dateTime } from "../../format.js";
 import type { WebhookEndpointCreateResponse } from "../../types.js";
+import { ErrorBanner } from "../../components/ui.js";
 
 /**
  * `POST /v1/merchants/:merchantId/webhook-endpoints`.
@@ -103,7 +104,7 @@ export function WebhookEndpointCreatePage() {
     <section>
       <h1>New webhook endpoint</h1>
 
-      {error ? <p className="dash-error">{error}</p> : null}
+      {error ? <ErrorBanner message={error} /> : null}
 
       <form className="dash-form" onSubmit={(e) => void handleSubmit(e)}>
         <label>

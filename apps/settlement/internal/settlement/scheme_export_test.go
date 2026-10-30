@@ -45,3 +45,25 @@ func TestSchemeExportAmountHasTwoDecimals(t *testing.T) {
 		}
 	}
 }
+
+func TestSchemeRoundingResidue(t *testing.T) {
+	cases := []struct {
+		gross, want money.Fils
+	}{
+		{0, 0},
+		{10, 0},
+		{4747, 7},
+		{47333, 3},
+		{150031, 1},
+		{999999, 9},
+	}
+	for _, tc := range cases {
+		got := SchemeRoundingResidue(tc.gross)
+		if got != tc.want {
+			t.Errorf("SchemeRoundingResidue(%d) = %d, want %d", tc.gross, got, tc.want)
+		}
+		if TruncateToSchemeAmount(tc.gross)+got != tc.gross {
+			t.Errorf("truncated + residue != gross for %d", tc.gross)
+		}
+	}
+}

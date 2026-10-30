@@ -6,11 +6,11 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import sharp from "sharp";
+import sharp, { type Sharp } from "sharp";
 import { detectFileType } from "./fileSignature.js";
 import { generateKycThumbnail } from "./kycThumbnail.js";
 
-function solidImage(): sharp.Sharp {
+function solidImage(): Sharp {
   return sharp({
     create: { width: 800, height: 600, channels: 3, background: { r: 12, g: 90, b: 160 } },
   });

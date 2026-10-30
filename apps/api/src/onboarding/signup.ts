@@ -34,8 +34,9 @@ export interface SignupResult {
  * flow, keeping "create an account" and "authenticate" as separate,
  * independently testable concerns.
  */
-// emails are only unique per merchant — the login re-lookup by email can land on another merchant? — am
-// — MK: login filters by merchantId. verified
+// Emails are only unique per merchant (UNIQUE (merchant_id, email)), and
+// signup does not verify the email. Anything that finds a merchant user must
+// filter by merchant_id as well as email; see docs/cyper/01-login-cross-tenant.md.
 export async function createMerchantWithOwner(
   pool: Pool,
   config: Config,

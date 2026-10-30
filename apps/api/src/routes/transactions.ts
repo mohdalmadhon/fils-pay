@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { toFils } from "@filspay/money";
 import { requireApiKey } from "../apiKeys/verify.js";
-import { requireMerchantAuth, requireMerchantWriterActor } from "../auth/requireMerchantAuth.js";
+import { requireMerchantAuth, requireMerchantRole, requireMerchantWriterActor } from "../auth/requireMerchantAuth.js";
 import { authorizeTransaction, type AuthorizeInput } from "../payments/authorize.js";
 import { captureTransaction } from "../payments/capture.js";
 import { applyCaptureDiscountAdjustment } from "../payments/discountAdjustment.js";
@@ -11,6 +11,7 @@ import { getTransactionById, listTransactions } from "../transactions/query.js";
 import { listTransactionEvents } from "../transactions/events.js";
 import { BadRequestError, NotFoundError } from "../lib/errors.js";
 import type { SimulatedCardInput } from "../acquirer/types.js";
+import { parseLimitParam } from "../lib/queryParams.js";
 
 interface AuthorizeBody {
   amountFils?: number;
@@ -88,11 +89,12 @@ export async function transactionRoutes(app: FastifyInstance): Promise<void> {
   );
 
   app.post<{ Params: TransactionIdParams; Body: CaptureBody }>(
-    // am: requireMerchantAuth lets impersonation through here too? an admin impersonating can capture
-    // MK: impersonation is read-only, enforced in requireMerchantAuth. fine
-    // MK: confirmed — ADMIN.md says grants are support-level read only
+    // Moves money: owner or finance only (API keys are owner-issued and pass).
+    // The merchant "support" role, and support/finance admins viewing as the
+    // merchant (mapped to "support"), are refused here. requireMerchantAuth
+    // alone does not make impersonation read-only.
     "/:id/capture",
-    { preHandler: requireMerchantAuth },
+    { preHandler: [requireMerchantAuth, requireMerchantRole("owner", "finance")] },
     async (request, reply) => {
       const idempotencyKey = getIdempotencyKey(request);
       const { amountFils } = request.body ?? {};
@@ -118,9 +120,10 @@ export async function transactionRoutes(app: FastifyInstance): Promise<void> {
   );
 
   app.post<{ Params: TransactionIdParams }>(
-    // TODO(FH): role check? finance role users shouldn't void. ask MK
+    // Owner or finance, same as capture. Whether finance should also be
+    // excluded is an open product question (docs/cyper/05-capture-void-roles.md).
     "/:id/void",
-    { preHandler: requireMerchantAuth },
+    { preHandler: [requireMerchantAuth, requireMerchantRole("owner", "finance")] },
     async (request, reply) => {
       const result = await voidTransaction(app.db, {
         transactionId: request.params.id,
@@ -137,7 +140,7 @@ export async function transactionRoutes(app: FastifyInstance): Promise<void> {
     async (request) => {
       const q = request.query;
       const status = q.status === undefined ? undefined : Array.isArray(q.status) ? q.status : [q.status];
-      const limit = q.limit !== undefined ? Number.parseInt(q.limit, 10) : undefined;
+      const limit = parseLimitParam(q.limit);
 
       return listTransactions(app.db, {
         merchantId: request.merchantAuth!.merchantId,

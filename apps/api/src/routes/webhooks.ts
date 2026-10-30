@@ -12,6 +12,7 @@ import { updateWebhookEndpoint } from "../webhooks/update.js";
 import { replayWebhookDelivery } from "../webhooks/replay.js";
 import { getWebhookDelivery, listWebhookDeliveries } from "../webhooks/deliveries.js";
 import { sendTestWebhookEvent } from "../webhooks/testSend.js";
+import { parseLimitParam } from "../lib/queryParams.js";
 
 interface MerchantIdParams {
   merchantId: string;
@@ -140,10 +141,10 @@ export async function webhookEndpointRoutes(app: FastifyInstance): Promise<void>
   );
 
   app.post<{ Params: EndpointIdParams }>(
-    // MK: test-send echoes up to 2KB of whatever the receiver returns. point an endpoint at
-    // http://settlement:8091 and you can read internal responses?
-    // am: only the merchant who owns the endpoint sees it. harmless
-    // MK: and create.ts blocks private hosts in production anyway
+    // Test-send echoes up to 2 KB of the receiver's response. That is only
+    // safe because the URL can't be a private/internal host (create.ts at
+    // save time, the transport's guardedLookup at send time) and redirects
+    // aren't followed. See docs/cyper/04-webhook-ssrf.md.
     "/:merchantId/webhook-endpoints/:id/test",
     { preHandler: [requireMerchantAuth, requireMerchantRole("owner", "finance")] },
     async (request, reply) => {
@@ -192,7 +193,7 @@ export async function webhookEndpointRoutes(app: FastifyInstance): Promise<void>
 
       const q = request.query;
       const status = q.status === undefined ? undefined : Array.isArray(q.status) ? q.status : [q.status];
-      const limit = q.limit !== undefined ? Number.parseInt(q.limit, 10) : undefined;
+      const limit = parseLimitParam(q.limit);
 
       const result = await listWebhookDeliveries(app.db, {
         merchantId: request.params.merchantId,

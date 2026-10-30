@@ -3,13 +3,13 @@ import { verifyPassword } from "../auth/passwords.js";
 import { attemptOtp, consumeOtpChallenge, issueChallenge } from "../auth/otp.js";
 import { requireSession } from "../auth/middleware.js";
 import { sendOtpCode } from "../auth/notifier.js";
+import { canonicalMerchantId, merchantAccountKey, recordAuthFailure, releaseLoginAttempt, reserveLoginAttempt } from "../auth/throttle.js";
 import {
   createPendingSession,
   lookupPendingSession,
   promoteSession,
   revokeSession,
 } from "../auth/sessions.js";
-import { findOtpRecipient } from "../auth/users.js";
 import { withTransaction } from "../db/withTransaction.js";
 import { BadRequestError, GoneError, TooManyRequestsError, UnauthorizedError } from "../lib/errors.js";
 
@@ -52,10 +52,22 @@ interface MerchantUserRow {
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   /** POST /v1/auth/login — step 1. */
   app.post<{ Body: LoginBody }>("/login", async (request, reply) => {
-    const { merchantId, email, password } = request.body ?? {};
-    if (!merchantId || !email || !password) {
+    const { merchantId: rawMerchantId, email, password } = request.body ?? {};
+    if (!rawMerchantId || !email || !password) {
       throw new BadRequestError("invalid_request", "merchantId, email and password are required");
     }
+    // One spelling per merchant, so the failure budget below can't be
+    // multiplied by writing the same UUID in upper case, with braces, etc.
+    const merchantId = canonicalMerchantId(rawMerchantId);
+    if (!merchantId) {
+      throw new UnauthorizedError("invalid_credentials");
+    }
+
+    // Throttle before anything else, for real and unknown accounts alike,
+    // so the right password doesn't get past it and the limit reveals
+    // nothing about which accounts exist.
+    const accountKey = merchantAccountKey(merchantId, email);
+    const attemptId = await reserveLoginAttempt(app.db, app.config, { plane: "merchant", accountKey, ipAddress: request.ip });
 
     const userResult = await app.db.query<MerchantUserRow>(
       `SELECT mu.id, mu.merchant_id, mu.email, mu.role, mu.password_hash
@@ -72,20 +84,23 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     // The same generic message in every failure case (no row, or wrong
     // password) — the response never discloses which part was wrong.
     if (!user || !passwordOk) {
+      // The reserved attempt stays recorded as a failure.
       throw new UnauthorizedError("invalid_credentials");
     }
+    await releaseLoginAttempt(app.db, attemptId);
 
-    const recipient = await findOtpRecipient(app.db, email) ?? user;
-
+    // The challenge and session belong to the user whose password was just
+    // checked: the (merchantId, email) row above. Emails are only unique per
+    // merchant, so never look the email up again without the merchant.
     const { code, expiresAt, rawToken } = await withTransaction(app.db, async (client) => {
       const challenge = await issueChallenge(client, {
-        merchantUserId: recipient.id,
+        merchantUserId: user.id,
         ttlMinutes: app.config.otpTtlMinutes,
         codeLength: app.config.otpCodeLength,
         maxAttempts: app.config.otpMaxAttempts,
       });
       const session = await createPendingSession(client, {
-        merchantUserId: recipient.id,
+        merchantUserId: user.id,
         otpChallengeId: challenge.id,
         ttlMinutes: app.config.pendingSessionTtlMinutes,
         ipAddress: request.ip,
@@ -94,7 +109,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       return { code: challenge.code, expiresAt: challenge.expiresAt, rawToken: session.rawToken };
     });
 
-    sendOtpCode(request.log, app.config, { merchantUserId: recipient.id, email: recipient.email }, code);
+    sendOtpCode(request.log, app.config, { merchantUserId: user.id, email: user.email }, code);
 
     reply.setCookie(app.config.cookieName, rawToken, {
       httpOnly: true,
@@ -143,6 +158,20 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         throw new TooManyRequestsError("too_many_attempts");
       }
       if (attempt.outcome === "invalid_code") {
+        // Counts toward the account's login limit, so fresh logins can't
+        // keep buying new sets of guesses.
+        const who = await app.db.query<{ merchant_id: string; email: string }>(
+          `SELECT merchant_id, email FROM merchant_users WHERE id = $1`,
+          [pending.merchantUserId],
+        );
+        if (who.rows[0]) {
+          await recordAuthFailure(app.db, app.config, {
+            plane: "merchant",
+            kind: "otp",
+            accountKey: merchantAccountKey(who.rows[0].merchant_id, who.rows[0].email),
+            ipAddress: request.ip,
+          });
+        }
         throw new UnauthorizedError("invalid_code");
       }
 
@@ -152,18 +181,28 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           // Another request with the same code got here first.
           throw new GoneError("otp_expired");
         }
-        // promoteSession bumps expires_at to 12h server-side; the cookie maxAge doesn't matter because
-        // MK: admin verify re-sets the cookie after this, merchant verify doesnt. related to the 10 min logouts?
-        await promoteSession(client, pending.sessionId, app.config.sessionTtlHours);
+        // New token for the authenticated session (see promoteSession).
+        const promoted = await promoteSession(client, pending.sessionId, app.config.sessionTtlHours);
         const result = await client.query<{ merchant_id: string; role: "owner" | "finance" | "support" }>(
           `SELECT merchant_id, role FROM merchant_users WHERE id = $1`,
           [pending.merchantUserId],
         );
-        return result.rows[0];
+        const row = result.rows[0];
+        return row ? { ...row, rawToken: promoted.rawToken } : undefined;
       });
       if (!merchantUserResult) {
         throw new Error("otp/verify: merchant_users row disappeared mid-transaction");
       }
+
+      // The new token, at the full session lifetime. The pending cookie had
+      // the 10-minute pending maxAge, which logged people out after 10 min.
+      reply.setCookie(app.config.cookieName, merchantUserResult.rawToken, {
+        httpOnly: true,
+        path: "/",
+        sameSite: "lax",
+        secure: app.config.cookieSecure,
+        maxAge: app.config.sessionTtlHours * 3_600,
+      });
 
       reply.code(200).send({
         authenticated: true,

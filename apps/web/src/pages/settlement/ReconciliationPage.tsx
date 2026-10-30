@@ -3,6 +3,7 @@ import { getReconciliation } from "../../api/settlement.js";
 import { ApiError, describeError } from "../../api/client.js";
 import { bhd } from "../../format.js";
 import type { ReconciliationReport } from "../../types.js";
+import { ErrorBanner, Loading } from "../../components/ui.js";
 
 /**
  * `from`/`to` are required by this endpoint (`400 invalid_request` without
@@ -101,7 +102,7 @@ export function ReconciliationPage() {
         </button>
       </form>
 
-      {error ? <p className="dash-error">{error}</p> : null}
+      {error ? <ErrorBanner message={error} /> : null}
 
       {report ? (
         <>
@@ -121,7 +122,7 @@ export function ReconciliationPage() {
             <dd>
               {report.periodFrom} to {report.periodTo} (exclusive)
             </dd>
-            <dt>Ledger merchant payable (net)</dt>
+            <dt>Earned in the ledger (net, before payouts)</dt>
             <dd>{bhd(report.ledgerMerchantPayableNetFils)}</dd>
             <dt>Settlement net payout</dt>
             <dd>{bhd(report.settlementNetPayoutFils)}</dd>
@@ -132,14 +133,17 @@ export function ReconciliationPage() {
           </dl>
 
           <p className="dash-muted">
-            Gap = ledger merchant payable − settlement net payout − pending
-            unbatched. A zero gap means every captured fil is accounted for in
-            either a settled batch or the pending queue.
+            Gap = earned in the ledger − settlement net payout − pending
+            unbatched. &ldquo;Earned&rdquo; is what your payments, fees,
+            refunds and adjustments added to your balance in the period; the
+            payouts themselves are the settlement side, so they are not
+            counted twice. A zero gap means every captured fil is accounted
+            for in either a settled batch or the pending queue.
           </p>
         </>
       ) : null}
 
-      {loading && !report ? <p>Loading...</p> : null}
+      {loading && !report ? <Loading /> : null}
     </section>
   );
 }

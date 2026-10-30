@@ -42,17 +42,41 @@ export interface AuthorizeResult {
  * no 'declined' value) — the only durable trace of such an attempt is its
  * idempotency_keys row.
  */
+/**
+ * The idempotency fingerprint stored in idempotency_keys.request_hash.
+ *
+ * It covers the amount, the reference, the card's expiry and only the last
+ * four digits of the card number, never the full number or the CVV. The
+ * stored hash used to be an unsalted sha256 over the whole request; with the
+ * BIN, last digits, amount and reference known, the rest of the card number
+ * and the CVV could be brute-forced from it offline, and keeping CVV-derived
+ * data after authorization is not allowed under the card rules (PCI DSS).
+ *
+ * Trade-off: two different cards with the same last four digits and expiry
+ * on the same key, amount and reference look like the same request, so the
+ * second would get the first one's replayed result instead of a 422. A
+ * client reusing an idempotency key for a different card is already
+ * misusing it.
+ */
+export function authorizeRequestHash(input: Pick<AuthorizeInput, "amountFils" | "card" | "reference">): string {
+  return hashRequest({
+    amountFils: input.amountFils,
+    card: {
+      last4: String(input.card.pan).slice(-4),
+      expiryMonth: input.card.expiryMonth,
+      expiryYear: input.card.expiryYear,
+    },
+    reference: input.reference ?? null,
+  });
+}
+
 export async function authorizeTransaction(
   pool: Pool,
   acquirer: AcquirerSimulator,
   input: AuthorizeInput,
 ): Promise<AuthorizeResult> {
   const actor = input.actor ?? { type: "system" as const, id: null };
-  const requestHash = hashRequest({
-    amountFils: input.amountFils,
-    card: input.card,
-    reference: input.reference ?? null,
-  });
+  const requestHash = authorizeRequestHash(input);
 
   return withTransaction(pool, async (client) => {
     const claim = await claimIdempotencyKey(client, {
@@ -110,8 +134,9 @@ export async function authorizeTransaction(
         throw new Error("authorizeTransaction: insert into transactions returned no row");
       }
 
-      // MK: 7 days = scheme rule for CNP. expire_holds.ts only flips status to expired,
-      // it never deletes, so the hold history stays
+      // 7 days = scheme rule for card-not-present. scripts/expire_holds.ts
+      // deletes holds still 'active' after expires_at (FP-219); captured and
+      // voided holds are 'released' and are never deleted.
       await client.query(
         `INSERT INTO holds (merchant_id, transaction_id, amount_fils, status, expires_at)
          VALUES ($1, $2, $3, 'active', now() + interval '7 days')`,

@@ -20,6 +20,7 @@ data repair.
 | [011 — Merchant A can cancel merchant B's payment link](011-payment-link-cancel-ownership.md) | Scope cancellation and status lookup to the authenticated merchant as well as link ID | Deploy API; investigate prior cancellations using retained request/session logs before restoring or replacing links |
 | [012 — March residue sweep posts again on every run](012-march-sweep-repeat-postings.md) | Default to read-only preview; verify stable per-merchant keys and source fingerprints; serialize applies; block uncertain history | Retire old copies; review historical postings and finance scope before applying or correcting duplicates |
 | [013 — Integrate finance fixes with main](013-finance-main-merge.md) | Combine distinct fixes and preserve each branch's safeguards | Existing test failures and broken migrations remain documented; production rollout is separate |
+| [014 — Actual net payout loses precision through float32](014-net-payout-integer-fils.md) | Subtract gross and fees directly in integer fils; trace the 07:58/08:30 Git-history clue | Deploy settlement; review historical differences before finance-approved corrections |
 
 For future entries, use the next number and a descriptive filename. Include
 before/after examples and links to the affected code. Line numbers reflect

@@ -19,6 +19,7 @@ import { useDashboardAuth } from "../../auth/DashboardAuthContext.js";
 import { RequireRole } from "../../auth/RequireRole.js";
 import { bhd } from "../../format.js";
 import type { TransactionDto } from "../../types.js";
+import { ErrorBanner } from "../../components/ui.js";
 
 interface RefundResponse {
   id: string;
@@ -87,7 +88,7 @@ export function RefundDrawer({ txn, onRefunded }: RefundDrawerProps) {
   return (
     <RequireRole allow={["owner", "finance"]}>
       <div className="dash-actions">
-        {error ? <p className="dash-error">{error}</p> : null}
+        {error ? <ErrorBanner message={error} /> : null}
         {open ? (
           <form className="dash-form dash-form-inline" onSubmit={(e) => void handleRefund(e)}>
             <label>

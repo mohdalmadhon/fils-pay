@@ -36,7 +36,9 @@ they run against a real Postgres and are what CI gates on.
 1. Get it running locally — `docs/README.md`. The Docker route is quickest
    if you have Docker; otherwise follow "Running without Docker". Seed it,
    log into the dashboard and the admin console with the seed accounts, and
-   take a payment through a payment link.
+   take a payment through a payment link. Then run
+   `node scripts/e2e/payment-check.mjs`, which takes one payment from link to
+   payout and checks every step (`docs/verification/`).
 2. Read `docs/ARCHITECTURE.md` and `docs/API.md`.
 3. Skim `docs/ADMIN.md` so you know what support can do from the console.
 4. Get added to the staging-2 database (ask AM) for anything you can't

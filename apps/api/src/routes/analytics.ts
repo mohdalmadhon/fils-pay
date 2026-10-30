@@ -1,3 +1,4 @@
+import { parseLimitParam } from "../lib/queryParams.js";
 import type { FastifyInstance } from "fastify";
 import { requireMerchantAuth } from "../auth/requireMerchantAuth.js";
 import { BadRequestError } from "../lib/errors.js";
@@ -119,7 +120,7 @@ export async function analyticsRoutes(app: FastifyInstance): Promise<void> {
     { preHandler: requireMerchantAuth },
     async (request) => {
       const { from, to } = parseDateRange(request.query);
-      const rawLimit = request.query.limit !== undefined ? Number.parseInt(request.query.limit, 10) : undefined;
+      const rawLimit = parseLimitParam(request.query.limit);
       const limit = clampTopLinksLimit(rawLimit);
 
       return getTopLinks(app.db, {
