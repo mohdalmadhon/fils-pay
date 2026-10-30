@@ -424,3 +424,10 @@ test("splitting a credit doesn't skip the second approver: the same operator's c
   const otherMerchant = await createMerchant("split-2");
   assert.equal((await issueCredit(finance.cookie, otherMerchant, { baseAmountFils: 10_000 })).status, "posted");
 });
+
+test("GET /v1/admin/credits: a malformed cursor restarts at page one instead of a 500", async () => {
+  const support = await signedInAdmin("support", "bad-cursor");
+  const cursor = Buffer.from("x|y", "utf8").toString("base64url");
+  const res = await app.inject({ method: "GET", url: `/v1/admin/credits?cursor=${cursor}`, headers: { cookie: support.cookie } });
+  assert.equal(res.statusCode, 200, res.body);
+});

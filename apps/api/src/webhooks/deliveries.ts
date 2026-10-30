@@ -1,4 +1,5 @@
 import type { Pool } from "pg";
+import { decodeKeysetCursor } from "../lib/keysetCursor.js";
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
@@ -57,27 +58,6 @@ function toSummary(row: DeliveryRow): WebhookDeliverySummary {
   };
 }
 
-interface DecodedCursor {
-  createdAt: string;
-  id: string;
-}
-
-function decodeCursor(cursor: string | null | undefined): DecodedCursor | null {
-  if (!cursor) return null;
-  let decoded: string;
-  try {
-    decoded = Buffer.from(cursor, "base64url").toString("utf8");
-  } catch {
-    return null;
-  }
-  const separatorIndex = decoded.indexOf("|");
-  if (separatorIndex === -1) return null;
-  const createdAt = decoded.slice(0, separatorIndex);
-  const id = decoded.slice(separatorIndex + 1);
-  if (!createdAt || !id) return null;
-  return { createdAt, id };
-}
-
 /**
  * Encodes the cursor from Postgres's own text rendering of `created_at`,
  * never `Date.toISOString()` (millisecond precision) — `timestamptz` has
@@ -121,7 +101,7 @@ export async function listWebhookDeliveries(
 ): Promise<ListWebhookDeliveriesResult> {
   const limit = Math.min(MAX_LIMIT, Math.max(1, filters.limit ?? DEFAULT_LIMIT));
   const statusArray = filters.status && filters.status.length > 0 ? filters.status : null;
-  const decodedCursor = decodeCursor(filters.cursor);
+  const decodedCursor = decodeKeysetCursor(filters.cursor);
 
   const result = await pool.query<DeliveryRow & { created_at_text: string }>(
     `SELECT wd.*, wd.created_at::text AS created_at_text FROM webhook_deliveries wd

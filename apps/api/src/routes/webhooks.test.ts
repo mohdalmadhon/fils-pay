@@ -522,3 +522,20 @@ test("secret encryption round-trips correctly: a delivery verifies using the SAM
     await receiver.close();
   }
 });
+
+test("GET deliveries list: a malformed cursor restarts at page one instead of a 500", async () => {
+  const { rawKey, merchantId } = await createApprovedMerchantWithApiKey("deliveries-bad-cursor");
+  const receiver = await startTestReceiver(200);
+  try {
+    const created = await createEndpointViaRoute(rawKey, merchantId, receiver.url);
+    const cursor = Buffer.from("x|y", "utf8").toString("base64url");
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/merchants/${merchantId}/webhook-endpoints/${created.id}/deliveries?cursor=${cursor}`,
+      headers: authHeader(rawKey),
+    });
+    assert.equal(res.statusCode, 200, res.body);
+  } finally {
+    await receiver.close();
+  }
+});

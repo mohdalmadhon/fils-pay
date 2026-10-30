@@ -99,6 +99,10 @@ export async function adminMerchantRoutes(app: FastifyInstance): Promise<void> {
             ? q.onboardingStatus
             : [q.onboardingStatus];
       const limit = parseLimitParam(q.limit);
+      // ?q=a&q=b arrives as an array; the search takes one string.
+      if (q.q !== undefined && typeof q.q !== "string") {
+        throw new BadRequestError("invalid_query", "q must be given once");
+      }
 
       return listMerchantsForAdmin(app.db, {
         q: q.q ?? null,

@@ -1663,3 +1663,20 @@ test("an mdr recalculation whose audit row cannot be written never makes the cal
     "an unloggable action must be BLOCKED, not merely unlogged",
   );
 });
+
+test("GET /v1/admin/merchants: a malformed cursor restarts at page one and a repeated ?q is a 400", async () => {
+  const admin = await signedInAdmin("support", "bad-cursor");
+  for (const raw of ["x|y", "2026-02-30 10:00:00+03|" + randomUUID(), "2026-01-01 10:00:00+03|not-a-uuid"]) {
+    const cursor = Buffer.from(raw, "utf8").toString("base64url");
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/admin/merchants?cursor=${cursor}`,
+      headers: { cookie: admin.cookie },
+    });
+    assert.equal(res.statusCode, 200, `${raw}: ${res.body}`);
+  }
+
+  const twice = await app.inject({ method: "GET", url: "/v1/admin/merchants?q=a&q=b", headers: { cookie: admin.cookie } });
+  assert.equal(twice.statusCode, 400, twice.body);
+  assert.equal(twice.json().error, "invalid_query");
+});
