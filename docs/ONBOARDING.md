@@ -38,7 +38,8 @@ they run against a real Postgres and are what CI gates on.
    log into the dashboard and the admin console with the seed accounts, and
    take a payment through a payment link. Then run
    `node scripts/e2e/payment-check.mjs`, which takes one payment from link to
-   payout and checks every step (`docs/verification/`).
+   payout and checks every step (`docs/verification/`). `npm run e2e:browser` does the
+   dashboard and checkout part in a real browser.
 2. Read `docs/ARCHITECTURE.md` and `docs/API.md`.
 3. Skim `docs/ADMIN.md` so you know what support can do from the console.
 4. Get added to the staging-2 database (ask AM) for anything you can't
