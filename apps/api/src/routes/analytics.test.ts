@@ -496,3 +496,14 @@ test("GET /v1/analytics/recent-ledger-activity: requires merchant auth, and reje
   assert.equal(res.statusCode, 400, res.body);
   assert.equal(res.json().error, "invalid_date");
 });
+
+test("analytics: a date that doesn't exist (2026-02-30) is a 400 on every endpoint, not a 500", async () => {
+  const { rawKey } = await createApprovedMerchantWithApiKey("impossible-date");
+  for (const path of ["volumes", "payout-trends", "top-links"]) {
+    for (const qs of ["from=2026-02-30&to=2026-03-05", "from=2026-02-01&to=2026-04-31"]) {
+      const res = await app.inject({ method: "GET", url: `/v1/analytics/${path}?${qs}`, headers: authHeader(rawKey) });
+      assert.equal(res.statusCode, 400, `${path}?${qs}: ${res.body}`);
+      assert.equal(res.json().error, "invalid_date");
+    }
+  }
+});
