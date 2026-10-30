@@ -25,7 +25,7 @@
   --c-line-2: #d5d3cc;
   --c-ink: #18181b;
   --c-ink-2: #46464d;
-  --c-ink-3: #75747b;
+  --c-ink-3: #6b6a71; /* 4.69:1 on the darkest light surface (was #75747b, 4.06) */
   --c-ink-4: #a3a2a8;
 
   /* Actions are ink; the accent is used sparingly. */
