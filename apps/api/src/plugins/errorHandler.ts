@@ -31,6 +31,34 @@ export function errorHandler(
     return;
   }
 
+  // Fastify's own client errors (malformed or empty JSON, a body over the
+  // size limit, an unsupported Content-Type) carry their 4xx status. They
+  // are the caller's mistake, not ours, so answer with that status.
+  if (typeof fastifyErr.statusCode === "number" && fastifyErr.statusCode >= 400 && fastifyErr.statusCode < 500) {
+    reply.code(fastifyErr.statusCode).send({
+      error: clientErrorCode(fastifyErr.code, fastifyErr.statusCode),
+      message: fastifyErr.message,
+    });
+    return;
+  }
+
   request.log.error({ err, occurredOn: formatIsoDate(new Date()) }, "unhandled error");
   reply.code(500).send({ error: "internal_error" });
+}
+
+const CLIENT_ERROR_CODES: Record<string, string> = {
+  FST_ERR_CTP_INVALID_JSON_BODY: "invalid_json",
+  FST_ERR_CTP_EMPTY_JSON_BODY: "invalid_json",
+  FST_ERR_CTP_BODY_TOO_LARGE: "payload_too_large",
+  FST_ERR_CTP_INVALID_MEDIA_TYPE: "unsupported_media_type",
+  FST_ERR_CTP_INVALID_CONTENT_LENGTH: "invalid_content_length",
+};
+
+const CLIENT_ERROR_CODES_BY_STATUS: Record<number, string> = {
+  413: "payload_too_large",
+  415: "unsupported_media_type",
+};
+
+function clientErrorCode(code: string | undefined, statusCode: number): string {
+  return (code && CLIENT_ERROR_CODES[code]) ?? CLIENT_ERROR_CODES_BY_STATUS[statusCode] ?? "bad_request";
 }
