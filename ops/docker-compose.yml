@@ -140,8 +140,10 @@ services:
       timeout: 3s
       retries: 3
       start_period: 30s
+    # Loopback only: on the hosted box the public reaches the api through
+    # Caddy (docker-compose.prod.yml); locally, localhost:3000 still works.
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     # NODE_ENV, ACQUIRER_CALLBACK_SIGNING_SECRET, ... (see ops/README.md).
     env_file: .env.docker
     environment:
