@@ -33,3 +33,4 @@ more detail, with how to reproduce it.
 | [013](013-acquirer-callback-values-not-validated.md) | The acquirer callback stores any outcome and retries errors that can never succeed | API: acquirer callbacks | Low |
 | [014](014-refund-leaves-balance-cache-stale.md) | A refund leaves the merchant's cached payable balance too high | API: refunds | Medium |
 | [015](015-capture-fee-priced-on-app-clock.md) | Capture and settlement can charge different fees when a fee schedule starts mid-capture | API: payments | Low |
+| [016](016-checkout-retry-after-success-409.md) | A buyer's retry of a successful checkout (same Idempotency-Key) gets 409 instead of the original 200 | API: payment links | Low |

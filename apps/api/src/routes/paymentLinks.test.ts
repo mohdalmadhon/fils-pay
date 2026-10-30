@@ -391,3 +391,19 @@ test("a payment link for 0 fils is a 400 invalid_amount, not a 500 (docs/bugs/00
   assert.equal(res.statusCode, 400, res.body);
   assert.equal(res.json().error, "invalid_amount");
 });
+
+test("retrying a successful payment with the same Idempotency-Key replays the 200 (docs/bugs/016)", async () => {
+  const { rawKey, merchantId } = await createApprovedMerchantWithApiKey("pay-replay");
+  const link = await createLink(rawKey, merchantId, { amountFils: 3_000 });
+  const key = randomUUID();
+  const first = await pay(link.token, APPROVED_CARD, key);
+  assert.equal(first.statusCode, 200, first.body);
+
+  const retry = await pay(link.token, APPROVED_CARD, key);
+  assert.equal(retry.statusCode, 200, retry.body);
+  assert.deepEqual(retry.json(), first.json());
+
+  // A different key is a different buyer: still refused.
+  const other = await pay(link.token, APPROVED_CARD);
+  assert.equal(other.statusCode, 409, other.body);
+});

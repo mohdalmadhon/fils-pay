@@ -107,6 +107,11 @@ export async function payPaymentLink(
 
   const claimedRow = claimResult.rows[0];
   if (!claimedRow) {
+    // The buyer's own retry of a payment that already went through (a lost
+    // response, a double click) carries the same Idempotency-Key and must get
+    // the same 200, not 409 already_paid. docs/bugs/016.
+    const replay = await replayPaidAttempt(pool, input.token, input.idempotencyKey);
+    if (replay) return replay;
     return classifyClaimFailure(pool, input.token);
   }
 
@@ -240,6 +245,40 @@ export async function payPaymentLink(
       transactionId: txnId,
       amountFils: link.amountFils,
       paidAt: outcome.paidAt.toISOString(),
+    },
+  };
+}
+
+/**
+ * The 200 a paid link gave the attempt that paid it, if this request is that
+ * attempt again: same link, same Idempotency-Key, and the authorization saved
+ * under that key is the very transaction the link was paid with.
+ */
+async function replayPaidAttempt(
+  pool: Pool,
+  token: string,
+  idempotencyKey: string,
+): Promise<PayPaymentLinkResult | null> {
+  const result = await pool.query<{ transaction_id: string; amount_fils: string | number; paid_at: Date }>(
+    `SELECT pl.transaction_id, pl.amount_fils, pl.paid_at
+       FROM payment_links pl
+       JOIN idempotency_keys ik
+         ON ik.merchant_id = pl.merchant_id
+        AND ik.endpoint = 'transactions.authorize'
+        AND ik.key = 'paylink:' || pl.id || ':' || $2 || ':authorize'
+      WHERE pl.token = $1 AND pl.status = 'paid'
+        AND ik.response_body->>'id' = pl.transaction_id::text`,
+    [token, idempotencyKey],
+  );
+  const row = result.rows[0];
+  if (!row) return null;
+  return {
+    statusCode: 200,
+    body: {
+      status: "paid",
+      transactionId: row.transaction_id,
+      amountFils: toFils(Number(row.amount_fils)),
+      paidAt: row.paid_at.toISOString(),
     },
   };
 }
