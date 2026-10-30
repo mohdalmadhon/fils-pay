@@ -31,7 +31,7 @@ export async function recomputeTransactionStatusesForMerchant(
     [merchantId],
   );
 
-  let updated = 0;
+  const changes: Array<{ id: string; status: string }> = [];
 
   for (const row of candidates.rows) {
     const next = nextStatusAfterRefund({
@@ -40,9 +40,22 @@ export async function recomputeTransactionStatusesForMerchant(
       refundedTotalFils: toFils(Number(row.refunded_fils)),
     });
     if (next !== row.status) {
-      await client.query(`UPDATE transactions SET status = $2 WHERE id = $1`, [row.id, next]);
-      updated += 1;
+      changes.push({ id: row.id, status: next });
     }
+  }
+
+  // Keep the existing JS status/money rules and candidate row locks. Send
+  // changed rows together in bounded batches instead of one UPDATE per row.
+  const BATCH_SIZE = 500;
+  for (let offset = 0; offset < changes.length; offset += BATCH_SIZE) {
+    const batch = changes.slice(offset, offset + BATCH_SIZE);
+    await client.query(
+      `UPDATE transactions AS transaction
+          SET status = change.status
+         FROM unnest($1::uuid[], $2::text[]) AS change(id, status)
+        WHERE transaction.id = change.id`,
+      [batch.map((row) => row.id), batch.map((row) => row.status)],
+    );
   }
 
   // Authorized transactions are deliberately not candidates above (nothing
@@ -54,5 +67,5 @@ export async function recomputeTransactionStatusesForMerchant(
   );
   const openAuthorizations = Number(open.rows[0]?.n ?? 0);
 
-  return { merchantId, scanned: candidates.rows.length, updated, openAuthorizations };
+  return { merchantId, scanned: candidates.rows.length, updated: changes.length, openAuthorizations };
 }

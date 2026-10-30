@@ -1,0 +1,692 @@
+{
+  "date": "2026-10-30",
+  "environment": {
+    "node": "26.8.1",
+    "postgres": "18.6",
+    "cpu": "AMD Ryzen 7 260",
+    "api_reporting_database_shared_logical_cpu": 2,
+    "driver_cpu": 3,
+    "api_pool_max": 20,
+    "api_heap_mib": 384,
+    "reporting_heap_mib": 128,
+    "postgres_shared_buffers_mib": 32,
+    "postgres_max_connections": 60,
+    "acquirer_latency_ms": [
+      100,
+      400
+    ],
+    "acquirer_failure_rate": 0,
+    "acquirer_rng_seed": 209,
+    "cgroup_memory_limit": null,
+    "reporting_enabled": true
+  },
+  "baseline_source": "c64b8dd",
+  "prior_capacity_source": "556c49e",
+  "baseline_checkout": {
+    "api": "http://127.0.0.1:3151",
+    "at": "2026-10-30T15:35:41.381Z",
+    "p95LimitMs": 1000,
+    "stepSeconds": 20,
+    "steps": [
+      {
+        "users": 10,
+        "arrivalWindowSeconds": 20,
+        "elapsedSeconds": 21.11,
+        "checkouts": 193,
+        "paid": 193,
+        "declined": 0,
+        "acquirer": 0,
+        "shed": 0,
+        "shedResponses": 0,
+        "checkoutsDelayedByShedding": 0,
+        "recoveredAfterFailure": 0,
+        "errors": 0,
+        "errorKinds": [],
+        "completedPerSecond": 9.1,
+        "p50": 1073,
+        "p95": 1365,
+        "p99": 1495,
+        "max": 1527,
+        "buyerP95": 1365,
+        "unusedLinks": 207,
+        "exhaustedLinkSupply": false,
+        "fastAndCorrect": false
+      },
+      {
+        "users": 30,
+        "arrivalWindowSeconds": 20,
+        "elapsedSeconds": 22.626,
+        "checkouts": 219,
+        "paid": 219,
+        "declined": 0,
+        "acquirer": 0,
+        "shed": 0,
+        "shedResponses": 0,
+        "checkoutsDelayedByShedding": 0,
+        "recoveredAfterFailure": 0,
+        "errors": 0,
+        "errorKinds": [],
+        "completedPerSecond": 9.7,
+        "p50": 2999,
+        "p95": 3450,
+        "p99": 3926,
+        "max": 4216,
+        "buyerP95": 3450,
+        "unusedLinks": 981,
+        "exhaustedLinkSupply": false,
+        "fastAndCorrect": false
+      }
+    ],
+    "capacity": null,
+    "problems": []
+  },
+  "prior_capacity_checkout": {
+    "api": "http://127.0.0.1:3150",
+    "at": "2026-10-30T15:38:21.882Z",
+    "p95LimitMs": 1000,
+    "stepSeconds": 20,
+    "steps": [
+      {
+        "users": 20,
+        "arrivalWindowSeconds": 20,
+        "elapsedSeconds": 20.606,
+        "checkouts": 758,
+        "paid": 758,
+        "declined": 0,
+        "acquirer": 0,
+        "shed": 0,
+        "shedResponses": 0,
+        "checkoutsDelayedByShedding": 0,
+        "recoveredAfterFailure": 0,
+        "errors": 0,
+        "errorKinds": [],
+        "completedPerSecond": 36.8,
+        "p50": 533,
+        "p95": 756,
+        "p99": 817,
+        "max": 883,
+        "buyerP95": 756,
+        "unusedLinks": 42,
+        "exhaustedLinkSupply": false,
+        "fastAndCorrect": true
+      },
+      {
+        "users": 40,
+        "arrivalWindowSeconds": 20,
+        "elapsedSeconds": 21.3,
+        "checkouts": 788,
+        "paid": 780,
+        "declined": 0,
+        "acquirer": 0,
+        "shed": 8,
+        "shedResponses": 320,
+        "checkoutsDelayedByShedding": 29,
+        "recoveredAfterFailure": 0,
+        "errors": 0,
+        "errorKinds": [],
+        "completedPerSecond": 36.6,
+        "p50": 629,
+        "p95": 840,
+        "p99": 904,
+        "max": 939,
+        "buyerP95": 879,
+        "unusedLinks": 412,
+        "exhaustedLinkSupply": false,
+        "fastAndCorrect": false
+      },
+      {
+        "users": 120,
+        "arrivalWindowSeconds": 20,
+        "elapsedSeconds": 21.474,
+        "checkouts": 866,
+        "paid": 800,
+        "declined": 0,
+        "acquirer": 0,
+        "shed": 66,
+        "shedResponses": 1920,
+        "checkoutsDelayedByShedding": 179,
+        "recoveredAfterFailure": 0,
+        "errors": 0,
+        "errorKinds": [],
+        "completedPerSecond": 37.3,
+        "p50": 639,
+        "p95": 862,
+        "p99": 964,
+        "max": 1076,
+        "buyerP95": 9676,
+        "unusedLinks": 334,
+        "exhaustedLinkSupply": false,
+        "fastAndCorrect": false
+      }
+    ],
+    "capacity": {
+      "users": 20,
+      "arrivalWindowSeconds": 20,
+      "elapsedSeconds": 20.606,
+      "checkouts": 758,
+      "paid": 758,
+      "declined": 0,
+      "acquirer": 0,
+      "shed": 0,
+      "shedResponses": 0,
+      "checkoutsDelayedByShedding": 0,
+      "recoveredAfterFailure": 0,
+      "errors": 0,
+      "errorKinds": [],
+      "completedPerSecond": 36.8,
+      "p50": 533,
+      "p95": 756,
+      "p99": 817,
+      "max": 883,
+      "buyerP95": 756,
+      "unusedLinks": 42,
+      "exhaustedLinkSupply": false,
+      "fastAndCorrect": true
+    },
+    "problems": []
+  },
+  "final_checkout": {
+    "api": "http://127.0.0.1:3150",
+    "at": "2026-10-30T15:45:50.265Z",
+    "p95LimitMs": 1000,
+    "stepSeconds": 20,
+    "steps": [
+      {
+        "users": 10,
+        "arrivalWindowSeconds": 20,
+        "elapsedSeconds": 20.573,
+        "checkouts": 374,
+        "paid": 374,
+        "declined": 0,
+        "acquirer": 0,
+        "shed": 0,
+        "shedResponses": 0,
+        "checkoutsDelayedByShedding": 0,
+        "recoveredAfterFailure": 0,
+        "errors": 0,
+        "errorKinds": [],
+        "completedPerSecond": 18.2,
+        "p50": 537,
+        "p95": 773,
+        "p99": 914,
+        "max": 1052,
+        "buyerP95": 773,
+        "unusedLinks": 26,
+        "exhaustedLinkSupply": false,
+        "fastAndCorrect": true
+      },
+      {
+        "users": 20,
+        "arrivalWindowSeconds": 20,
+        "elapsedSeconds": 20.687,
+        "checkouts": 761,
+        "paid": 761,
+        "declined": 0,
+        "acquirer": 0,
+        "shed": 0,
+        "shedResponses": 0,
+        "checkoutsDelayedByShedding": 0,
+        "recoveredAfterFailure": 0,
+        "errors": 0,
+        "errorKinds": [],
+        "completedPerSecond": 36.8,
+        "p50": 529,
+        "p95": 738,
+        "p99": 791,
+        "max": 905,
+        "buyerP95": 738,
+        "unusedLinks": 39,
+        "exhaustedLinkSupply": false,
+        "fastAndCorrect": true
+      },
+      {
+        "users": 24,
+        "arrivalWindowSeconds": 20,
+        "elapsedSeconds": 20.746,
+        "checkouts": 793,
+        "paid": 793,
+        "declined": 0,
+        "acquirer": 0,
+        "shed": 0,
+        "shedResponses": 0,
+        "checkoutsDelayedByShedding": 0,
+        "recoveredAfterFailure": 0,
+        "errors": 0,
+        "errorKinds": [],
+        "completedPerSecond": 38.2,
+        "p50": 619,
+        "p95": 827,
+        "p99": 899,
+        "max": 975,
+        "buyerP95": 827,
+        "unusedLinks": 167,
+        "exhaustedLinkSupply": false,
+        "fastAndCorrect": true
+      },
+      {
+        "users": 30,
+        "arrivalWindowSeconds": 20,
+        "elapsedSeconds": 21.343,
+        "checkouts": 793,
+        "paid": 793,
+        "declined": 0,
+        "acquirer": 0,
+        "shed": 0,
+        "shedResponses": 120,
+        "checkoutsDelayedByShedding": 22,
+        "recoveredAfterFailure": 0,
+        "errors": 0,
+        "errorKinds": [],
+        "completedPerSecond": 37.2,
+        "p50": 624,
+        "p95": 822,
+        "p99": 876,
+        "max": 950,
+        "buyerP95": 856,
+        "unusedLinks": 407,
+        "exhaustedLinkSupply": false,
+        "fastAndCorrect": false
+      },
+      {
+        "users": 40,
+        "arrivalWindowSeconds": 20,
+        "elapsedSeconds": 20.873,
+        "checkouts": 802,
+        "paid": 788,
+        "declined": 0,
+        "acquirer": 0,
+        "shed": 14,
+        "shedResponses": 320,
+        "checkoutsDelayedByShedding": 25,
+        "recoveredAfterFailure": 0,
+        "errors": 0,
+        "errorKinds": [],
+        "completedPerSecond": 37.8,
+        "p50": 622,
+        "p95": 830,
+        "p99": 902,
+        "max": 999,
+        "buyerP95": 849,
+        "unusedLinks": 398,
+        "exhaustedLinkSupply": false,
+        "fastAndCorrect": false
+      },
+      {
+        "users": 80,
+        "arrivalWindowSeconds": 20,
+        "elapsedSeconds": 21.326,
+        "checkouts": 834,
+        "paid": 791,
+        "declined": 0,
+        "acquirer": 0,
+        "shed": 43,
+        "shedResponses": 1120,
+        "checkoutsDelayedByShedding": 94,
+        "recoveredAfterFailure": 0,
+        "errors": 0,
+        "errorKinds": [],
+        "completedPerSecond": 37.1,
+        "p50": 637,
+        "p95": 855,
+        "p99": 924,
+        "max": 1062,
+        "buyerP95": 3655,
+        "unusedLinks": 366,
+        "exhaustedLinkSupply": false,
+        "fastAndCorrect": false
+      },
+      {
+        "users": 120,
+        "arrivalWindowSeconds": 20,
+        "elapsedSeconds": 21.579,
+        "checkouts": 876,
+        "paid": 795,
+        "declined": 0,
+        "acquirer": 0,
+        "shed": 81,
+        "shedResponses": 1920,
+        "checkoutsDelayedByShedding": 150,
+        "recoveredAfterFailure": 0,
+        "errors": 0,
+        "errorKinds": [],
+        "completedPerSecond": 36.8,
+        "p50": 633,
+        "p95": 855,
+        "p99": 953,
+        "max": 1121,
+        "buyerP95": 7558,
+        "unusedLinks": 324,
+        "exhaustedLinkSupply": false,
+        "fastAndCorrect": false
+      }
+    ],
+    "capacity": {
+      "users": 24,
+      "arrivalWindowSeconds": 20,
+      "elapsedSeconds": 20.746,
+      "checkouts": 793,
+      "paid": 793,
+      "declined": 0,
+      "acquirer": 0,
+      "shed": 0,
+      "shedResponses": 0,
+      "checkoutsDelayedByShedding": 0,
+      "recoveredAfterFailure": 0,
+      "errors": 0,
+      "errorKinds": [],
+      "completedPerSecond": 38.2,
+      "p50": 619,
+      "p95": 827,
+      "p99": 899,
+      "max": 975,
+      "buyerP95": 827,
+      "unusedLinks": 167,
+      "exhaustedLinkSupply": false,
+      "fastAndCorrect": true
+    },
+    "problems": []
+  },
+  "final_sustained_checkout": {
+    "api": "http://127.0.0.1:3150",
+    "at": "2026-10-30T15:48:41.336Z",
+    "p95LimitMs": 1000,
+    "stepSeconds": 120,
+    "steps": [
+      {
+        "users": 24,
+        "arrivalWindowSeconds": 120,
+        "elapsedSeconds": 120.645,
+        "checkouts": 4555,
+        "paid": 4555,
+        "declined": 0,
+        "acquirer": 0,
+        "shed": 0,
+        "shedResponses": 0,
+        "checkoutsDelayedByShedding": 0,
+        "recoveredAfterFailure": 0,
+        "errors": 0,
+        "errorKinds": [],
+        "completedPerSecond": 37.8,
+        "p50": 632,
+        "p95": 849,
+        "p99": 914,
+        "max": 1148,
+        "buyerP95": 849,
+        "unusedLinks": 1205,
+        "exhaustedLinkSupply": false,
+        "fastAndCorrect": true
+      }
+    ],
+    "capacity": {
+      "users": 24,
+      "arrivalWindowSeconds": 120,
+      "elapsedSeconds": 120.645,
+      "checkouts": 4555,
+      "paid": 4555,
+      "declined": 0,
+      "acquirer": 0,
+      "shed": 0,
+      "shedResponses": 0,
+      "checkoutsDelayedByShedding": 0,
+      "recoveredAfterFailure": 0,
+      "errors": 0,
+      "errorKinds": [],
+      "completedPerSecond": 37.8,
+      "p50": 632,
+      "p95": 849,
+      "p99": 914,
+      "max": 1148,
+      "buyerP95": 849,
+      "unusedLinks": 1205,
+      "exhaustedLinkSupply": false,
+      "fastAndCorrect": true
+    },
+    "problems": []
+  },
+  "helper_comparison": {
+    "baseline": "/tmp/filspay-capacity-friend/apps/api",
+    "checks": [
+      "200 KYC reviews retain reviewer, notes, sorted response IDs and audit metadata",
+      "duplicate, nonexistent, already-approved and rejected KYC IDs preserve skip behavior",
+      "concurrent KYC approval creates one review per merchant",
+      "failed audit rolls back all KYC reviews and merchant flags",
+      "1001 status changes cross batch boundaries with identical persisted rows, repeat behavior and merchant flags",
+      "status recomputation rollback preserves every original status",
+      "capture preserves exact gross/fee legs, fee snapshots, events and idempotent responses for normal and zero fees",
+      "unchanged CSV bytes match the prior version for 20000 rows, tied timestamps, escaping, null references, dates and status filters"
+    ],
+    "measurements": [
+      {
+        "name": "kyc-200-before",
+        "medianMs": 120.095,
+        "queries": [
+          405
+        ],
+        "samples": [
+          {
+            "ms": 132.70954500000005,
+            "queries": 405
+          },
+          {
+            "ms": 114.91906699999993,
+            "queries": 405
+          },
+          {
+            "ms": 114.01884399999994,
+            "queries": 405
+          },
+          {
+            "ms": 125.27013499999998,
+            "queries": 405
+          },
+          {
+            "ms": 134.923806,
+            "queries": 405
+          },
+          {
+            "ms": 98.31291399999986,
+            "queries": 405
+          }
+        ]
+      },
+      {
+        "name": "kyc-200-after",
+        "medianMs": 7.893,
+        "queries": [
+          6
+        ],
+        "samples": [
+          {
+            "ms": 7.970534999999927,
+            "queries": 6
+          },
+          {
+            "ms": 11.589851999999837,
+            "queries": 6
+          },
+          {
+            "ms": 17.0773200000001,
+            "queries": 6
+          },
+          {
+            "ms": 6.641710999999987,
+            "queries": 6
+          },
+          {
+            "ms": 6.406889999999976,
+            "queries": 6
+          },
+          {
+            "ms": 7.8153859999999895,
+            "queries": 6
+          }
+        ]
+      },
+      {
+        "name": "statuses-1001-before",
+        "medianMs": 222.215,
+        "queries": [
+          1005
+        ],
+        "samples": [
+          {
+            "ms": 285.46171000000004,
+            "queries": 1005
+          },
+          {
+            "ms": 261.7631449999999,
+            "queries": 1005
+          },
+          {
+            "ms": 223.9221309999998,
+            "queries": 1005
+          },
+          {
+            "ms": 220.50741299999981,
+            "queries": 1005
+          },
+          {
+            "ms": 198.16424400000005,
+            "queries": 1005
+          },
+          {
+            "ms": 207.32382800000005,
+            "queries": 1005
+          }
+        ]
+      },
+      {
+        "name": "statuses-1001-after",
+        "medianMs": 27.057,
+        "queries": [
+          7
+        ],
+        "samples": [
+          {
+            "ms": 23.98969100000022,
+            "queries": 7
+          },
+          {
+            "ms": 27.880235000000084,
+            "queries": 7
+          },
+          {
+            "ms": 26.23376700000017,
+            "queries": 7
+          },
+          {
+            "ms": 25.812118000000282,
+            "queries": 7
+          },
+          {
+            "ms": 40.10206600000038,
+            "queries": 7
+          },
+          {
+            "ms": 29.272514999999657,
+            "queries": 7
+          }
+        ]
+      }
+    ],
+    "captureSql": [
+      {
+        "mdr": 250,
+        "fee": 225,
+        "before": 15,
+        "after": 14
+      },
+      {
+        "mdr": 0,
+        "fee": 0,
+        "before": 14,
+        "after": 14
+      }
+    ],
+    "csv": {
+      "rows": 20000,
+      "bytes": 1911611,
+      "sha256": "d8b3aed9784ef0447bb8188c991c5cd54fbfe5b59fa06d5aa8145d1b8b220d22"
+    }
+  },
+  "database_verification": [
+    "PASS  ledger balances",
+    "PASS  paid links have one full capture",
+    "PASS  no stray captures (charged, link not paid)",
+    "PASS  no double charges",
+    "PASS  captures have their event and outbox row",
+    "PASS  balance cache moved with the ledger",
+    "links since 2026-10-30T09:49:05.480Z: 9650 paid, 3070 unpaid, 0 reserved (0 past the 60 s timeout, free for the next buyer)"
+  ],
+  "resources": {
+    "sample_interval_ms": 500,
+    "samples": 702,
+    "api_peak_rss_mib": 210.55,
+    "reporting_peak_rss_mib": 83.33,
+    "max_sampled_event_loop_delay_ms": 36
+  },
+  "final_application_base": "ad0ab10",
+  "source_sha256": {
+    "apps/api/src/admin/bulkKyc.ts": "1eea81b0aa183b8a82ffd72f987e9a70f1d4269f196b99cc1d7662d602fb50fe",
+    "apps/api/src/admin/transactionStatusRecompute.ts": "8dcea73f56349b9666e23e6d84e6e948f99420134ba146f1e6483c80f9af0cf7",
+    "apps/api/src/onboarding/review.ts": "2755c8a65887f04a00af67d914a0c78a6349af182c8b515d72899eb98fd6eb30",
+    "apps/api/src/payments/capture.ts": "6bc7d60ffe11e39b910654fe04f90b16d26370f0f4901df2e6fc5085d759625d",
+    "apps/api/src/transactions/exportCsv.ts": "c6a1440049d274e17406b4691b2221d0e5cf9dc45d2fa9c593f1d7c8d2b399f9",
+    "scripts/load/checkout-load.mjs": "134c14e13caf3170366774dea63c43a9bcf9bf1e8f42c43f8eb5cd064a6fe18c"
+  },
+  "compatibility": {
+    "csv_source_unchanged": true,
+    "rejected_csv_projection": "Changed ordering among tied occurrence timestamps; removed before final code."
+  },
+  "validation": {
+    "npm_test": {
+      "exit_code": 1,
+      "events": {
+        "pass": 4,
+        "fail": 0
+      },
+      "money": {
+        "pass": 40,
+        "fail": 0
+      },
+      "api": {
+        "pass": 547,
+        "fail": 1
+      },
+      "reporting": {
+        "pass": 12,
+        "fail": 0
+      },
+      "web": {
+        "pass": 25,
+        "fail": 0
+      },
+      "failure": "analytics breakdown: the created_at range is served by an index"
+    },
+    "baseline_failure_reproduced_at": "556c49e",
+    "root_regression_checks": {
+      "pass": 11,
+      "fail": 0
+    },
+    "go_test_uncached": "pass",
+    "workspace_typecheck": "pass",
+    "database_checks": {
+      "pass": 6,
+      "fail": 0
+    },
+    "capacity_path_check_groups": 8
+  },
+  "development": {
+    "url": "http://localhost:3000",
+    "health_status": 200,
+    "readiness_status": 200,
+    "schema_migrations": 80,
+    "latest_migration": "0083_ledger_entries_group_and_transaction_indexes.sql",
+    "test_cluster_stopped": true
+  },
+  "later_main_review": {
+    "through": "ad0ab10",
+    "capacity_corrections": "13d9c11",
+    "executable_application_changes": false
+  }
+}

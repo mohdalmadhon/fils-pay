@@ -34,6 +34,11 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
   database.
 
 ### Fixed
+- **Capacity follow-up:** bulk KYC and status recompute batch their writes;
+  capture posts gross/fee legs together.
+  Preserves review/audit history, status and money rules, and API/CSV results.
+  Independent capacity measurements and comparison with the existing capacity
+  commits: `docs/perf/2026-10-30-capacity-follow-up.md`.
 - **Database:** a fresh `npm run migrate` stopped at 0054, so 0055–0077 never
   applied (`fresh-migrations`). Existing databases catch up with a plain
   migrate.
