@@ -13,6 +13,10 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
 - New interface for the merchant dashboard, checkout and Ops console ("Ledger"
   design system): Ctrl+K command palette, light and night themes, and a
   Halloween costume toggle (`docs/design/README.md`).
+- The Halloween costume is now pixel art in classic Halloween colours: pixel
+  sprites, a pixel font, square corners, a witch, a graveyard and stars
+  behind the page, and a ghost that haunts on its own instead of following
+  the pointer (`docs/design/README.md`).
 - `scripts/e2e/payment-check.mjs`: one-command end-to-end payment check, from
   link to payout, with PASS/FAIL per step
   (`docs/verification/end-to-end-2026-10-30.md`).
