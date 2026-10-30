@@ -1,134 +1,112 @@
 /**
- * Stress test: generates 2000 synthetic ledger entries spanning a month,
- * runs the reconciliation residue logic, and checks for zero net residual
- * after correction entries. Requires DATABASE_URL.
+ * runMarchSweep against real rows in a throwaway database: it must find the
+ * March captures with a residue, preview without posting, post one balanced
+ * group per merchant with --apply, and recognise its own earlier posting.
+ *
+ * Before the fix this file never called runMarchSweep: it filled its own
+ * temp table and checked that three ways of computing `% 10` agreed, so it
+ * passed whatever the sweep did. docs/bugs/087-tests-that-cannot-fail.md.
+ *
+ * The month window is UTC (monthBounds). Whether it should be the Bahrain
+ * month is an open decision, so the rows here stay clear of the month edges.
+ *
+ * Requires DATABASE_URL pointing at a Postgres server where the role may
+ * CREATE DATABASE; the database in DATABASE_URL is only used to connect.
  */
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
-import { Pool } from "pg";
-import { createRng } from "../db/seed/rng.js";
-import { toFils, formatBhd, type Fils, addFils, ZERO_FILS } from "@filspay/money";
-import { computeResidueFils } from "./reconcile_march.js";
+import { fileURLToPath } from "node:url";
+import { Client } from "pg";
+import { marchSweepGroupId, runMarchSweep } from "./reconcile_march.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
-  throw new Error(
-    "reconcile_march.integration.test.ts requires DATABASE_URL to point at a real, migrated Postgres",
-  );
+  throw new Error("reconcile_march.integration.test.ts requires DATABASE_URL (a role that may CREATE DATABASE)");
 }
+const here = dirname(fileURLToPath(import.meta.url));
+const scratchName = `fp_march_sweep_check_${process.pid}`;
 
-const ENTRY_COUNT = 2000;
-const MARCH_START = new Date("2026-03-01T00:00:00Z");
-const MARCH_END = new Date("2026-04-01T00:00:00Z");
-const MARCH_SPAN_MS = MARCH_END.getTime() - MARCH_START.getTime();
-const DAYS_IN_MARCH = 31;
-
-const pool = new Pool({ connectionString: databaseUrl, max: 3 });
-
-test.after(async () => {
-  await pool.end();
-});
-
-test("reconciliation stress: 2000 ledger entries with zero net residual", { timeout: 120_000 }, async () => {
-  const rng = createRng(314159);
-  const client = await pool.connect();
-
+test("runMarchSweep previews, posts once per merchant, then reports already_applied", { timeout: 180_000 }, async () => {
+  const admin = new Client({ connectionString: databaseUrl });
+  await admin.connect();
+  await admin.query(`DROP DATABASE IF EXISTS ${scratchName}`);
+  await admin.query(`CREATE DATABASE ${scratchName}`);
+  const url = new URL(databaseUrl);
+  url.pathname = `/${scratchName}`;
   try {
-    await client.query("BEGIN");
-
-    await client.query(`
-      CREATE TEMP TABLE stress_captures (
-        id SERIAL PRIMARY KEY,
-        merchant_id TEXT NOT NULL,
-        captured_fils BIGINT NOT NULL,
-        occurred_at TIMESTAMPTZ NOT NULL,
-        residue_fils BIGINT NOT NULL
-      ) ON COMMIT DROP
-    `);
-
-    const merchantId = "stress-test-merchant-00000000";
-    const dailyTotals = new Map<number, { captures: number; residueFils: number; grossFils: number }>();
-
-    for (let day = 1; day <= DAYS_IN_MARCH; day++) {
-      dailyTotals.set(day, { captures: 0, residueFils: 0, grossFils: 0 });
-    }
-
-    console.log(`generating ${ENTRY_COUNT} synthetic capture entries...`);
-
-    let totalResidue: Fils = ZERO_FILS;
-    let totalGross: Fils = ZERO_FILS;
-
-    for (let i = 0; i < ENTRY_COUNT; i++) {
-      const offsetMs = Math.floor(rng.next() * MARCH_SPAN_MS);
-      const occurredAt = new Date(MARCH_START.getTime() + offsetMs);
-      const day = occurredAt.getUTCDate();
-
-      const capturedFils = toFils(rng.int(10, 999_999));
-      const residueFils = computeResidueFils(capturedFils);
-
-      await client.query(
-        `INSERT INTO stress_captures (merchant_id, captured_fils, occurred_at, residue_fils)
-         VALUES ($1, $2, $3, $4)`,
-        [merchantId, capturedFils, occurredAt.toISOString(), residueFils],
-      );
-
-      totalResidue = addFils(totalResidue, toFils(residueFils));
-      totalGross = addFils(totalGross, capturedFils);
-
-      const dayStats = dailyTotals.get(day)!;
-      dayStats.captures += 1;
-      dayStats.residueFils += residueFils;
-      dayStats.grossFils += capturedFils;
-
-      if ((i + 1) % 200 === 0) {
-        console.log(`  inserted ${i + 1}/${ENTRY_COUNT} entries...`);
-      }
-    }
-
-    console.log("\ndaily totals:");
-    for (let day = 1; day <= DAYS_IN_MARCH; day++) {
-      const stats = dailyTotals.get(day)!;
-      if (stats.captures > 0) {
-        console.log(
-          `  March ${String(day).padStart(2, "0")}: ${stats.captures} captures, ` +
-          `gross ${formatBhd(toFils(stats.grossFils))}, ` +
-          `residue ${stats.residueFils} fils`,
+    execFileSync("npx", ["tsx", join(here, "..", "db", "migrate.ts")], {
+      env: { ...process.env, DATABASE_URL: url.toString() },
+      encoding: "utf8",
+    });
+    const db = new Client({ connectionString: url.toString() });
+    await db.connect();
+    try {
+      const merchant = async (name: string) =>
+        (await db.query<{ id: string }>(`INSERT INTO merchants (display_name, mdr_bps) VALUES ($1, 250) RETURNING id`, [name]))
+          .rows[0]!.id;
+      const a = await merchant("Sweep A");
+      const b = await merchant("Sweep B");
+      const c = await merchant("Sweep C");
+      const capture = (m: string, fils: number, at: string) =>
+        db.query(
+          `INSERT INTO transactions (merchant_id, status, amount_fils, captured_fils, acquirer_reference, occurred_at)
+           VALUES ($1, 'captured', $2, $2, gen_random_uuid()::text, $3)`,
+          [m, fils, at],
         );
-      }
+      await capture(a, 4_759, "2026-03-05T10:00:00Z"); // residue 9
+      await capture(a, 1_003, "2026-03-20T10:00:00Z"); // residue 3
+      await capture(a, 4_750, "2026-03-21T10:00:00Z"); // no residue
+      await capture(b, 2_001, "2026-03-15T10:00:00Z"); // residue 1
+      await capture(b, 7_777, "2026-02-15T10:00:00Z"); // February: outside
+      await capture(c, 5_555, "2026-04-15T10:00:00Z"); // April: outside
+
+      const preview = await runMarchSweep(db);
+      assert.equal(preview.mode, "dry-run");
+      assert.deepEqual(preview.blocked, []);
+      const summary = (report: typeof preview) =>
+        report.merchants
+          .map((m) => ({ merchantId: m.merchantId, lineCount: m.lineCount, residueFils: m.residueFils, outcome: m.outcome }))
+          .sort((x, y) => x.residueFils - y.residueFils);
+      assert.deepEqual(summary(preview), [
+        { merchantId: b, lineCount: 1, residueFils: 1, outcome: "pending" },
+        { merchantId: a, lineCount: 2, residueFils: 12, outcome: "pending" },
+      ]);
+      const legCount = async () => Number((await db.query(`SELECT count(*) FROM ledger_entries`)).rows[0].count);
+      assert.equal(await legCount(), 0, "a preview posts nothing");
+
+      const applied = await runMarchSweep(db, true);
+      assert.deepEqual(applied.blocked, []);
+      assert.deepEqual(summary(applied).map((m) => m.outcome), ["applied", "applied"]);
+      const legs = await db.query(
+        `SELECT entry_group_id, merchant_id, account_id, direction, amount_fils::int
+           FROM ledger_entries ORDER BY amount_fils, direction`,
+      );
+      assert.deepEqual(legs.rows, [
+        { entry_group_id: marchSweepGroupId(b), merchant_id: b, account_id: "scheme_rounding_residue", direction: "credit", amount_fils: 1 },
+        { entry_group_id: marchSweepGroupId(b), merchant_id: b, account_id: "merchant_payable", direction: "debit", amount_fils: 1 },
+        { entry_group_id: marchSweepGroupId(a), merchant_id: a, account_id: "scheme_rounding_residue", direction: "credit", amount_fils: 12 },
+        { entry_group_id: marchSweepGroupId(a), merchant_id: a, account_id: "merchant_payable", direction: "debit", amount_fils: 12 },
+      ]);
+
+      const again = await runMarchSweep(db, true);
+      assert.deepEqual(again.blocked, []);
+      assert.deepEqual(summary(again).map((m) => m.outcome), ["already_applied", "already_applied"]);
+      assert.equal(await legCount(), 4, "a second --apply posts nothing more");
+
+      // A March capture that changes after posting no longer matches the
+      // posted fingerprint: the sweep blocks instead of posting again.
+      await capture(a, 1_001, "2026-03-25T10:00:00Z");
+      const changed = await runMarchSweep(db, true);
+      assert.equal(changed.blocked.length, 1);
+      assert.match(changed.blocked[0]!, new RegExp(marchSweepGroupId(a)));
+      assert.equal(await legCount(), 4);
+    } finally {
+      await db.end();
     }
-
-    console.log(`\ntotal gross: ${formatBhd(totalGross)} BD`);
-    console.log(`total residue: ${formatBhd(totalResidue)} BD (${totalResidue} fils)`);
-
-    const dbResidue = await client.query<{ total: string }>(
-      `SELECT COALESCE(SUM(residue_fils), 0)::text AS total FROM stress_captures`,
-    );
-    const dbTotal = Number(dbResidue.rows[0]?.total ?? "0");
-
-    console.log(`db-computed residue: ${dbTotal} fils`);
-
-    assert.equal(dbTotal, Number(totalResidue), "db residue should match in-memory calculation");
-
-    const modResidue = await client.query<{ total: string }>(
-      `SELECT COALESCE(SUM(captured_fils % 10), 0)::text AS total FROM stress_captures`,
-    );
-    const modTotal = Number(modResidue.rows[0]?.total ?? "0");
-
-    console.log(`db mod-10 residue: ${modTotal} fils`);
-    assert.equal(modTotal, dbTotal, "mod-10 residue should match stored residue");
-
-    const floorResidue = await client.query<{ total: string }>(
-      `SELECT COALESCE(SUM(captured_fils - (captured_fils / 10) * 10), 0)::text AS total FROM stress_captures`,
-    );
-    const floorTotal = Number(floorResidue.rows[0]?.total ?? "0");
-
-    console.log(`db floor-formula residue: ${floorTotal} fils`);
-    assert.equal(floorTotal, dbTotal, "floor-formula residue should match mod-10 residue");
-
-    console.log("\nreconciliation stress test passed: all three residue methods agree");
-
-    await client.query("ROLLBACK");
   } finally {
-    client.release();
+    await admin.query(`DROP DATABASE IF EXISTS ${scratchName} WITH (FORCE)`);
+    await admin.end();
   }
 });
