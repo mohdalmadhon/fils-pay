@@ -100,6 +100,12 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
   retained 9 existing fixes and fixed 15 remaining issues in separate commits.
   Per-problem explanations, source references, verification and migration
   requirements: `docs/audits/future-fixes-disposition.md`.
+- **AI setup and submission:** how the AI assistant was set up and used
+  (`ai-setup/`: standing instructions, commit and bundle helpers, offline Go
+  and screenshot helpers) and `docs/SUBMISSION.md` with three annotated
+  transcript excerpts. Three claims in the capacity work that were never
+  measured were found while preparing it and corrected
+  (`docs/perf/checkout-capacity.md`, "Corrections").
 - **Checkout capacity:** about 38 checkouts a second on one vCPU at p95 under
   1 s, up from 10 (a 5-connection pool, an unindexed ledger lookup at every
   commit, a long lock on the merchant's balance row, reporting passes on
