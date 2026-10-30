@@ -1282,6 +1282,178 @@ button.fp-nav-search:hover {
   animation: fp-fade var(--dur) var(--ease);
 }
 
+/* The sky behind the page (HalloweenSky): stars, a witch, a graveyard and
+ * fog. z-index -1 puts it under all content; it never takes a click. Kept
+ * dim so text over it stays readable. */
+.fp-hw-sky {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.fp-hw-star {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: var(--hw-bone);
+  opacity: 0.55;
+  animation: fp-twinkle 3.2s steps(1) infinite;
+}
+
+.fp-hw-star.is-big {
+  width: 6px;
+  height: 6px;
+  background: var(--hw-candy);
+  /* A four-point pixel sparkle. */
+  box-shadow: 6px 0 0 -1.5px var(--hw-candy), -6px 0 0 -1.5px var(--hw-candy), 0 6px 0 -1.5px var(--hw-candy), 0 -6px 0 -1.5px var(--hw-candy);
+}
+
+@keyframes fp-twinkle {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  40% {
+    opacity: 0.15;
+  }
+  60% {
+    opacity: 0.85;
+  }
+}
+
+/* The witch: 28x15 pixels at 3x, crossing the sky every 24 seconds. */
+.fp-hw-witch {
+  position: absolute;
+  top: 14%;
+  left: 0;
+  width: 84px;
+  height: 45px;
+  opacity: 0.9;
+  translate: -120px 0;
+  animation: fp-witch 24s linear 3s infinite;
+}
+
+.fp-hw-witch svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes fp-witch {
+  0% {
+    translate: -120px 40px;
+  }
+  10% {
+    translate: 15vw 0;
+  }
+  20% {
+    translate: 35vw 30px;
+  }
+  30% {
+    translate: 60vw -10px;
+  }
+  45%,
+  100% {
+    translate: calc(100vw + 120px) 20px;
+  }
+}
+
+.fp-hw-graveyard {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 64px;
+  opacity: 0.6;
+}
+
+.fp-hw-grave-slot {
+  position: absolute;
+  bottom: 12px;
+}
+
+.fp-hw-grave {
+  display: block;
+}
+
+.fp-hw-grave-tombRound {
+  width: 30px; /* 10x10 at 3x */
+  height: 30px;
+}
+
+.fp-hw-grave-tombCross {
+  width: 27px; /* 9x9 at 3x */
+  height: 27px;
+}
+
+.fp-hw-grave-pumpkinLit {
+  width: 36px; /* 18x16 at 2x */
+  height: 32px;
+  filter: drop-shadow(0 0 10px rgba(255, 122, 26, 0.7));
+  animation: fp-flicker 2.8s steps(1) infinite;
+}
+
+/* The ground: a dark band with a stepped, pixel top edge. */
+.fp-hw-ground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 15px;
+  background:
+    linear-gradient(#1d1430, #1d1430) 0 3px / 100% 12px no-repeat,
+    repeating-linear-gradient(90deg, #1d1430 0 24px, transparent 24px 33px, #1d1430 33px 45px, transparent 45px 51px) 0 0 / 100% 3px no-repeat;
+}
+
+/* Fog: blocky bands that drift sideways in steps. */
+.fp-hw-fog {
+  position: absolute;
+  left: -200px;
+  right: -200px;
+  height: 18px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(220, 203, 242, 0.05) 0 54px,
+    rgba(220, 203, 242, 0.03) 54px 96px,
+    transparent 96px 132px,
+    rgba(220, 203, 242, 0.045) 132px 210px,
+    transparent 210px 270px
+  );
+  /* Thin out toward the top in three hard steps, not a smooth fade. */
+  -webkit-mask-image: linear-gradient(to top, #000 0 33%, rgba(0, 0, 0, 0.6) 33% 66%, rgba(0, 0, 0, 0.25) 66%);
+  mask-image: linear-gradient(to top, #000 0 33%, rgba(0, 0, 0, 0.6) 33% 66%, rgba(0, 0, 0, 0.25) 66%);
+  animation: fp-fog 40s steps(60) infinite alternate;
+}
+
+.fp-hw-fog-back {
+  bottom: 20px;
+}
+
+.fp-hw-fog-front {
+  bottom: 2px;
+  height: 12px;
+  animation-duration: 28s;
+  animation-direction: alternate-reverse;
+}
+
+@keyframes fp-fog {
+  to {
+    translate: 180px 0;
+  }
+}
+
+/* In costume the page's own backgrounds step aside so the sky shows. */
+:root[data-costume="halloween"] .dash-shell,
+:root[data-costume="halloween"] .dash-content,
+:root[data-costume="halloween"] .admin-shell,
+:root[data-costume="halloween"] .checkout-page,
+:root[data-costume="halloween"] .checkout-sea,
+:root[data-costume="halloween"] .checkout-outcome {
+  background: transparent;
+}
+
 /* The switch into costume: a circle of night spreading from the pumpkin. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
@@ -1305,6 +1477,11 @@ button.fp-nav-search:hover {
 /* Motion preferences ------------------------------------------------------ */
 
 @media (prefers-reduced-motion: reduce) {
+  /* No witch crossing the sky; the rest of the scenery stays, still. */
+  .fp-hw-witch {
+    display: none;
+  }
+
   *,
   *::before,
   *::after {

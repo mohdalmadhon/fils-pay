@@ -120,8 +120,72 @@ export function HalloweenToggle() {
           {on ? "Take off the costume" : "Halloween costume"}
         </span>
       </button>
+      {on ? <HalloweenSky /> : null}
       {on ? <HalloweenLayer /> : null}
     </>
+  );
+}
+
+/* The sky behind the page ------------------------------------------------ */
+
+/** Star positions from a fixed seed, so they don't jump on every render. */
+const STARS = (() => {
+  let seed = 31;
+  const rnd = () => {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  };
+  return Array.from({ length: 46 }, () => ({
+    left: `${(rnd() * 100).toFixed(2)}%`,
+    top: `${(rnd() * 70).toFixed(2)}%`,
+    delay: `${(rnd() * 4).toFixed(2)}s`,
+    big: rnd() < 0.2,
+  }));
+})();
+
+/** Graveyard props along the bottom: [sprite, left %]. */
+const GRAVES: ReadonlyArray<readonly ["tombRound" | "tombCross" | "pumpkinLit", number]> = [
+  ["tombCross", 4],
+  ["tombRound", 11],
+  ["pumpkinLit", 17],
+  ["tombRound", 29],
+  ["tombCross", 46],
+  ["tombRound", 58],
+  ["pumpkinLit", 66],
+  ["tombCross", 74],
+  ["tombRound", 86],
+];
+
+/**
+ * Scenery behind the page content (z-index -1, so it never covers text or
+ * takes a click): twinkling pixel stars, a witch who crosses the sky now
+ * and then, a graveyard with tombstones and jack-o'-lanterns along the
+ * bottom, and drifting pixel fog.
+ */
+function HalloweenSky() {
+  return (
+    <div className="fp-hw-sky" aria-hidden>
+      {STARS.map((star, i) => (
+        <span
+          key={i}
+          className={`fp-hw-star${star.big ? " is-big" : ""}`}
+          style={{ left: star.left, top: star.top, animationDelay: star.delay }}
+        />
+      ))}
+      <div className="fp-hw-witch">
+        <PixelArt sprite="witch" />
+      </div>
+      <div className="fp-hw-graveyard">
+        {GRAVES.map(([sprite, left]) => (
+          <span key={`${sprite}-${left}`} className="fp-hw-grave-slot" style={{ left: `${left}%` }}>
+            <PixelArt sprite={sprite} className={`fp-hw-grave fp-hw-grave-${sprite}`} />
+          </span>
+        ))}
+        <div className="fp-hw-ground" />
+      </div>
+      <div className="fp-hw-fog fp-hw-fog-back" />
+      <div className="fp-hw-fog fp-hw-fog-front" />
+    </div>
   );
 }
 
