@@ -1,11 +1,17 @@
-/* FilsPay design system: "Ledger".
+/* FilsPay design system.
  *
- * FilsPay keeps the books for Bahraini merchants down to the fils, so the
- * interface is set like a well-kept ledger: warm parchment neutrals, ink-black
- * actions, tabular mono numerals, hairline rules, and a single saffron accent
- * that marks where you are and what moved. Colour is reserved for meaning
- * (status, focus, the current page). Three looks share every component:
- * light (default), night (dark) and the Halloween costume.
+ * Three designs share every component, chosen in Settings (data-design on
+ * <html>), each with a light and a dark mode (data-theme="night"):
+ *
+ *   Carnival (default)  indigo with sun, rose and mint; bold geometric art
+ *   Blush               soft pink and sand; black pill buttons; big numbers
+ *   Slate               calm slate blue with coral actions; line art
+ *
+ * Plus the Halloween costume (data-costume), which dresses any of them.
+ * Layout (data-layout="topbar") and spacing (data-density="compact") are
+ * chosen in Settings too. Colours and shapes are tokens; components never
+ * use raw colours, so every design and mode works everywhere.
+ * designTokens.test.ts checks every text colour reaches 4.5:1.
  *
  * This file is shared by the merchant dashboard and the Ops console (each
  * app keeps an identical copy); app layouts live in dashboard.css and
@@ -16,42 +22,10 @@
 :root {
   color-scheme: light;
 
-  /* Neutrals: warm parchment, not cold grey and never pure white, so the
-   * page doesn't glare. Text colours are all at least 5:1 on the darkest
-   * surface. */
-  --c-bg: #e9e5db;
-  --c-surface: #f3f0e8;
-  --c-surface-2: #eeeae1;
-  --c-surface-3: #e2ddd1;
-  --c-line: #d8d1c2;
-  --c-line-2: #c4bba8;
-  --c-ink: #1c1a17;
-  --c-ink-2: #48433a;
-  --c-ink-3: #5f594e; /* 5.12:1 on surface-3 */
-  --c-ink-4: #9b9384;
-
-  /* Actions are ink; the accent is used sparingly. */
-  --c-primary: #1c1a17;
-  --c-primary-hover: #38342d;
-  --c-on-primary: #f3f0e8;
-  --c-accent: #d97a1e;
-  --c-accent-ink: #8a4a0c;
-  --c-accent-soft: #f0dfc8;
-
-  /* Meaning */
-  --c-good: #17683f;
-  --c-good-soft: #dcebdf;
-  --c-warn: #7f5200;
-  --c-warn-soft: #f1e5c8;
-  --c-danger: #a92d24;
-  --c-danger-soft: #f2dcd6;
-  --c-neutral-soft: #e3ded2;
-
-  --c-focus: rgba(217, 122, 30, 0.45);
-  --c-scrim: rgba(24, 24, 27, 0.4);
-
-  /* Type */
+  /* Type: Geist for reading; each design sets its own --font-display for
+   * headings, amounts and the name. */
   --font-sans: "Geist", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-sans);
   --font-mono: "Geist Mono", ui-monospace, "Cascadia Mono", "SFMono-Regular", Menlo, monospace;
   --text-xs: 0.75rem;
   --text-sm: 0.8125rem;
@@ -97,44 +71,90 @@
   --control-h-lg: 44px;
 }
 
-/* Night: the ledger at midnight. A deep navy with layered surfaces, and
- * saffron for the primary action, lit like a desk lamp on the page. Every
- * text colour is at least 5.4:1 on the lightest surface. Depth (glow,
- * ruling, highlights) is added below under "Night depth". */
-:root[data-theme="night"] {
+/* Carnival --------------------------------------------------------------
+ * A festival poster: indigo ink, with sun, rose, mint and peach shapes.
+ * Light is a lavender page; dark is a clear indigo, never black. Pill
+ * buttons and generous rounding. Unbounded for display type. */
+:root,
+:root[data-design="carnival"] {
+  color-scheme: light;
+  --font-display: "Unbounded Variable", "Geist", system-ui, sans-serif;
+  --c-bg: #eceafb;
+  --c-surface: #f8f7ff;
+  --c-surface-2: #f2f0fd;
+  --c-surface-3: #e3e0f7;
+  --c-line: #d9d6f2;
+  --c-line-2: #bdb8e6;
+  --c-ink: #151a52;
+  --c-ink-2: #3a3f7a;
+  --c-ink-3: #5a5e93;
+  --c-ink-4: #8f92c0;
+  --c-primary: #2b34b8;
+  --c-primary-hover: #3a44cc;
+  --c-on-primary: #ffffff;
+  --c-accent: #ffb42e;
+  --c-accent-ink: #8a4b00;
+  --c-accent-soft: #fff0d4;
+  --c-good: #05744b;
+  --c-good-soft: #d6f5e7;
+  --c-warn: #8a5300;
+  --c-warn-soft: #ffefcc;
+  --c-danger: #c0123f;
+  --c-danger-soft: #ffe0e7;
+  --c-neutral-soft: #e6e4f8;
+  --c-focus: rgba(43, 52, 184, 0.4);
+  --c-scrim: rgba(21, 26, 82, 0.45);
+  /* The shapes in the art (overview band, sign-in, empty states). */
+  --art-1: #ffb42e;
+  --art-2: #ff3d68;
+  --art-3: #07c983;
+  --art-4: #ffc8c8;
+  --art-5: #2b34b8;
+  --hero-bg: #1f2672;
+  --hero-ink: #ffffff;
+  --hero-ink-2: #d9dbfa;
+  --r-1: 6px;
+  --r-2: 10px;
+  --r-3: 16px;
+  --r-4: 24px;
+  --r-button: 999px;
+  --shadow-xs: 0 1px 1px rgba(21, 26, 82, 0.05);
+  --shadow-sm: 0 2px 6px rgba(21, 26, 82, 0.08);
+  --shadow-pop: 0 18px 44px -14px rgba(21, 26, 82, 0.35), 0 2px 6px rgba(21, 26, 82, 0.08);
+}
+
+:root:not([data-design])[data-theme="night"],
+:root[data-design="carnival"][data-theme="night"] {
   color-scheme: dark;
-  --c-bg: #070b14;
-  --c-surface: #0d1320;
-  --c-surface-2: #111827;
-  --c-surface-3: #172033;
-  --c-line: #1f2a40;
-  --c-line-2: #2c3a57;
-  --c-ink: #e9edf6;
-  --c-ink-2: #b6c0d4;
-  --c-ink-3: #8a96ae;
-  --c-ink-4: #5a6680;
-  --c-primary: #f2a33a;
-  --c-primary-hover: #f7b85e;
-  --c-on-primary: #1a1206;
-  --c-accent: #f2a33a;
-  --c-accent-ink: #f7bf6e;
-  --c-accent-soft: #2d2724;
-  --c-good: #4fd18b;
-  --c-good-soft: #162e2f;
-  --c-warn: #f2c14e;
-  --c-warn-soft: #2d2b26;
-  --c-danger: #ff7b72;
-  --c-danger-soft: #2f222b;
-  --c-neutral-soft: #172033;
-  --c-focus: rgba(242, 163, 58, 0.55);
-  --c-scrim: rgba(2, 4, 10, 0.65);
-  --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.4);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  --shadow-pop: 0 24px 60px -16px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(140, 170, 230, 0.08);
-  /* Night-only: the lamp glow and a raised surface's top edge. */
-  --night-glow: rgba(242, 163, 58, 0.13);
-  --night-glow-2: rgba(80, 110, 220, 0.16);
-  --night-edge: inset 0 1px 0 rgba(160, 190, 255, 0.06);
+  --c-bg: #1f2672;
+  --c-surface: #283090;
+  --c-surface-2: #2d3699;
+  --c-surface-3: #353fa8;
+  --c-line: #3b45ad;
+  --c-line-2: #5059c0;
+  --c-ink: #f6f5ff;
+  --c-ink-2: #d9dbfa;
+  --c-ink-3: #bfc3f2;
+  --c-ink-4: #8a90d6;
+  --c-primary: #ffb42e;
+  --c-primary-hover: #ffc456;
+  --c-on-primary: #151a52;
+  --c-accent: #ffb42e;
+  --c-accent-ink: #ffc65c;
+  --c-accent-soft: #3b3a83;
+  --c-good: #5fe3a6;
+  --c-good-soft: #244a86;
+  --c-warn: #ffd06b;
+  --c-warn-soft: #3d3a7e;
+  --c-danger: #ff8aa6;
+  --c-danger-soft: #40307f;
+  --c-neutral-soft: #323ba2;
+  --c-focus: rgba(255, 180, 46, 0.55);
+  --c-scrim: rgba(10, 12, 50, 0.6);
+  --hero-bg: #151a52;
+  --shadow-xs: 0 1px 1px rgba(8, 10, 40, 0.3);
+  --shadow-sm: 0 2px 6px rgba(8, 10, 40, 0.35);
+  --shadow-pop: 0 20px 50px -14px rgba(8, 10, 40, 0.7), 0 0 0 1px rgba(200, 205, 255, 0.08);
 }
 
 /* Halloween costume: a pixel-art Halloween night. Pumpkin orange, witch
@@ -142,7 +162,8 @@
  * pixel shadows and a pixel font for headings. Set from the pumpkin button
  * (components/kit/Halloween.tsx). Every text colour here is at least
  * 4.5:1 on every surface (npm run e2e:a11y audits the costume). */
-:root[data-costume="halloween"] {
+:root[data-costume="halloween"],
+:root[data-design][data-costume="halloween"] {
   color-scheme: dark;
   --hw-pumpkin: #ff7a1a;
   --hw-pumpkin-light: #ffa24c;
@@ -188,122 +209,6 @@
   --hw-pixel-shadow: 3px 3px 0 #05030a;
   /* Two-tone, hard stop: a pixel highlight on orange buttons. */
   --hw-gradient: linear-gradient(180deg, #ffa24c 0 50%, #ff7a1a 50% 100%);
-}
-
-/* Night depth --------------------------------------------------------------
- * What makes night more than a dark palette. Scoped to night without the
- * Halloween costume, which paints its own sky. Shared by the dashboard
- * (dash-*), the Ops console (admin-*) and checkout (checkout-*). */
-
-/* The page: a warm lamp glow in one corner, cool moonlight in the other,
- * and faint ledger ruling, fixed behind everything. */
-:root[data-theme="night"]:not([data-costume="halloween"]) body {
-  background:
-    radial-gradient(900px 600px at 85% -10%, var(--night-glow), transparent 70%),
-    radial-gradient(800px 700px at -10% 110%, var(--night-glow-2), transparent 70%),
-    repeating-linear-gradient(180deg, transparent 0 31px, rgba(140, 170, 230, 0.025) 31px 32px),
-    var(--c-bg);
-  background-attachment: fixed;
-}
-
-/* Layout backgrounds step aside so the glow shows through. */
-:root[data-theme="night"]:not([data-costume="halloween"]) :is(.dash-shell, .dash-content, .admin-shell, .admin-content, .checkout-page, .checkout-sea, .checkout-outcome) {
-  background: transparent;
-}
-
-/* The sidebar: a darker pane, fading down, with a saffron hairline that
- * catches the light along its edge. */
-:root[data-theme="night"]:not([data-costume="halloween"]) :is(.dash-sidebar, .admin-sidebar) {
-  background: linear-gradient(180deg, rgba(13, 19, 32, 0.85), rgba(5, 8, 15, 0.92));
-  border-right: 1px solid transparent;
-  border-image: linear-gradient(180deg, transparent, rgba(242, 163, 58, 0.55) 30%, rgba(80, 110, 220, 0.4) 75%, transparent) 1;
-  backdrop-filter: blur(6px);
-}
-
-/* Raised surfaces: a slight top-lit gradient and a highlight on the top
- * edge, so cards read as layers rather than flat boxes. */
-:root[data-theme="night"]:not([data-costume="halloween"]) :is(.dash-filters, .dash-table, .dash-dl, .dash-merchant, .ov-tiles, .ov-chart-card, .admin-filters, .admin-table, .admin-identity, .admin-dl, .checkout-outcome-card) {
-  background: linear-gradient(180deg, var(--c-surface-2), var(--c-surface));
-  border-color: var(--c-line);
-  box-shadow: var(--night-edge), 0 10px 30px -18px rgba(0, 0, 0, 0.8);
-}
-
-/* The rule under each page title fades out from saffron. */
-:root[data-theme="night"]:not([data-costume="halloween"]) :is(.dash-main, .admin-main) .fp-page-enter > h1:first-child,
-:root[data-theme="night"]:not([data-costume="halloween"]) :is(.dash-main, .admin-main) .fp-page-enter > section > h1:first-child,
-:root[data-theme="night"]:not([data-costume="halloween"]) :is(.dash-main, .admin-main) .fp-page-enter > div > h1:first-child {
-  border-bottom: 1px solid transparent;
-  border-image: linear-gradient(90deg, rgba(242, 163, 58, 0.6), rgba(80, 110, 220, 0.25) 45%, transparent 80%) 1;
-}
-
-/* The current page: a saffron marker in the margin that glows, and a
- * warm wash fading across the row. */
-:root[data-theme="night"]:not([data-costume="halloween"]) :is(.dash-nav, .admin-nav) a.active {
-  background: linear-gradient(90deg, rgba(242, 163, 58, 0.16), rgba(242, 163, 58, 0.03) 70%, transparent);
-  box-shadow: inset 0 0 0 1px rgba(242, 163, 58, 0.18);
-}
-
-:root[data-theme="night"]:not([data-costume="halloween"]) :is(.dash-nav, .admin-nav) a.active::before {
-  display: block;
-  background: var(--c-accent);
-  box-shadow: 0 0 10px 1px rgba(242, 163, 58, 0.7);
-}
-
-/* Primary actions are lit: a saffron gradient that glows on hover. */
-:root[data-theme="night"]:not([data-costume="halloween"]) :is(
-    .dash-form button[type="submit"],
-    .dash-button-primary,
-    .dash-button-link,
-    .admin-form button[type="submit"],
-    .admin-button-primary,
-    .checkout-form button[type="submit"]
-  ) {
-  background-image: linear-gradient(180deg, #f7b85e, #f2a33a 55%, #e08e22);
-  border-color: rgba(255, 200, 120, 0.4);
-  box-shadow: inset 0 1px 0 rgba(255, 240, 210, 0.45), 0 8px 22px -10px rgba(242, 163, 58, 0.7);
-  transition: box-shadow var(--dur) var(--ease), filter var(--dur) var(--ease);
-}
-
-:root[data-theme="night"]:not([data-costume="halloween"]) :is(
-    .dash-form button[type="submit"],
-    .dash-button-primary,
-    .dash-button-link,
-    .admin-form button[type="submit"],
-    .admin-button-primary,
-    .checkout-form button[type="submit"]
-  ):hover {
-  filter: brightness(1.06);
-  box-shadow: inset 0 1px 0 rgba(255, 240, 210, 0.5), 0 10px 30px -8px rgba(242, 163, 58, 0.85);
-}
-
-/* Fields sit slightly below the surface, and light up when focused. */
-:root[data-theme="night"]:not([data-costume="halloween"]) :is(.dash-form, .dash-filters, .admin-form, .admin-filters, .checkout-form) :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
-  background: #080d18;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-:root[data-theme="night"]:not([data-costume="halloween"]) :is(.dash-form, .dash-filters, .admin-form, .admin-filters, .checkout-form) :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus {
-  border-color: var(--c-accent);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(242, 163, 58, 0.22), 0 0 18px -4px rgba(242, 163, 58, 0.5);
-}
-
-/* Status pills get a fine border in their own colour. */
-:root[data-theme="night"]:not([data-costume="halloween"]) .dash-status {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 28%, transparent);
-}
-
-/* Table rows warm up under the pointer. */
-:root[data-theme="night"]:not([data-costume="halloween"]) :is(.dash-table, .admin-table) tbody tr:hover {
-  background: linear-gradient(90deg, rgba(242, 163, 58, 0.06), rgba(80, 110, 220, 0.05));
-}
-
-/* The card on checkout: midnight blue with a saffron sheen. */
-:root[data-theme="night"]:not([data-costume="halloween"]) .checkout-card {
-  background:
-    linear-gradient(135deg, rgba(242, 163, 58, 0.22), transparent 42%),
-    repeating-linear-gradient(180deg, transparent 0 15px, rgba(160, 190, 255, 0.035) 15px 16px),
-    linear-gradient(160deg, #1b2a4a, #0b1222 70%);
-  box-shadow: 0 24px 50px -22px rgba(0, 0, 0, 0.9), 0 0 40px -18px rgba(242, 163, 58, 0.45), inset 0 0 0 1px rgba(160, 190, 255, 0.12);
 }
 
 /* Base -------------------------------------------------------------------- */

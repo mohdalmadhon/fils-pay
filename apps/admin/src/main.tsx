@@ -7,6 +7,8 @@ import { initTheme } from "./components/kit/theme.js";
 import { HalloweenToggle, initCostume } from "./components/kit/Halloween.js";
 // The costume's pixel font, bundled (no third-party request). The browser
 // only downloads it when the costume is on.
+// Display faces for the three designs. Each only downloads when used.
+import "@fontsource-variable/unbounded/index.css";
 import "@fontsource/pixelify-sans/latin-500.css";
 import "@fontsource/pixelify-sans/latin-600.css";
 import "./theme.css";
