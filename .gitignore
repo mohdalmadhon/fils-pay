@@ -11,3 +11,6 @@ npm-debug.log*
 
 # Screenshots from scripts/e2e/browser-check.mjs
 e2e-artifacts/
+
+# Load test reports (scripts/load/)
+scripts/out/
