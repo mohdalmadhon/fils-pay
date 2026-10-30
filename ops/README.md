@@ -94,9 +94,13 @@ psql "$OWNER_DATABASE_URL" -v api_password=... -v settlement_password=... \
   -v reporting_password=... -f ops/db/service-roles.sql
 ```
 
-The settlement worker can be given a second connection string,
-`PGCONN_SETTLEMENT`, for its batch-close pool. It only takes effect when
-`DATABASE_URL` is unset.
+The settlement worker reads an optional `PGCONN_SETTLEMENT`. When it is set
+(not empty) it **replaces** `DATABASE_URL` for the whole worker, which then
+uses only that connection string (one pool, for batch close and everything
+else). `DATABASE_URL` must still be set: the worker refuses to start without
+it, even when `PGCONN_SETTLEMENT` is given
+(`apps/settlement/internal/config/config.go`, `Load`). Compose sets both to
+the same `filspay_settlement` URL, so today they make no difference.
 
 To reset a **local** database to the demo data, run the `seed` job above.
 It empties the whole database first (it does not only touch its own tables),
