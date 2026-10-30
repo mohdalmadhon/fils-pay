@@ -17,7 +17,7 @@
  * Bats and the ghost never take clicks (pointer-events: none), so the page
  * underneath always works; only the small spider can be grabbed.
  *
- * Everything is pixel art (pixelArt.tsx). The choice is kept in this
+ * Everything is vector SVG (halloweenArt.tsx). The choice is kept in this
  * browser. Under prefers-reduced-motion everything is still: the
  * decorations stay, nothing flies or follows. All decorations are
  * aria-hidden; the button itself is a normal toggle (aria-pressed).
@@ -25,6 +25,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { prefersReducedMotion } from "./motion.js";
 import { PixelArt } from "./pixelArt.js";
+import { Bat, Cobweb, Ghost, Moon, Pumpkin, Spider } from "./halloweenArt.js";
 
 const KEY = "fp-costume";
 const CHANGE = "fp-costume-change";
@@ -114,8 +115,8 @@ export function HalloweenToggle() {
           toggle(box ? { x: box.left + box.width / 2, y: box.top + box.height / 2 } : undefined);
         }}
       >
-        {/* A pixel jack-o'-lantern: dark until the costume lights it. */}
-        <PixelArt sprite={on ? "pumpkinLit" : "pumpkinDark"} className="fp-hw-pumpkin" />
+        {/* A jack-o'-lantern: dark until the costume lights it. */}
+        <Pumpkin lit={on} className="fp-hw-pumpkin" />
         <span className="fp-hw-tip" aria-hidden>
           {on ? "Take off the costume" : "Halloween costume"}
         </span>
@@ -424,9 +425,9 @@ function HalloweenLayer() {
     <div ref={layer} className="fp-hw-layer" aria-hidden>
       <div className="fp-hw-lantern" />
       <div className="fp-hw-vignette" />
-      <PixelArt sprite="moon" className="fp-hw-moon" />
-      <PixelArt sprite="cobweb" className="fp-hw-web fp-hw-web-left" />
-      <PixelArt sprite="cobweb" className="fp-hw-web fp-hw-web-right" />
+      <Moon className="fp-hw-moon" />
+      <Cobweb className="fp-hw-web fp-hw-web-left" />
+      <Cobweb className="fp-hw-web fp-hw-web-right" />
 
       {[0, 1, 2, 3].map((i) => (
         <div
@@ -436,8 +437,7 @@ function HalloweenLayer() {
           }}
           className="fp-hw-bat"
         >
-          <PixelArt sprite="batUp" className="fp-hw-frame fp-hw-frame-a" />
-          <PixelArt sprite="batDown" className="fp-hw-frame fp-hw-frame-b" />
+          <Bat />
         </div>
       ))}
 
@@ -452,7 +452,7 @@ function HalloweenLayer() {
             state.current.spider.dragging = true;
           }}
         >
-          <PixelArt sprite="spider" />
+          <Spider />
         </div>
       </div>
 
@@ -460,8 +460,8 @@ function HalloweenLayer() {
         ref={ghostEl}
         className={`fp-hw-ghost${boo ? " is-boo" : ""}`}
       >
-        <PixelArt sprite="ghostA" className="fp-hw-frame fp-hw-frame-a" />
-        <PixelArt sprite="ghostB" className="fp-hw-frame fp-hw-frame-b" />
+        <Ghost frame="a" className="fp-hw-frame fp-hw-frame-a" />
+        <Ghost frame="b" className="fp-hw-frame fp-hw-frame-b" />
         {boo ? (
           <span key={boo.id} className="fp-hw-ghost-bubble" onAnimationEnd={() => setBoo(null)}>
             {boo.text}

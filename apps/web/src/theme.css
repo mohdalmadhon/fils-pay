@@ -1907,21 +1907,67 @@ button.fp-nav-search:hover {
   position: absolute;
   top: 56px;
   right: 9%;
-  width: 72px; /* 18 pixels at 4x */
-  height: 72px;
-  filter: drop-shadow(0 0 0 #ffd23f) drop-shadow(0 0 24px rgba(255, 210, 63, 0.35));
+  width: 96px; /* the SVG carries its own halo */
+  height: 96px;
 }
 
 .fp-hw-bat {
   position: absolute;
   left: 0;
   top: 0;
-  width: 60px; /* 20x10 pixels at 3x */
+  width: 60px;
   height: 30px;
   will-change: transform;
 }
 
-/* Two frames, wings up and down, swapped in steps: a pixel flap. */
+/* A bat: dark body with a purple rim light so it shows against the sky. */
+.fp-hw-bat svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: #1a1030;
+  filter: drop-shadow(0 0 1px #b45cf0) drop-shadow(0 0 6px rgba(180, 92, 240, 0.45));
+}
+
+/* Each wing folds down from the shoulder and back: a real flap. */
+.fp-hw-wing {
+  transform-box: view-box;
+  transform-origin: 30px 14px;
+  animation: fp-wing 300ms ease-in-out infinite alternate;
+}
+
+@keyframes fp-wing {
+  from {
+    transform: scaleY(1);
+  }
+  to {
+    transform: scaleY(-0.45);
+  }
+}
+
+/* The spider's legs twitch now and then. */
+.fp-hw-legs {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: fp-legs 2.4s ease-in-out infinite;
+}
+
+@keyframes fp-legs {
+  0%,
+  80%,
+  100% {
+    transform: scale(1);
+  }
+  86% {
+    transform: scale(1.06, 0.94);
+  }
+  92% {
+    transform: scale(0.96, 1.04);
+  }
+}
+
+/* Two frames swapped in place: the ghost's hem. */
 .fp-hw-frame {
   position: absolute;
   inset: 0;
