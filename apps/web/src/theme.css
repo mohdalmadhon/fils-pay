@@ -1088,6 +1088,59 @@ h1 {
   min-width: 11rem;
 }
 
+/* Detail lists (after Orbit's info list) --------------------------------
+ * A transaction's, link's, batch's or merchant's details: a column of small
+ * uppercase mono labels beside readable values, a rule under each row and
+ * no filled label column. On phones the label sits above its value.
+ * Anchored at :root so these win over the older rules in dashboard.css
+ * and admin.css, which load after this file. */
+:root :is(.dash-dl, .admin-dl) {
+  grid-template-columns: minmax(90px, 160px) 1fr;
+  column-gap: 20px;
+  padding: var(--sp-2) var(--sp-5);
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-4);
+  box-shadow: var(--shadow-sm);
+}
+
+:root :is(.dash-dl, .admin-dl) :is(dt, dd) {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--c-line);
+}
+
+:root :is(.dash-dl, .admin-dl) dt {
+  align-self: baseline;
+  font-family: var(--font-meta);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-ink-3);
+  background: none;
+}
+
+:root :is(.dash-dl, .admin-dl) dd {
+  align-self: baseline;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--c-ink);
+  word-break: break-word;
+}
+
+@media (max-width: 500px) {
+  :root :is(.dash-dl, .admin-dl) {
+    grid-template-columns: 1fr;
+  }
+  :root :is(.dash-dl, .admin-dl) dt {
+    padding-bottom: 2px;
+    border-bottom: 0;
+  }
+  :root :is(.dash-dl, .admin-dl) dd {
+    padding-top: 0;
+  }
+}
+
 /* Page backdrops. Carnival and Slate get a dot grid in the top corner
  * (from the brief's images 2 and 3); Blush a blush-to-peach wash. */
 :is(:root[data-design="orchid"], :root:not([data-design]), :root[data-design="lagoon"]):not([data-costume="halloween"]) body::before {
