@@ -10,6 +10,7 @@ import { describeError, WEB_BASE_URL } from "../../api/client.js";
 import { useAdminAuth } from "../../auth/AdminAuthContext.js";
 import { RequireRole } from "../../auth/RequireRole.js";
 import { bahrainToday } from "../../bahrainDate.js";
+import { openInNewTab } from "../../utils/openTab.js";
 import type { AdminMerchantDetail, CreditReasonCode, RotatedApiKey } from "../../types.js";
 
 function bhd(fils: number): string {
@@ -195,6 +196,7 @@ export function MerchantDetailPage() {
     setActionError(null);
     setNotice(null);
     try {
+      setImpersonationUrl(null);
       const grant = await startImpersonation(id);
       rememberImpersonation({ ...grant, merchantDisplayName: detail.merchant.displayName });
       // The grant rides an httpOnly cookie set for apps/api's domain, which
@@ -203,8 +205,7 @@ export function MerchantDetailPage() {
       // Opened in a second tab on purpose: this tab keeps showing the
       // impersonation banner and its exit action, which is the whole point
       // of the banner existing.
-      const opened = window.open(WEB_BASE_URL, "_blank", "noopener");
-      if (!opened) setImpersonationUrl(WEB_BASE_URL);
+      if (!openInNewTab(WEB_BASE_URL)) setImpersonationUrl(WEB_BASE_URL);
     } catch (err) {
       setActionError(describeError(err));
     } finally {
