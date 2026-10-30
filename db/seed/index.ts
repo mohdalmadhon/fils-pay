@@ -8,6 +8,7 @@
  */
 import { Pool } from "pg";
 import { generate } from "./generate.js";
+import { assertSeedMayReset } from "./guard.js";
 import { buildAssertions, runAssertions } from "./selfVerify.js";
 
 async function main(): Promise<void> {
@@ -30,6 +31,9 @@ async function main(): Promise<void> {
   const pool = new Pool({ connectionString: databaseUrl, max: 5 });
 
   try {
+    // The seed empties the database first; refuse where that would destroy
+    // real data (production, or merchants the seed didn't create).
+    await assertSeedMayReset(pool, process.env);
     const summary = await generate(pool);
     console.log(
       `seed: generated ${summary.merchantCount} merchants, ${summary.merchantUserCount} merchant_users, ` +
