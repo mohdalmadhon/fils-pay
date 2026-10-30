@@ -1,3 +1,4 @@
+import { settlementFeeFils } from "../fees/settlementFee.js";
 import { applyPayableCacheDelta } from "./balanceCache.js";
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
@@ -39,8 +40,8 @@ export async function applyCaptureDiscountAdjustment(
       [input.transactionId, input.merchantId],
     );
     if (!owned.rows[0]) throw new NotFoundError("transaction_not_found");
-    const events = await client.query<{ id: string; metadata: { feeFils?: number; negotiatedDiscountBps?: number } }>(
-      `SELECT id, metadata FROM transaction_events
+    const events = await client.query<{ id: string; amount_fils: string; metadata: { feeFils?: number; negotiatedDiscountBps?: number; chargedMdrBps?: number } }>(
+      `SELECT id, amount_fils, metadata FROM transaction_events
         WHERE transaction_id = $1 AND event_type IN ('captured', 'partially_captured')
           AND NOT (metadata ? 'negotiatedDiscountAppliedFils')
         ORDER BY id FOR UPDATE`, [input.transactionId],
@@ -49,16 +50,27 @@ export async function applyCaptureDiscountAdjustment(
     const legacy = await client.query(
       `SELECT 1 FROM ledger_entries WHERE transaction_id = $1
         AND description = 'capture: negotiated discount adjustment'
-        AND NOT EXISTS (SELECT 1 FROM transaction_events
-          WHERE transaction_id = $1 AND metadata ? 'negotiatedDiscountAppliedFils') LIMIT 1`,
+        AND (SELECT count(*) FROM ledger_entries
+          WHERE transaction_id = $1 AND direction = 'credit'
+            AND description = 'capture: negotiated discount adjustment') >
+          (SELECT count(*) FROM transaction_events WHERE transaction_id = $1
+            AND (metadata->>'negotiatedDiscountAppliedFils')::bigint > 0) LIMIT 1`,
       [input.transactionId],
     );
-    if (legacy.rows[0] || events.rows.some(e => e.metadata.negotiatedDiscountBps === undefined)) {
+    if (legacy.rows[0]) {
       throw new ConflictError("legacy_discount_review_required", "Capture history needs finance review before discount replay");
     }
+    const merchant = await client.query<{ negotiated_discount_bps: number }>(
+      `SELECT negotiated_discount_bps FROM merchants WHERE id = $1`, [input.merchantId]);
     for (const event of events.rows) {
       const fee = toFils(event.metadata.feeFils ?? 0);
-      const discountFils = applyRateFils(fee, event.metadata.negotiatedDiscountBps!);
+      // Keep the established settlement rule: round the discounted gross, then MDR.
+      const hasSnapshot = event.metadata.chargedMdrBps !== undefined && event.metadata.negotiatedDiscountBps !== undefined;
+      // Preserve the previous fee-discount contract for unadjusted old captures.
+      // Never guess which event an already-posted legacy credit belongs to.
+      const discountFils = hasSnapshot
+        ? toFils(fee - settlementFeeFils(Number(event.amount_fils), event.metadata.chargedMdrBps!, event.metadata.negotiatedDiscountBps!))
+        : applyRateFils(fee, merchant.rows[0]?.negotiated_discount_bps ?? 0);
       if (discountFils > 0) {
         await client.query(
           `INSERT INTO ledger_entries
@@ -71,8 +83,8 @@ export async function applyCaptureDiscountAdjustment(
       }
       if (discountFils > 0) await applyPayableCacheDelta(client, input.merchantId, discountFils);
       await client.query(
-        `UPDATE transaction_events SET metadata = metadata || jsonb_build_object('negotiatedDiscountAppliedFils', $2::bigint)
-          WHERE id = $1`, [event.id, discountFils],
+        `UPDATE transaction_events SET metadata = metadata || jsonb_build_object('negotiatedDiscountAppliedFils', $2::bigint, 'discountPricingSource', $3::text)
+          WHERE id = $1`, [event.id, discountFils, hasSnapshot ? "capture-snapshot" : "legacy-fee-discount"],
       );
     }
   });

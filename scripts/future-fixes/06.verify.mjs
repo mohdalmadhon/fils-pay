@@ -5,7 +5,7 @@ const pool=new pg.Pool({connectionString:process.env.DATABASE_URL});
 try {
  const m=(await pool.query("INSERT INTO merchants(display_name) VALUES ('audit06') RETURNING id")).rows[0].id;
  const t=(await pool.query("INSERT INTO transactions(merchant_id,status,amount_fils,captured_fils,acquirer_reference) VALUES($1,'captured',10000,10000,'audit06') RETURNING id",[m])).rows[0].id;
- for (const [fee,discount] of [[0,1250],[80,1250]]) await pool.query("INSERT INTO transaction_events(transaction_id,event_type,amount_fils,actor_type,metadata) VALUES($1,'partially_captured',5000,'system',$2)",[t,{feeFils:fee,negotiatedDiscountBps:discount}]);
+ for (const [fee,discount] of [[0,1250],[80,1250]]) await pool.query("INSERT INTO transaction_events(transaction_id,event_type,amount_fils,actor_type,metadata) VALUES($1,'partially_captured',5000,'system',$2)",[t,{feeFils:fee,negotiatedDiscountBps:discount,chargedMdrBps:fee===0?0:160}]);
  await applyCaptureDiscountAdjustment(pool,{merchantId:m,transactionId:t});
  await Promise.all([applyCaptureDiscountAdjustment(pool,{merchantId:m,transactionId:t}),applyCaptureDiscountAdjustment(pool,{merchantId:m,transactionId:t})]);
  const r=(await pool.query("SELECT count(*)::int n,sum(amount_fils)::text total FROM ledger_entries WHERE transaction_id=$1 AND direction='credit'",[t])).rows[0];

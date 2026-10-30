@@ -271,7 +271,7 @@ export async function captureTransactionWithClient(
     eventType: newStatus === "captured" ? "captured" : "partially_captured",
     amountFils: requestedAmount,
     actor: input.actor,
-    metadata: { feeFils, negotiatedDiscountBps: merchant.negotiated_discount_bps, acquirerReference: acquirerResult.acquirerReference },
+    metadata: { feeFils, negotiatedDiscountBps: merchant.negotiated_discount_bps, chargedMdrBps: Math.max(0, effectiveMdrBps - volumeTierBonusBps), acquirerReference: acquirerResult.acquirerReference },
   });
 
   const body = serializeTransaction(updatedTxn);
