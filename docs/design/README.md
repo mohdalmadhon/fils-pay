@@ -22,8 +22,8 @@ lines and a margin rule) with one figure on it: `0.001 BHD`, one fils.
 
 | Group | Tokens | Notes |
 |---|---|---|
-| Neutrals | `--c-bg`, `--c-surface`, `--c-surface-2/3`, `--c-line`, `--c-line-2`, `--c-ink` … `--c-ink-4` | paper `#f6f5f2`, ink `#18181b` |
-| Action | `--c-primary`, `--c-primary-hover`, `--c-on-primary` | ink buttons; in night mode they invert |
+| Neutrals | `--c-bg`, `--c-surface`, `--c-surface-2/3`, `--c-line`, `--c-line-2`, `--c-ink` … `--c-ink-4` | parchment `#e9e5db` page, `#f3f0e8` cards, ink `#1c1a17`; night is navy `#070b14` |
+| Action | `--c-primary`, `--c-primary-hover`, `--c-on-primary` | ink buttons; saffron in night |
 | Accent | `--c-accent` `#d97a1e`, `--c-accent-ink`, `--c-accent-soft` | current page, focus, chart line, the BHD tag |
 | Meaning | `--c-good`, `--c-warn`, `--c-danger` with `-soft` fills | status pills always pair a dot with a word |
 | Type | `--font-sans` Geist, `--font-mono` Geist Mono, `--text-xs` … `--text-3xl` | 14px base; headings 22–28px, never oversized |
@@ -34,8 +34,24 @@ lines and a margin rule) with one figure on it: `0.001 BHD`, one fils.
 
 There are three looks, all on the same tokens:
 
-- **Light**: the default.
-- **Night** (`data-theme="night"` on `<html>`): toggled from the sidebar or the command palette. It is remembered per browser; otherwise it follows the system.
+- **Light**, the default: warm parchment, never pure white, so the page
+  doesn't glare. Cards `#F3F0E8` on a `#E9E5DB` page, ink actions, the
+  saffron accent. Every text colour is at least 5:1 on the darkest surface.
+- **Night** (`data-theme="night"` on `<html>`): the ledger at midnight. A deep
+  navy (`#070B14` page, `#0D1320` to `#172033` surfaces) with saffron primary
+  buttons. It has its own depth, in the "Night depth" section of `theme.css`:
+  - a warm lamp glow and cool moonlight in opposite corners, with faint
+    ledger ruling, fixed behind the page
+  - a gradient sidebar with a saffron-to-blue hairline on its edge
+  - cards, tables, filter panels and the overview tiles lit from the top
+    with a highlight on their top edge
+  - a glowing saffron marker on the current page, lit buttons that glow on
+    hover, inset fields that light up on focus, and a midnight-blue card on
+    checkout
+
+  Toggled from the sidebar or the command palette. It is remembered per
+  browser; otherwise it follows the system. These styles are scoped to night
+  without the costume, which paints its own sky.
 - **Halloween costume**: see below.
 
 ## Building blocks

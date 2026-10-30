@@ -13,6 +13,9 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
 - New interface for the merchant dashboard, checkout and Ops console ("Ledger"
   design system): Ctrl+K command palette, light and night themes, and a
   Halloween costume toggle (`docs/design/README.md`).
+- A softer light theme (warm parchment instead of white) and a richer night
+  theme (midnight navy with saffron actions, a lamp glow, raised surfaces and
+  lit buttons) (`docs/design/README.md`).
 - The Halloween costume is now pixel art in classic Halloween colours: pixel
   sprites, a pixel font, square corners, a witch, a graveyard and stars
   behind the page, and a ghost that haunts on its own instead of following
