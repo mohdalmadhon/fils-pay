@@ -123,6 +123,12 @@ reproduced since March.
 
 - Small PRs, one reviewer. Tests run against a real Postgres — keep it that
   way.
+- CI (`.github/workflows/ci.yml`) runs on every pull request: typecheck and
+  builds, the TypeScript tests and the Go settlement tests against a fresh
+  Postgres 16, and `npm run audit:prod`. Dependabot opens weekly update PRs.
+  The repo admin should make all four jobs required checks in the branch
+  protection rule for `main` (Settings > Branches: require a pull request,
+  one approval, the four checks, and no force-pushes).
 - Money is integer fils end to end. If you catch yourself reaching for a
   float, stop and ask.
 - Don't hand-edit data in production. Use the console or a reviewed script.
