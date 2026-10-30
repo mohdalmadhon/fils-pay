@@ -59,6 +59,21 @@ export async function applyAdjustmentImport(
     );
     const importId = importRow.rows[0]!.id;
 
+    // Every row must name a real merchant. Without this, an unknown id only
+    // failed at the ledger insert's foreign key, as a 500 naming no row.
+    const known = await client.query<{ id: string }>(
+      `SELECT id::text AS id FROM merchants WHERE id = ANY($1::uuid[])`,
+      [[...new Set(input.rows.map((row) => row.merchantId))]],
+    );
+    const knownIds = new Set(known.rows.map((row) => row.id.toLowerCase()));
+    const unknownRow = input.rows.findIndex((row) => !knownIds.has(row.merchantId.toLowerCase()));
+    if (unknownRow !== -1) {
+      throw new BadRequestError(
+        "unknown_merchant",
+        `row ${unknownRow + 1}: no merchant has id ${input.rows[unknownRow]!.merchantId}`,
+      );
+    }
+
     let total = ZERO_FILS;
     // FH: claude says nothing here stops the same CSV being applied twice. intended? (asked in #fp-backend 14/8, no answer)
     // re-upload is blocked by the unique original_filename i think — am

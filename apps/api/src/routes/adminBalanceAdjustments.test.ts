@@ -230,3 +230,17 @@ test("invalid bodies are rejected with 400", async () => {
     assert.equal(res.statusCode, 400, `${JSON.stringify(payload)} -> ${res.body}`);
   }
 });
+
+test("a deltaFils beyond the safe integer range is a 400, not a 500", async () => {
+  const admin = await signedInAdmin("finance");
+  const merchantId = await createMerchant(1_000);
+  for (const deltaFils of [1e20, -1e20, Number.MAX_SAFE_INTEGER + 1]) {
+    const res = await app.inject({
+      method: "POST",
+      url: PATH(merchantId),
+      headers: { cookie: admin.cookie },
+      payload: { deltaFils, reason: "too big" },
+    });
+    assert.equal(res.statusCode, 400, `${deltaFils} -> ${res.body}`);
+  }
+});

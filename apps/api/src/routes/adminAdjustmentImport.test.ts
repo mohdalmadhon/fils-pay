@@ -282,3 +282,22 @@ test("reading the import history requires a session", async () => {
   const res = await app.inject({ method: "GET", url: PATH });
   assert.equal(res.statusCode, 401, res.body);
 });
+
+test("a row naming a merchant that doesn't exist is a 400 naming the row, and applies nothing", async () => {
+  const admin = await signedInAdmin("finance");
+  const merchantId = await createMerchant();
+  const missing = randomUUID();
+
+  const res = await app.inject({
+    method: "POST",
+    url: PATH,
+    headers: { cookie: admin.cookie },
+    payload: { csvContent: `merchantId,amount,reason\n${merchantId},1.00,ok\n${missing},2.00,typo\n` },
+  });
+  assert.equal(res.statusCode, 400, res.body);
+  assert.equal(res.json().error, "unknown_merchant");
+  assert.match(res.json().message, new RegExp(`row 2: .*${missing}`));
+
+  const legs = await pool.query(`SELECT 1 FROM ledger_entries WHERE merchant_id = $1`, [merchantId]);
+  assert.equal(legs.rowCount, 0, "nothing is posted when any row is bad");
+});
