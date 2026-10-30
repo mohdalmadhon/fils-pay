@@ -32,8 +32,11 @@ Ordered by severity.
   directory: no required reviews, no required checks, no CODEOWNERS.
 - **Commit `0af74f0`** ("dead man's switch", Yousif, 2026-04-09) carries an
   encrypted payload ("transmission 3 of 3", `openssl enc -aes-256-cbc -pbkdf2`)
-  and the text "If nobody asks where I went, this stays shut." It wasn't
-  decrypted; the passphrase isn't known. It changes no code.
+  and the text "If nobody asks where I went, this stays shut." It changes no code.
+  Follow-up: the 07:58/08:30 Git-history clue led to its successful decryption
+  using the date of `098c2de`. It is repository puzzle text, not executable
+  code or proof of the story it tells. See the
+  [investigation and payout fix](../solved-problems/014-net-payout-integer-fils.md).
 
 **Recommendation**
 

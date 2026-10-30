@@ -36,6 +36,7 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
   - concurrent refunds can't pay out twice (`concurrent-refunds`)
   - refunds don't give back more fee than was charged (`refund-fee-over-reversal`)
 - **Settlement:**
+  - actual net payout uses integer fils subtraction instead of float32 BD conversions (`docs/solved-problems/014-net-payout-integer-fils.md`)
   - the daily close runs at Bahrain midnight (`daily-close-timing`)
   - split payouts conserve every fil (`split-payout-rounding`)
   - payout notifications are sent once (`duplicate-payout-notifications`)
