@@ -62,10 +62,12 @@ async function loginAndVerify(merchantId: string, email: string, password: strin
   const login = await app.inject({ method: "POST", url: "/v1/auth/login", payload: { merchantId, email, password } });
   assert.equal(login.statusCode, 200, login.body);
   const header = login.headers["set-cookie"];
-  const cookie = (Array.isArray(header) ? header[0]! : header!).split(";")[0]!;
+  let cookie = (Array.isArray(header) ? header[0]! : header!).split(";")[0]!;
   const { devOtpCode } = login.json() as { devOtpCode: string };
   const verify = await app.inject({ method: "POST", url: "/v1/auth/otp/verify", headers: { cookie }, payload: { code: devOtpCode } });
   assert.equal(verify.statusCode, 200, verify.body);
+  // OTP verify issues a new session token; the pending one is dead.
+  cookie = (([] as string[]).concat(verify.headers["set-cookie"] ?? [])[0] ?? "").split(";")[0]!;
   const me = await app.inject({ method: "GET", url: "/v1/auth/me", headers: { cookie } });
   assert.equal(me.statusCode, 200, me.body);
   return me.json() as { merchant: { id: string } };

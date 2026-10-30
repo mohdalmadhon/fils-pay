@@ -128,13 +128,14 @@ test("an unknown business-profile field is a 400, not a 500", async () => {
     [merchantId, email, await hashPassword(password, config)],
   );
   const login = await app.inject({ method: "POST", url: "/v1/auth/login", payload: { merchantId, email, password } });
-  const cookie = parseCookie(login.headers["set-cookie"], config.cookieName);
-  await app.inject({
+  const pendingCookie = parseCookie(login.headers["set-cookie"], config.cookieName);
+  const verify = await app.inject({
     method: "POST",
     url: "/v1/auth/otp/verify",
-    headers: { cookie },
+    headers: { cookie: pendingCookie },
     payload: { code: (login.json() as { devOtpCode: string }).devOtpCode },
   });
+  const cookie = parseCookie(verify.headers["set-cookie"], config.cookieName);
   const res = await app.inject({
     method: "PATCH",
     url: `/v1/merchants/${merchantId}/business-profile`,

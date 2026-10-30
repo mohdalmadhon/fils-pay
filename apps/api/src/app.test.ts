@@ -98,7 +98,7 @@ async function signupLoginAndVerify(emailPrefix: string) {
   const loginBody = loginRes.json() as { otpRequired: boolean; devOtpCode?: string };
   assert.equal(loginBody.otpRequired, true);
   assert.ok(loginBody.devOtpCode, "expected devOtpCode with OTP_DEV_EXPOSE=true");
-  const cookie = parseCookie(loginRes.headers["set-cookie"]);
+  let cookie = parseCookie(loginRes.headers["set-cookie"]);
 
   const verifyRes = await app.inject({
     method: "POST",
@@ -107,6 +107,8 @@ async function signupLoginAndVerify(emailPrefix: string) {
     payload: { code: loginBody.devOtpCode },
   });
   assert.equal(verifyRes.statusCode, 200, verifyRes.body);
+  // OTP verify issues a new session token; the pending one is dead.
+  cookie = (([] as string[]).concat(verifyRes.headers["set-cookie"] ?? [])[0] ?? "").split(";")[0]!;
 
   return { merchantId, email, password, cookie };
 }

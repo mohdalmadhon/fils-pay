@@ -51,7 +51,7 @@ async function merchantSession(role: "owner" | "finance" | "support") {
   );
   const login = await app.inject({ method: "POST", url: "/v1/auth/login", payload: { merchantId, email, password: PASSWORD } });
   assert.equal(login.statusCode, 200, login.body);
-  const cookie = parseCookie(login.headers["set-cookie"], config.cookieName);
+  let cookie = parseCookie(login.headers["set-cookie"], config.cookieName);
   const verify = await app.inject({
     method: "POST",
     url: "/v1/auth/otp/verify",
@@ -59,6 +59,8 @@ async function merchantSession(role: "owner" | "finance" | "support") {
     payload: { code: (login.json() as { devOtpCode: string }).devOtpCode },
   });
   assert.equal(verify.statusCode, 200, verify.body);
+  // OTP verify issues a new session token; the pending one is dead.
+  cookie = (([] as string[]).concat(verify.headers["set-cookie"] ?? [])[0] ?? "").split(";")[0]!;
   return cookie;
 }
 

@@ -48,17 +48,26 @@ export async function createPendingSession(
 }
 
 /** Promotes a pending session to authenticated. */
+/**
+ * Marks the session authenticated after OTP and gives it a NEW token. The
+ * pending token was handed out at /login, before the second factor, so it
+ * must never become the full session: if it leaked (logs, a shared machine,
+ * a fixation attempt), it would otherwise turn into a live session the
+ * moment the real user completed OTP. The caller must set the returned
+ * token as the cookie.
+ */
 export async function promoteSession(
   client: PoolClient,
   sessionId: string,
   sessionTtlHours: number,
-): Promise<Date> {
+): Promise<{ expiresAt: Date; rawToken: string }> {
   const expiresAt = new Date(Date.now() + sessionTtlHours * 3_600_000);
+  const rawToken = randomToken(32);
   await client.query(
-    `UPDATE sessions SET authenticated = true, authenticated_at = now(), expires_at = $2 WHERE id = $1`,
-    [sessionId, expiresAt],
+    `UPDATE sessions SET authenticated = true, authenticated_at = now(), expires_at = $2, token_hash = $3 WHERE id = $1`,
+    [sessionId, expiresAt, sha256Hex(rawToken)],
   );
-  return expiresAt;
+  return { expiresAt, rawToken };
 }
 
 /** Takes a Pool or a PoolClient so logout can run outside a transaction. */
