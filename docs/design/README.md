@@ -220,3 +220,8 @@ rest of the scenery stays, still.
 3. Use `Loading` / `EmptyState` / `ErrorBanner` rather than plain text.
 4. Show money with `<Amount />`, and statuses with `statusLabel()` in a `dash-status dash-status-<status>` pill.
 5. Use tokens, never raw colours, so every design, both modes and the costume all work.
+
+## Personal layout
+
+Besides the design, each person can reorder the dashboard's sidebar with
+**Edit layout**; see [edit-layout.md](edit-layout.md).
