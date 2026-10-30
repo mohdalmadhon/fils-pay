@@ -26,8 +26,10 @@ allows that only with two switches set together (`OTP_DEV_EXPOSE` and
 boot. While it is on, **the password alone signs in**, so:
 
 - the demo data's passwords, which are published in this repo, are
-  replaced on every deploy with random ones, printed once and kept in
-  `~/fils-pay-config/demo-passwords.txt` on the server;
+  replaced on every deploy with random ones, **one per account** (so handing
+  someone one demo login doesn't hand them the others; docs/defence/04),
+  printed once and kept in `~/fils-pay-config/demo-passwords.txt` on the
+  server;
 - turn it off (`SHOW_OTP=0 ops/deploy.sh`) once email delivery exists, or
   before real merchants use it. This is the setting the security review
   turned off (`docs/cyper/03-insecure-defaults.md`).
@@ -125,8 +127,10 @@ changes or removes something.
 
 - **Signing in to the demo**: merchant users (e.g. `owner@alpharetail.example`,
   merchant id `9972daab-2c86-459f-9d78-3fe1be4e3280`) and admins (e.g.
-  `superadmin@filspay.test`) use the passwords printed by the deploy, also
-  in `~/fils-pay-config/demo-passwords.txt`; the code is on the page. The
+  `superadmin@filspay.test`) each use their own password printed by the
+  deploy, also in `~/fils-pay-config/demo-passwords.txt` (one line per
+  account: `merchant user <email> at <merchant> (<id>): <password>` or
+  `admin <email> (<role>): <password>`); the code is on the page. The
   demo API keys are in `~/fils-pay-config/seed-output.txt`.
 - The acquirer signing secret is generated on the server; give it to the
   acquirer simulator / partner if callbacks are used

@@ -43,12 +43,12 @@ new one in `~/fils-pay-config/demo-passwords.txt` on the server, so pass it
 in:
 
 ```
-MERCHANT_PASSWORD="$(ssh <user@server> "grep 'new password for .* merchant users:' ~/fils-pay-config/demo-passwords.txt | tail -1 | sed 's/.*: //'")" \
+MERCHANT_PASSWORD="$(ssh <user@server> "grep 'merchant user owner@alpharetail.example at .* (9972daab-2c86-459f-9d78-3fe1be4e3280):' ~/fils-pay-config/demo-passwords.txt | tail -1 | sed 's/.*: //'")" \
 API_URL=https://<api host> WEBHOOK_URL=<public receiver> node scripts/e2e/payment-check.mjs
 ```
 
-(The file is appended to on each deploy; the last "merchant users" line is
-the current password.)
+(The file is appended to on each deploy, one line per account; the last
+line for that owner is the current password.)
 
 Use staging, not production; it creates real rows. The full options, and
 what a passing run looks like, are in

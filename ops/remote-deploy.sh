@@ -154,7 +154,7 @@ if [ "${SEED:-0}" = 1 ]; then
   fi
 fi
 if [ "${SHOW_OTP:-1}" = 1 ]; then
-  say "Replacing the demo data's public passwords (sign-in codes are shown on screen)"
+  say "Replacing the demo data's public passwords, one per account (sign-in codes are shown on screen)"
   touch "$CONF/demo-passwords.txt" && chmod 600 "$CONF/demo-passwords.txt"
   "${COMPOSE[@]}" run --rm --no-deps migrate npx tsx db/seed/replaceDemoPasswords.ts | tee -a "$CONF/demo-passwords.txt"
 fi
