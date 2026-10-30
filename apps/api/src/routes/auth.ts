@@ -183,6 +183,12 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         }
         // New token for the authenticated session (see promoteSession).
         const promoted = await promoteSession(client, pending.sessionId, app.config.sessionTtlHours);
+        // The code went to this user's email, so finishing OTP proves they
+        // control it. Recorded once (docs/improvements/11).
+        await client.query(
+          `UPDATE merchant_users SET email_verified_at = now() WHERE id = $1 AND email_verified_at IS NULL`,
+          [pending.merchantUserId],
+        );
         const result = await client.query<{ merchant_id: string; role: "owner" | "finance" | "support" }>(
           `SELECT merchant_id, role FROM merchant_users WHERE id = $1`,
           [pending.merchantUserId],
