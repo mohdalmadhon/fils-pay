@@ -57,7 +57,7 @@ interface SidebarNavProps {
 export function SidebarNav({ links }: SidebarNavProps) {
   const grouped = isDefaultNavOrder(links.map((link) => link.id));
   return (
-    <nav className="dash-nav" aria-label="Main">
+    <nav className="dash-nav" aria-label="Main" data-tour="nav">
       {links.map((link, i) => (
         <Fragment key={link.id}>
           {grouped && link.section !== links[i - 1]?.section ? <span className="dash-nav-label">{link.section}</span> : null}

@@ -11,6 +11,8 @@ import { useCostume } from "./kit/Halloween.js";
 import { SidebarNav, visibleNavLinks } from "./nav/SidebarNav.js";
 import { NavOrderEditor } from "./nav/NavOrderEditor.js";
 import { isDefaultNavOrder, loadNavOrder, moveNavItem, moveNavItemTo, saveNavOrder, type NavId } from "./nav/navOrder.js";
+import { Tour } from "./tour/Tour.js";
+import { DASHBOARD_TOUR, availableSteps, hasSeenTour, markTourSeen, type TourStep } from "./tour/tourSteps.js";
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 export const shortcutLabel = isMac ? "⌘K" : "Ctrl K";
@@ -50,6 +52,33 @@ export function DashboardLayout() {
     [navLinks, navOrder],
   );
   useCommandPaletteShortcut(openPalette);
+
+  // Take a tour. The steps are picked when it starts, from what is on the
+  // page for this person. On a phone the drawer is opened first so the
+  // sidebar's controls can be shown, and the "main area" step, which the
+  // drawer covers, is left out.
+  const [tourSteps, setTourSteps] = useState<TourStep[] | null>(null);
+  const [tourSeen, setTourSeen] = useState(() => hasSeenTour());
+  const startTour = useCallback(() => {
+    const narrow = window.matchMedia("(max-width: 900px)").matches;
+    setEditingNav(false);
+    setPaletteOpen(false);
+    if (narrow) setNavOpen(true);
+    // After the drawer (if any) has opened, so its controls can be found.
+    requestAnimationFrame(() =>
+      setTourSteps(
+        availableSteps(
+          DASHBOARD_TOUR.filter((step) => !(narrow && step.id === "main")),
+          (target) => document.querySelector(`[data-tour="${target}"]`) !== null,
+        ),
+      ),
+    );
+  }, []);
+  const endTour = useCallback(() => {
+    setTourSteps(null);
+    markTourSeen();
+    setTourSeen(true);
+  }, []);
 
   // Close the drawer whenever the page changes, and on Escape.
   useEffect(() => {
@@ -113,6 +142,14 @@ export function DashboardLayout() {
     list.push(
       go("settings", "Settings", "/dashboard/settings", icons.settings, "appearance design theme layout compact cobalt lagoon saffron"),
       {
+        id: "tour",
+        label: "Take a tour",
+        group: "Actions",
+        icon: icons.sparkle,
+        keywords: "tutorial help guide walkthrough onboarding introduction",
+        run: startTour,
+      },
+      {
         id: "edit-layout",
         label: "Edit layout (reorder the navigation)",
         group: "Actions",
@@ -143,7 +180,7 @@ export function DashboardLayout() {
     );
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canSeeFinance, theme, toggleTheme, costume, toggleCostume, navigate]);
+  }, [canSeeFinance, theme, toggleTheme, costume, toggleCostume, navigate, startTour]);
 
   return (
     <div className="dash-shell" data-nav-open={navOpen}>
@@ -186,7 +223,7 @@ export function DashboardLayout() {
           </div>
         ) : null}
 
-        <button type="button" className="fp-nav-search" onClick={openPalette}>
+        <button type="button" className="fp-nav-search" onClick={openPalette} data-tour="search">
           {icons.search}
           <span>Search or jump to…</span>
           <kbd className="fp-kbd">{shortcutLabel}</kbd>
@@ -209,7 +246,7 @@ export function DashboardLayout() {
         )}
 
         <div className="dash-sidebar-foot">
-          <div className="fp-segment" role="group" aria-label="Theme">
+          <div className="fp-segment" role="group" aria-label="Theme" data-tour="theme">
             <button type="button" aria-pressed={theme === "light"} onClick={() => setTheme("light")}>
               {icons.sun}
               Light
@@ -219,8 +256,14 @@ export function DashboardLayout() {
               Dark
             </button>
           </div>
+          <button type="button" className="dash-signout dash-take-tour" onClick={startTour} data-tour="tour">
+            {icons.sparkle}
+            Take a tour
+            {tourSeen ? null : <span className="dash-new-chip">New</span>}
+          </button>
           <button
             type="button"
+            data-tour="edit-layout"
             className="dash-signout dash-edit-layout"
             aria-pressed={editingNav}
             onClick={() => setEditingNav((on) => !on)}
@@ -238,7 +281,7 @@ export function DashboardLayout() {
       <div className="dash-scrim" onClick={() => setNavOpen(false)} aria-hidden />
 
       <div className="dash-content">
-        <main id="main" className="dash-main" tabIndex={-1}>
+        <main id="main" className="dash-main" tabIndex={-1} data-tour="main">
           {me?.impersonation ? (
             <div className="dash-impersonation" role="status">
               <strong>Viewing as {me.merchant.displayName}.</strong>{" "}
@@ -253,6 +296,8 @@ export function DashboardLayout() {
           </div>
         </main>
       </div>
+
+      {tourSteps ? <Tour steps={tourSteps} onClose={endTour} /> : null}
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} commands={commands} />
     </div>
