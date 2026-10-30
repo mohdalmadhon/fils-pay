@@ -1,0 +1,21 @@
+# Check out and archive text files with LF line endings on every machine.
+# Git for Windows defaults to core.autocrlf=true, which would otherwise turn
+# shell scripts into CRLF files that bash on the server refuses to run
+# ("set: pipefail: invalid option name"). docs/bugs/080-*.md.
+* text=auto eol=lf
+
+# Binary files: never convert.
+*.bundle binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.pdf binary
+*.zip binary
+*.gz binary

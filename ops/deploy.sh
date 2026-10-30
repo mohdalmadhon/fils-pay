@@ -24,7 +24,10 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
 fi
 echo "deploy: sending $BRANCH @ $COMMIT to $SERVER"
 
-git archive --format=tar HEAD | ssh "$SERVER" "
+# core.autocrlf=false: send the files as committed (LF), even from Git for
+# Windows, whose default (true) would turn the shell scripts into CRLF files
+# that bash on the server cannot run. .gitattributes does the same.
+git -c core.autocrlf=false archive --format=tar HEAD | ssh "$SERVER" "
   set -e
   rm -rf ~/fils-pay.new && mkdir -p ~/fils-pay.new
   tar -x -C ~/fils-pay.new
