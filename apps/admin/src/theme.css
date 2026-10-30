@@ -676,6 +676,19 @@ h1 {
     #1e2a46;
 }
 
+/* Empty, error and not-found scenes: the line drawing's accent takes the
+ * design's second art colour, and it sits on two soft shapes in the
+ * design's colours (a disc and a smaller offset one), so these moments
+ * carry the same character as the rest of the design. Not in the spinner. */
+:root:not([data-costume="halloween"]) .fp-scene:not(.fp-scene-waiting) {
+  --c-accent: var(--art-2);
+  padding: 10px;
+  width: 116px;
+  background:
+    radial-gradient(circle at 74% 26%, color-mix(in srgb, var(--art-1) 55%, transparent) 0 16px, transparent 16.5px),
+    radial-gradient(circle at 48% 56%, color-mix(in srgb, var(--art-4) 60%, transparent) 0 44px, transparent 44.5px);
+}
+
 /* Page backdrops. Carnival and Slate get a dot grid in the top corner
  * (from the brief's images 2 and 3); Blush a blush-to-peach wash. */
 :is(:root[data-design="carnival"], :root:not([data-design]), :root[data-design="slate"]):not([data-costume="halloween"]) body::before {
