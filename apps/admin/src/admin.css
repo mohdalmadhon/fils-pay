@@ -44,13 +44,6 @@
   overflow-y: auto;
 }
 
-:root[data-costume="halloween"] .admin-sidebar {
-  background: #0a0612;
-  --c-surface: #150f21;
-  --c-surface-3: #231a35;
-  --c-line: #33264d;
-}
-
 .admin-shell:has(.impersonation-banner) .admin-sidebar {
   height: auto;
   min-height: 100%;

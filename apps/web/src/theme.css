@@ -483,6 +483,16 @@
   --hw-glow: 0 8px 24px -8px rgba(255, 122, 26, 0.75), inset 0 1px 0 rgba(255, 230, 180, 0.5);
   /* Buttons glow like a lantern: candle yellow into pumpkin. */
   --hw-gradient: linear-gradient(180deg, #ffbe5c, #ff7a1a 70%, #f0640a);
+  /* The sidebar: the darkest part of the night, a pumpkin current page. */
+  --side-bg: #08050f;
+  --side-surface: #150f21;
+  --side-surface-3: #1b1429;
+  --side-line: #2a1f3d;
+  --side-ink: #f7efe0;
+  --side-ink-2: #dccbf2;
+  --side-ink-3: #a894c9;
+  --side-active-bg: #ff7a1a;
+  --side-active-ink: #1a0d05;
   /* The balance band and sign-in panels: a haunted purple night. */
   --hero-bg: #2a1747;
   --hero-ink: #f7efe0;
@@ -542,11 +552,20 @@ h1 {
   font-weight: 600;
 }
 
-/* The sidebar has its own colours: an indigo panel in Carnival, a soft
- * blush panel in Blush, slate navy in Slate. Redefining the colour tokens
- * inside it means the merchant chip, search, nav and theme switch all
- * follow without their own rules. The current page is a coloured pill. */
-:root:not([data-costume="halloween"]) :is(.dash-sidebar, .admin-sidebar) {
+/* The sidebar ------------------------------------------------------------
+ * One complete set of rules for the dashboard's and the Ops console's
+ * sidebar, anchored at :root so the older rules in dashboard.css and
+ * admin.css (which load after this file) can't override parts of it.
+ * It has its own colours (--side-*, darker than the page in every design
+ * and in the costume); the colour tokens are redefined inside it so
+ * anything placed in it follows.
+ *
+ *   merchant card   avatar, the role as a mono eyebrow, name, email
+ *   search          a filled field, as in Orbit
+ *   nav             mono section labels; 40px rows; the current page is a
+ *                   solid pill in the design's highlight
+ *   foot            light/dark as underline tabs, then log out */
+:root :is(.dash-sidebar, .admin-sidebar) {
   --c-surface: var(--side-surface);
   --c-surface-2: var(--side-surface);
   --c-surface-3: var(--side-surface-3);
@@ -556,32 +575,252 @@ h1 {
   --c-ink-2: var(--side-ink-2);
   --c-ink-3: var(--side-ink-3);
   --c-ink-4: var(--side-ink-3);
+  gap: 18px;
+  padding: 20px 14px 16px;
   color: var(--side-ink);
   background: var(--side-bg);
-  border-right-color: var(--side-line);
+  border-right: 1px solid var(--side-line);
 }
 
-:root:not([data-costume="halloween"]) :is(.dash-nav, .admin-nav) a {
-  border-radius: var(--r-button);
+:root :is(.dash-sidebar-head, .admin-sidebar-head) {
+  height: 28px;
+  padding: 0 6px;
 }
 
-:root:not([data-costume="halloween"]) :is(.dash-nav, .admin-nav) a.active {
-  color: var(--side-active-ink);
-  background: var(--side-active-bg);
+:root :is(.dash-sidebar, .admin-sidebar) .fp-wordmark {
+  font-size: 1.2rem;
+  color: var(--side-ink);
+}
+
+/* Merchant card: avatar on the left; the role as an eyebrow above the
+ * name, so nothing is squeezed. */
+:root :is(.dash-merchant, .admin-identity) {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  row-gap: 2px;
+  align-items: center;
+  padding: 12px;
+  background: var(--side-surface);
+  border: 1px solid var(--side-line);
+  border-radius: var(--r-3);
   box-shadow: none;
 }
 
-:root:not([data-costume="halloween"]) :is(.dash-nav, .admin-nav) a.active svg {
+:root :is(.dash-merchant-avatar, .admin-identity-avatar) {
+  grid-row: 1 / 3;
+  width: 36px;
+  height: 36px;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--side-active-ink);
+  background: var(--side-active-bg);
+  border-radius: 10px;
+}
+
+:root .dash-role-chip {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+:root .dash-merchant-text {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+:root :is(.dash-merchant-text, .admin-identity-text) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+:root :is(.dash-merchant-name, .admin-identity-text strong) {
+  overflow: hidden;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--side-ink);
+}
+
+:root .dash-merchant-user {
+  overflow: hidden;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--side-ink-2);
+}
+
+:root :is(.dash-role-chip, .admin-role-chip) {
+  display: block;
+  justify-self: start;
+  height: auto;
+  padding: 0;
+  font-family: var(--font-meta);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--side-ink-3);
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+
+:root .admin-identity-text {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  gap: 2px;
+}
+
+:root .admin-role-chip {
+  order: -1;
+}
+
+/* Search: a filled field with the shortcut at its end. */
+:root :is(.dash-sidebar, .admin-sidebar) .fp-nav-search {
+  min-height: 40px;
+  padding: 0 10px 0 12px;
+  color: var(--side-ink-2);
+  background: var(--side-surface-3);
+  border: 1px solid transparent;
+  border-radius: var(--r-input);
+  box-shadow: none;
+}
+
+:root :is(.dash-sidebar, .admin-sidebar) .fp-nav-search > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+:root :is(.dash-sidebar, .admin-sidebar) .fp-nav-search .fp-kbd {
+  flex: none;
+  white-space: nowrap;
+}
+
+:root :is(.dash-sidebar, .admin-sidebar) .fp-nav-search:hover {
+  border-color: var(--side-line);
+  color: var(--side-ink);
+}
+
+:root :is(.dash-sidebar, .admin-sidebar) .fp-kbd {
+  font-family: var(--font-meta);
+  font-size: 0.625rem;
+  color: var(--side-ink-2);
+  background: var(--side-surface);
+  border-color: var(--side-line);
+}
+
+/* Navigation. */
+:root :is(.dash-nav, .admin-nav) {
+  gap: 2px;
+}
+
+:root :is(.dash-nav-label, .admin-nav-label) {
+  padding: 16px 12px 6px;
+  font-family: var(--font-meta);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--side-ink-3);
+}
+
+:root :is(.dash-nav-label, .admin-nav-label):first-child {
+  padding-top: 2px;
+}
+
+:root :is(.dash-nav, .admin-nav) a {
+  gap: 12px;
+  height: 40px;
+  padding: 0 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--side-ink-2);
+  background: transparent;
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+:root :is(.dash-nav, .admin-nav) a svg {
+  color: var(--side-ink-3);
+}
+
+:root :is(.dash-nav, .admin-nav) a:hover {
+  color: var(--side-ink);
+  background: var(--side-surface);
+}
+
+:root :is(.dash-nav, .admin-nav) a.active {
+  font-weight: 600;
+  color: var(--side-active-ink);
+  background: var(--side-active-bg);
+  box-shadow: 0 6px 16px -8px var(--side-active-bg);
+}
+
+:root :is(.dash-nav, .admin-nav) a.active svg {
   color: currentColor;
 }
 
-:root:not([data-costume="halloween"]) :is(.dash-nav, .admin-nav) a.active::before {
-  display: none;
+/* The old design's margin marker is gone in every look. */
+:root :is(.dash-nav, .admin-nav) a::before {
+  display: none !important;
 }
 
-:root:not([data-costume="halloween"]) :is(.dash-merchant-avatar, .admin-identity-avatar) {
-  color: var(--side-active-ink);
-  background: var(--side-active-bg);
+/* Foot: light/dark as underline tabs (as in Orbit), then log out. */
+:root :is(.dash-sidebar-foot, .admin-sidebar-foot) {
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--side-line);
+}
+
+:root :is(.dash-sidebar-foot, .admin-sidebar-foot) .fp-segment {
+  gap: 18px;
+  padding: 0 6px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--side-line);
+  border-radius: 0;
+}
+
+:root :is(.dash-sidebar-foot, .admin-sidebar-foot) .fp-segment button {
+  flex: none;
+  height: 36px;
+  padding: 0 0 2px;
+  color: var(--side-ink-3);
+  background: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+:root :is(.dash-sidebar-foot, .admin-sidebar-foot) .fp-segment button:hover {
+  color: var(--side-ink);
+}
+
+:root :is(.dash-sidebar-foot, .admin-sidebar-foot) .fp-segment button[aria-pressed="true"] {
+  color: var(--side-ink);
+  background: none;
+  border-bottom-color: var(--side-active-bg);
+  box-shadow: none;
+}
+
+:root :is(.dash-signout, .admin-signout) {
+  height: 40px;
+  padding: 0 12px;
+  color: var(--side-ink-2);
+  border-radius: 10px;
+}
+
+:root :is(.dash-signout, .admin-signout):hover {
+  color: var(--side-ink);
+  background: var(--side-surface);
 }
 
 /* The design illustrations (DesignArt.tsx): show the current design's. */
