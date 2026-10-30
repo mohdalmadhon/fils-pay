@@ -323,8 +323,8 @@ export async function getReconciliationReport(
       `SELECT mdr_bps, negotiated_discount_bps FROM merchants WHERE id = $1`,
       [input.merchantId],
     ),
-    pool.query<{ effective_from: Date; created_at: Date; mdr_bps: number }>(
-      `SELECT effective_from, created_at, mdr_bps FROM fee_schedules WHERE merchant_id = $1`,
+    pool.query<{ id: string; effective_from: Date; created_at: Date; mdr_bps: number }>(
+      `SELECT id, effective_from, created_at, mdr_bps FROM fee_schedules WHERE merchant_id = $1`,
       [input.merchantId],
     ),
     pool.query<{ total_processed_fils: string | number }>(`SELECT total_processed_fils FROM platform_stats WHERE id = 1`),
@@ -340,6 +340,7 @@ export async function getReconciliationReport(
   const schedules: FeeScheduleRow[] = scheduleResult.rows.map((row) => ({
     effectiveFrom: row.effective_from,
     createdAt: row.created_at,
+    id: row.id,
     mdrBps: row.mdr_bps,
   }));
   // CloseBatch reads the platform volume tier when the batch closes, so the

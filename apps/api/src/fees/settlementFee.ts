@@ -17,10 +17,13 @@ export interface FeeScheduleRow {
   effectiveFrom: Date;
   createdAt: Date;
   mdrBps: number;
+  /** Last tie-breaker, same as settlement's ORDER BY ... created_at, id. */
+  id?: string;
 }
 
 /** The rate in effect at `asOf`: newest effective_from not after it, a later
- *  created_at winning a tie (same rule as getEffectiveMdrBps); otherwise the
+ *  created_at (then a larger id) winning a tie, the same rule as
+ *  getEffectiveMdrBps and settlement's LoadFeeSchedules; otherwise the
  *  fallback (merchants.mdr_bps). */
 export function effectiveMdrBpsAt(schedules: readonly FeeScheduleRow[], asOf: Date, fallbackMdrBps: number): number {
   let best: FeeScheduleRow | null = null;
@@ -29,7 +32,9 @@ export function effectiveMdrBpsAt(schedules: readonly FeeScheduleRow[], asOf: Da
     if (
       !best ||
       row.effectiveFrom.getTime() > best.effectiveFrom.getTime() ||
-      (row.effectiveFrom.getTime() === best.effectiveFrom.getTime() && row.createdAt.getTime() > best.createdAt.getTime())
+      (row.effectiveFrom.getTime() === best.effectiveFrom.getTime() &&
+        (row.createdAt.getTime() > best.createdAt.getTime() ||
+          (row.createdAt.getTime() === best.createdAt.getTime() && (row.id ?? "") > (best.id ?? ""))))
     ) {
       best = row;
     }

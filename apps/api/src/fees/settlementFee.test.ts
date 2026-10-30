@@ -38,3 +38,13 @@ test("settlementFeeFils applies the discount to the amount, like ComputeSettleme
   assert.equal(settlementFeeFils(100_000, 250, 1_000), 2_250);
   assert.equal(settlementFeeFils(5_000, 0, 0), 0);
 });
+
+test("effectiveMdrBpsAt: a full tie (same effective and entry time) goes to the larger id, like settlement", () => {
+  const at = d("2026-08-01T00:00:00Z");
+  const rows: FeeScheduleRow[] = [
+    { effectiveFrom: at, createdAt: at, mdrBps: 230, id: "00000000-0000-0000-0000-00000000000a" },
+    { effectiveFrom: at, createdAt: at, mdrBps: 220, id: "00000000-0000-0000-0000-00000000000b" },
+  ];
+  assert.equal(effectiveMdrBpsAt(rows, d("2026-09-01T00:00:00Z"), 250), 220);
+  assert.equal(effectiveMdrBpsAt([...rows].reverse(), d("2026-09-01T00:00:00Z"), 250), 220, "input order doesn't matter");
+});
