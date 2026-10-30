@@ -8,6 +8,7 @@ import {
   type KycDocumentType,
 } from "../onboarding/kyc.js";
 import { BadRequestError, ForbiddenError } from "../lib/errors.js";
+import { contentDisposition } from "../lib/contentDisposition.js";
 
 /** Accepted document_type values. commercial_registration must be a PDF; others may be PDF/JPEG/PNG. */
 const ALLOWED_DOCUMENT_TYPES: readonly KycDocumentType[] = [
@@ -47,6 +48,9 @@ export async function kycRoutes(app: FastifyInstance): Promise<void> {
 
       for await (const part of request.parts()) {
         if (part.type === "file") {
+          if (buffer !== undefined) {
+            throw new BadRequestError("one_file_only", "upload exactly one file per request");
+          }
           buffer = await part.toBuffer();
           fileName = part.filename;
         } else if (part.fieldname === "documentType") {
@@ -97,7 +101,7 @@ export async function kycRoutes(app: FastifyInstance): Promise<void> {
         request.params.documentId,
       );
       reply.header("Content-Type", file.mimeType);
-      reply.header("Content-Disposition", `inline; filename="${file.fileName}"`);
+      reply.header("Content-Disposition", contentDisposition("inline", file.fileName));
       return reply.send(file.buffer);
     },
   );
@@ -114,7 +118,7 @@ export async function kycRoutes(app: FastifyInstance): Promise<void> {
         request.params.documentId,
       );
       reply.header("Content-Type", file.mimeType);
-      reply.header("Content-Disposition", `inline; filename="${file.fileName}"`);
+      reply.header("Content-Disposition", contentDisposition("inline", file.fileName));
       return reply.send(file.buffer);
     },
   );
