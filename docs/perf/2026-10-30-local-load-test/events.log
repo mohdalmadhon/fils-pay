@@ -1,0 +1,13 @@
+2026-10-30T19:04:55.515Z api up: {"status":"ok","uptimeSeconds":3.154986164,"load":{"inFlight":0,"shedTotal":0,"eventLoopDelayMs":10}}
+2026-10-30T19:04:56.616Z ramp: 5,10,20,40,60,80,120,160,200 buyers, 30 s each
+2026-10-30T19:10:36.530Z ramp finished
+2026-10-30T19:10:42.578Z ramp verify exit 0
+2026-10-30T19:10:51.830Z crash: load step started (120 buyers, 90 s)
+2026-10-30T19:11:11.851Z crash: kill -9 api pid 441 (process crash, mid-payment)
+2026-10-30T19:11:11.959Z supervisor: api exited with 0; restarting in 1 s
+2026-10-30T19:11:36.871Z crash: kill -9 postgres (database crash)
+2026-10-30T19:11:39.929Z crash: restarting postgres (what docker's restart policy does)
+2026-10-30T19:11:44.651Z crash: postgres up: /var/tmp:5432 - accepting connections
+2026-10-30T19:12:32.707Z crash: load finished
+2026-10-30T19:12:35.246Z crash verify exit 0
+2026-10-30T19:12:35.258Z all done

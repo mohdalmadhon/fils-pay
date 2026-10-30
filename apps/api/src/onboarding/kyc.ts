@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Pool } from "pg";
 import type { Config } from "../config.js";
@@ -74,12 +74,22 @@ export async function recordKycDocument(
   // oversized image never leaves a file behind.
   const thumbnail = await generateKycThumbnail(input.buffer, detected);
 
-  await mkdir(join(config.kycUploadDir, input.merchantId), { recursive: true });
-  await writeFile(fullPath, input.buffer);
+  // Identity documents are readable by the API's own user only: folders
+  // 0700, files 0600. They used to be created with the defaults (0755 and
+  // 0644), so any other user or process on the host could read them.
+  // chmod as well, because mkdir/writeFile modes apply only to what they
+  // create, not to a folder or file that already exists. docs/defence/07.
+  const merchantDir = join(config.kycUploadDir, input.merchantId);
+  await mkdir(merchantDir, { recursive: true, mode: 0o700 });
+  await chmod(merchantDir, 0o700);
+  await writeFile(fullPath, input.buffer, { mode: 0o600 });
+  await chmod(fullPath, 0o600);
   let thumbnailStorageKey: string | null = null;
   if (thumbnail) {
     thumbnailStorageKey = join(input.merchantId, `${sha256}.thumb.jpg`);
-    await writeFile(join(config.kycUploadDir, thumbnailStorageKey), thumbnail.buffer);
+    const thumbPath = join(config.kycUploadDir, thumbnailStorageKey);
+    await writeFile(thumbPath, thumbnail.buffer, { mode: 0o600 });
+    await chmod(thumbPath, 0o600);
   }
 
   return withTransaction(pool, async (client) => {

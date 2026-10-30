@@ -14,14 +14,17 @@ export interface MinimalLogger {
 
 export function sendOtpCode(
   logger: MinimalLogger,
-  config: Pick<Config, "otpDevExpose" | "otpLogFile">,
+  config: Pick<Config, "otpDevExpose" | "otpLogFile"> & { nodeEnv?: Config["nodeEnv"] },
   recipient: { merchantUserId: string; email: string },
   code: string,
 ): void {
   if (config.otpLogFile) {
     deliverOtpToFile(config.otpLogFile, "merchant", recipient.merchantUserId, code);
     logger.info({ merchantUserId: recipient.merchantUserId, channel: "otp" }, "otp delivered to operator file");
-  } else if (!config.otpDevExpose) {
+  } else if (!config.otpDevExpose || config.nodeEnv === "production") {
+    // Never the code in a production log, even on the hosted demo where the
+    // code is shown on screen: logs are kept and shipped, and whoever reads
+    // them could finish a sign-in. docs/defence/05.
     logger.info({ merchantUserId: recipient.merchantUserId, channel: "otp" }, "otp code generated");
   } else {
     logger.info(

@@ -1,0 +1,8 @@
+checkout capacity test against http://localhost:3000: steps 120 buyers, 90s each, fast = p95 <= 1500 ms
+step 120 buyers started
+ 120 buyers   33.1/s  p50 616 p95 847 p99 948 ms (buyer p95 16747)  paid 2911 declined 120 503s 6467 (703 buyers waited) errors 21 (recovered after a failure: 196)  OVER  [pay:409 payment_link_processing]
+
+no step was fast and correct
+verifying 3103 checkouts against the server...
+verified: every paid link has its captured transaction; nothing turned away or failed was charged
+report: /tmp/claude-0/load2/crash.json

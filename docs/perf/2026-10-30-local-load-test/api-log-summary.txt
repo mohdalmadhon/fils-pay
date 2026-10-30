@@ -1,0 +1,24 @@
+API log summary for the local load test (the full log is about 12 MB; this is what is in it).
+
+Responses by HTTP status, per phase (503s from load shedding are answered before routing and not logged one by one; see the health timeline for their count):
+  ramp                                 200: 35855, 201: 12900, 402: 245, 502: 108
+  crash: before the API kill           200: 1450, 402: 16, 502: 3
+  crash: API restarted, database up    200: 1649, 402: 30, 409: 212, 502: 7
+  crash: database down                 200: 176, 402: 3, 409: 43, 500: 660
+  crash: after recovery                200: 8839, 402: 39, 409: 463, 502: 22
+
+660 unhandled errors (500), all between 2026-10-30T19:11:36.947Z and 2026-10-30T19:11:42.454Z (the database outage):
+   330  ECONNREFUSED connect ECONNREFUSED /var/tmp/.s.PGSQL.5432
+    20  Error Client has encountered a connection error and is not queryable
+    28  ENOENT connect ENOENT /var/tmp/.s.PGSQL.5432
+   157  57P03 the database system is starting up
+   125  57P03 the database system is not yet accepting connections
+
+API process starts:
+  [index] booting, date=2026-10-30
+  [index] booting, date=2026-10-30
+
+First three error lines in full:
+{"level":50,"time":1793387496947,"pid":4100,"hostname":"vm","reqId":"req-2t7","err":{"type":"Error","message":"connect ECONNREFUSED /var/tmp/.s.PGSQL.5432","stack":"Error: connect ECONNREFUSED /var/tmp/.s.PGSQL.5432\n    at /var/tmp/combined/node_modules/pg-pool/index.js:45:11\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async classifyClaimFailure (/var/tmp/combined/apps/api/src/paymentLinks/pay.ts:335:18)\n    at async Object.<anonymous> (/var/tmp/combined/apps/api/src/routes/paymentLinks.ts:169:20)","errno":-111,"code":"ECONNREFUSED","syscall":"connect","address":"/var/tmp/.s.PGSQL.5432"},"occurredOn":"2026-10-30","msg":"unhandled error"}
+{"level":50,"time":1793387496953,"pid":4100,"hostname":"vm","reqId":"req-2tn","err":{"type":"Error","message":"connect ECONNREFUSED /var/tmp/.s.PGSQL.5432","stack":"Error: connect ECONNREFUSED /var/tmp/.s.PGSQL.5432\n    at /var/tmp/combined/node_modules/pg-pool/index.js:45:11\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async payPaymentLink (/var/tmp/combined/apps/api/src/paymentLinks/pay.ts:87:23)\n    at async Object.<anonymous> (/var/tmp/combined/apps/api/src/routes/paymentLinks.ts:169:20)","errno":-111,"code":"ECONNREFUSED","syscall":"connect","address":"/var/tmp/.s.PGSQL.5432"},"occurredOn":"2026-10-30","msg":"unhandled error"}
+{"level":50,"time":1793387496954,"pid":4100,"hostname":"vm","reqId":"req-2to","err":{"type":"Error","message":"connect ECONNREFUSED /var/tmp/.s.PGSQL.5432","stack":"Error: connect ECONNREFUSED /var/tmp/.s.PGSQL.5432\n    at /var/tmp/combined/node_modules/pg-pool/index.js:45:11\n    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at async payPaymentLink (/var/tmp/combined/apps/api/src/paymentLinks/pay.ts:87:23)\n    at async Object.<anonymous> (/var/tmp/combined/apps/api/src/routes/paymentLinks.ts:169:20)","errno":-111,"code":"ECONNREFUSED","syscall":"connect","address":"/var/tmp/.s.PGSQL.5432"},"occurredOn":"2026-10-30","msg":"unhandled error"}

@@ -407,3 +407,16 @@ test("retrying a successful payment with the same Idempotency-Key replays the 20
   const other = await pay(link.token, APPROVED_CARD);
   assert.equal(other.statusCode, 409, other.body);
 });
+
+test("a payment link's reference and description must be plain text (docs/defence/08)", async () => {
+  const { rawKey, merchantId } = await createApprovedMerchantWithApiKey("link-text");
+  for (const extra of [{ reference: { a: 1 } }, { description: "Invoice\u0000#1" }, { description: "x".repeat(300) }]) {
+    const res = await app.inject({
+      method: "POST",
+      url: `/v1/merchants/${merchantId}/payment-links`,
+      headers: authHeader(rawKey),
+      payload: { amountFils: 1000, expiresAt: new Date(Date.now() + 3_600_000).toISOString(), ...extra },
+    });
+    assert.equal(res.statusCode, 400, `${JSON.stringify(extra)}: ${res.body}`);
+  }
+});

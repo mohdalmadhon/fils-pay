@@ -100,10 +100,12 @@ sed -i '/^WEBHOOK_ALLOW_PRIVATE_HOSTS=/d' "$CONF/.env.docker"
 # Sign-in codes have no delivery channel yet, so by default the hosted demo
 # shows them on the sign-in page (both switches are needed in production;
 # apps/api/src/config.ts). The password alone then signs in, so the demo
-# data's public passwords are replaced below.
-sed -i '/^OTP_DEV_EXPOSE=/d; /^OTP_SHOW_IN_PRODUCTION=/d' "$CONF/.env.docker"
+# data's public passwords are replaced below. OTP_DEMO_DISPLAY, not the
+# development switch OTP_DEV_EXPOSE: the demo display shows the code on the
+# page only, never in the container logs (docs/defence/05).
+sed -i '/^OTP_DEV_EXPOSE=/d; /^OTP_DEMO_DISPLAY=/d; /^OTP_SHOW_IN_PRODUCTION=/d' "$CONF/.env.docker"
 if [ "${SHOW_OTP:-1}" = 1 ]; then
-  printf 'OTP_DEV_EXPOSE=true\nOTP_SHOW_IN_PRODUCTION=true\n' >> "$CONF/.env.docker"
+  printf 'OTP_DEMO_DISPLAY=true\nOTP_SHOW_IN_PRODUCTION=true\n' >> "$CONF/.env.docker"
 fi
 
 cp "$CONF/.env" ops/.env
@@ -154,7 +156,7 @@ if [ "${SEED:-0}" = 1 ]; then
   fi
 fi
 if [ "${SHOW_OTP:-1}" = 1 ]; then
-  say "Replacing the demo data's public passwords (sign-in codes are shown on screen)"
+  say "Replacing the demo data's public passwords, one per account (sign-in codes are shown on screen)"
   touch "$CONF/demo-passwords.txt" && chmod 600 "$CONF/demo-passwords.txt"
   "${COMPOSE[@]}" run --rm --no-deps migrate npx tsx db/seed/replaceDemoPasswords.ts | tee -a "$CONF/demo-passwords.txt"
 fi

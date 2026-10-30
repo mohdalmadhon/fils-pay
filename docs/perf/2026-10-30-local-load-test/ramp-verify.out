@@ -1,0 +1,7 @@
+PASS  ledger balances
+PASS  paid links have one full capture
+PASS  no stray captures (charged, link not paid)
+PASS  no double charges
+PASS  captures have their event and outbox row
+PASS  balance cache moved with the ledger
+links since 2026-10-30T19:04:55Z: 8596 paid, 4304 unpaid, 0 reserved (0 past the 60 s timeout, free for the next buyer)

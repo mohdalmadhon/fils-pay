@@ -13,7 +13,7 @@
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { mkdtemp, readdir } from "node:fs/promises";
+import { mkdtemp, readdir, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -146,4 +146,15 @@ test("a normal image upload still works", async () => {
   const who = await owner();
   const res = await upload(who, "owner_id", [{ filename: "id.png", data: await smallPng() }]);
   assert.equal(res.statusCode, 201, res.body);
+});
+
+test("identity documents are stored readable by the API's own user only (docs/defence/07)", async () => {
+  const who = await owner();
+  const res = await upload(who, "owner_id", [{ filename: "id.png", data: await smallPng() }]);
+  assert.equal(res.statusCode, 201, res.body);
+  const dir = join(uploadDir, who.merchantId);
+  assert.equal((await stat(dir)).mode & 0o777, 0o700, "merchant folder");
+  const files = await readdir(dir);
+  assert.ok(files.length >= 2, "the document and its thumbnail");
+  for (const f of files) assert.equal((await stat(join(dir, f))).mode & 0o777, 0o600, f);
 });

@@ -8,6 +8,7 @@ Team member: **malmadhoo** (Mohammed Almadhoon). Branch history is on
 | Area | Write-up |
 |---|---|
 | Security review and fixes | [`docs/cyper/`](cyper/) |
+| Technical defence test (leaks, access, abuse) and fixes | [`docs/defence/`](defence/) |
 | Fixes and improvements 01-19 (tests, CI, Dockerfiles, refunds, signup limits, service roles, migration checksums, browser and accessibility checks, …) | [`docs/improvements/`](improvements/) |
 | Redesign: three designs in light and dark, layouts, Halloween costume | [`docs/design/README.md`](design/README.md) |
 | Merging the team's audit fixes (`main`) into the redesign | [`docs/merges/2026-10-30-main-into-ui-ux.md`](merges/2026-10-30-main-into-ui-ux.md) |

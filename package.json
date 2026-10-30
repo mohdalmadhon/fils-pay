@@ -16,7 +16,7 @@
     "audit:prod": "npm audit --omit=dev --audit-level=moderate",
     "e2e:browser": "node scripts/e2e/browser-check.mjs",
     "e2e:a11y": "node scripts/e2e/a11y-check.mjs",
-    "test:db": "tsx --test db/migrate.integration.test.ts db/migrateChecksum.test.ts db/seed/guard.test.ts db/seed/printedKeys.integration.test.ts db/refundMerchantSummary.integration.test.ts db/ledgerGroupBalance.integration.test.ts db/seed/selfVerify.integration.test.ts"
+    "test:db": "tsx --test db/migrate.integration.test.ts db/migrateChecksum.test.ts db/seed/guard.test.ts db/seed/printedKeys.integration.test.ts db/refundMerchantSummary.integration.test.ts db/ledgerGroupBalance.integration.test.ts db/seed/selfVerify.integration.test.ts db/seed/replaceDemoPasswords.integration.test.ts"
   },
   "devDependencies": {
     "@types/node": "^24.5.2",

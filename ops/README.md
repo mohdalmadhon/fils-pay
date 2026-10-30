@@ -43,12 +43,12 @@ new one in `~/fils-pay-config/demo-passwords.txt` on the server, so pass it
 in:
 
 ```
-MERCHANT_PASSWORD="$(ssh <user@server> "grep 'new password for .* merchant users:' ~/fils-pay-config/demo-passwords.txt | tail -1 | sed 's/.*: //'")" \
+MERCHANT_PASSWORD="$(ssh <user@server> "grep 'merchant user owner@alpharetail.example at .* (9972daab-2c86-459f-9d78-3fe1be4e3280):' ~/fils-pay-config/demo-passwords.txt | tail -1 | sed 's/.*: //'")" \
 API_URL=https://<api host> WEBHOOK_URL=<public receiver> node scripts/e2e/payment-check.mjs
 ```
 
-(The file is appended to on each deploy; the last "merchant users" line is
-the current password.)
+(The file is appended to on each deploy, one line per account; the last
+line for that owner is the current password.)
 
 Use staging, not production; it creates real rows. The full options, and
 what a passing run looks like, are in
@@ -136,7 +136,8 @@ docker compose -f ops/docker-compose.yml up
 | api | `ACQUIRER_CALLBACK_SIGNING_SECRET`, `NODE_ENV` | `.env.docker`, loaded with `env_file:` |
 | api | `OTP_DEV_EXPOSE` | off unless set to `true`; refused when `NODE_ENV=production` |
 | api | `OTP_LOG_FILE` | optional private server file for temporary operator OTP delivery; see `docs/fixes/operator-otp-file.md` |
-| api | `OTP_DEMO_DISPLAY` | default false; explicit demo-only OTP display on both login screens, including a production-mode demo; does not enable development logging |
+| api | `OTP_DEMO_DISPLAY` | default false; only the exact value `true` turns it on: demo-only OTP display on both login screens. In production it also needs `OTP_SHOW_IN_PRODUCTION=true` or the api refuses to start, and it warns at boot (docs/defence/02). Does not enable development logging |
+| api | `PAYMENT_LINK_MAX_ATTEMPTS`, `PAYMENT_LINK_ATTEMPT_WINDOW_MINUTES` | default 10 card attempts per payment link per 10 minutes, then `429 too_many_payment_attempts` with `Retry-After`; `0` turns the limit off (docs/defence/03) |
 | settlement | `DATABASE_URL` | `environment:` |
 | reporting | `DATABASE_URL` | `environment:`; runs `worker` by default |
 

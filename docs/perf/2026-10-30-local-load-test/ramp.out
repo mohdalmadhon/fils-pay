@@ -1,0 +1,24 @@
+checkout capacity test against http://localhost:3000: steps 5, 10, 20, 40, 60, 80, 120, 160, 200 buyers, 30s each, fast = p95 <= 1500 ms
+step 5 buyers started
+   5 buyers    9.5/s  p50 520 p95 741 p99 809 ms (buyer p95 741)  paid 279 declined 13 503s 0 (0 buyers waited) errors 0  OK
+step 10 buyers started
+  10 buyers   18.9/s  p50 530 p95 735 p99 782 ms (buyer p95 735)  paid 551 declined 24 503s 0 (0 buyers waited) errors 0  OK
+step 20 buyers started
+  20 buyers     37/s  p50 533 p95 748 p99 804 ms (buyer p95 748)  paid 1093 declined 46 503s 0 (0 buyers waited) errors 0  OK
+step 40 buyers started
+  40 buyers   37.1/s  p50 632 p95 863 p99 971 ms (buyer p95 1092)  paid 1127 declined 42 503s 480 (55 buyers waited) errors 0  OVER
+step 60 buyers started
+  60 buyers   37.2/s  p50 634 p95 849 p99 918 ms (buyer p95 885)  paid 1117 declined 37 503s 1080 (59 buyers waited) errors 0  OVER
+step 80 buyers started
+  80 buyers   37.4/s  p50 635 p95 844 p99 914 ms (buyer p95 974)  paid 1123 declined 44 503s 1680 (97 buyers waited) errors 0  OVER
+step 120 buyers started
+ 120 buyers   37.1/s  p50 637 p95 868 p99 949 ms (buyer p95 6755)  paid 1111 declined 47 503s 2880 (179 buyers waited) errors 0  OVER
+step 160 buyers started
+ 160 buyers   36.5/s  p50 656 p95 880 p99 950 ms (buyer p95 15907)  paid 1103 declined 45 503s 4080 (254 buyers waited) errors 0  OVER
+step 200 buyers started
+ 200 buyers   36.5/s  p50 658 p95 886 p99 955 ms (buyer p95 14782)  paid 1092 declined 55 503s 5280 (305 buyers waited) errors 0  OVER
+
+capacity: 20 concurrent buyers, 37 checkouts/s at p95 748 ms
+verifying 9372 checkouts against the server...
+verified: every paid link has its captured transaction; nothing turned away or failed was charged
+report: /tmp/claude-0/load2/ramp.json

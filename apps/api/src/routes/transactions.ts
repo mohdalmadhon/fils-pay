@@ -10,7 +10,7 @@ import { listTransactionEvents } from "../transactions/events.js";
 import { BadRequestError, NotFoundError } from "../lib/errors.js";
 import type { SimulatedCardInput } from "../acquirer/types.js";
 import { parseInstantParam, parseLimitParam } from "../lib/queryParams.js";
-import { parseCardInput, parsePositiveFils } from "../lib/paymentInput.js";
+import { parseCardInput, parsePositiveFils, parseReference } from "../lib/paymentInput.js";
 import { canonicalUuid } from "../lib/uuid.js";
 
 interface AuthorizeBody {
@@ -88,7 +88,7 @@ export async function transactionRoutes(app: FastifyInstance): Promise<void> {
         merchantId: request.apiKeyAuth!.merchantId,
         amountFils: parsePositiveFils(amountFils, "amountFils"),
         card: parseCardInput(card),
-        reference,
+        reference: parseReference(reference),
         idempotencyKey,
         actor: { type: "merchant_api_key", id: request.apiKeyAuth!.apiKeyId },
       };

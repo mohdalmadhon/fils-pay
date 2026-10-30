@@ -119,6 +119,10 @@ export interface Config {
    *  attempt) before it self-expires back to claimable, closing the gap
    *  between claim and finalize without a sweep job. */
   paymentLinkReservationTimeoutSeconds: number;
+  /** Card attempts one payment link accepts per window; 0 turns the limit
+   *  off. docs/defence/03. */
+  paymentLinkMaxAttempts: number;
+  paymentLinkAttemptWindowMinutes: number;
 
   /** Base64-encoded 32 raw bytes, the single application-level AES-256-GCM
    *  key `webhooks/secretCrypto.ts` uses to encrypt/decrypt
@@ -214,6 +218,27 @@ function parseOtpDevExpose(
   if (on && nodeEnv === "production" && showInProduction !== "true") {
     throw new Error(
       "loadConfig: OTP_DEV_EXPOSE must not be set when NODE_ENV=production (unless OTP_SHOW_IN_PRODUCTION=true: hosted demo only)",
+    );
+  }
+  return on;
+}
+
+/** OTP_DEMO_DISPLAY puts the sign-in code in the login response for both
+ *  planes, so the password alone signs in, exactly like OTP_DEV_EXPOSE. It
+ *  used to be a plain boolean ("true" or "1"), with no production guard and
+ *  no boot warning: one stray variable switched off the second factor for
+ *  every merchant and admin. Now only the exact value "true" turns it on,
+ *  and in production it needs OTP_SHOW_IN_PRODUCTION=true as well, or the
+ *  api refuses to start. docs/defence/02. */
+function parseOtpDemoDisplay(
+  value: string | undefined,
+  nodeEnv: Config["nodeEnv"],
+  showInProduction: string | undefined,
+): boolean {
+  const on = value === "true";
+  if (on && nodeEnv === "production" && showInProduction !== "true") {
+    throw new Error(
+      "loadConfig: OTP_DEMO_DISPLAY must not be set when NODE_ENV=production (unless OTP_SHOW_IN_PRODUCTION=true: hosted demo only)",
     );
   }
   return on;
@@ -329,7 +354,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     otpCodeLength: parseIntEnv(env.OTP_CODE_LENGTH, 6),
     otpMaxAttempts: parseIntEnv(env.OTP_MAX_ATTEMPTS, 5),
     otpDevExpose: parseOtpDevExpose(env.OTP_DEV_EXPOSE, nodeEnv, env.OTP_SHOW_IN_PRODUCTION),
-    otpDemoDisplay: parseBoolEnv(env.OTP_DEMO_DISPLAY, false),
+    otpDemoDisplay: parseOtpDemoDisplay(env.OTP_DEMO_DISPLAY, nodeEnv, env.OTP_SHOW_IN_PRODUCTION),
     otpLogFile: env.OTP_LOG_FILE || undefined,
     loginMaxFailures: parseIntEnv(env.LOGIN_MAX_FAILURES, 10),
     // Off unless set: behind a proxy without TRUST_PROXY every client shares
@@ -381,6 +406,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
 
     checkoutBaseUrl: env.CHECKOUT_BASE_URL ?? "http://localhost:5173",
     paymentLinkReservationTimeoutSeconds: parseIntEnv(env.PAYMENT_LINK_RESERVATION_TIMEOUT_SECONDS, 60),
+    paymentLinkMaxAttempts: parseIntEnv(env.PAYMENT_LINK_MAX_ATTEMPTS, 10),
+    paymentLinkAttemptWindowMinutes: parseIntEnv(env.PAYMENT_LINK_ATTEMPT_WINDOW_MINUTES, 10),
 
     // No built-in fallback: a key that ships in the repo protects nothing.
     webhookSecretEncryptionKey: parseWebhookSecretEncryptionKey(env.WEBHOOK_SECRET_ENCRYPTION_KEY),

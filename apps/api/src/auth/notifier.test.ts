@@ -24,3 +24,12 @@ test("admin OTP: the code is logged only when otpDevExpose is on", () => {
   sendAdminOtpCode(off.logger, { otpDevExpose: false }, { adminUserId: "a", email: "e" }, "654321");
   assert.equal(JSON.stringify(off.lines).includes("654321"), false);
 });
+
+test("in production the code never reaches the log, even with the demo switches on (docs/defence/05)", () => {
+  const merchant = capture();
+  sendOtpCode(merchant.logger, { otpDevExpose: true, nodeEnv: "production" }, { merchantUserId: "u", email: "e" }, "111222");
+  assert.equal(JSON.stringify(merchant.lines).includes("111222"), false);
+  const admin = capture();
+  sendAdminOtpCode(admin.logger, { otpDevExpose: true, nodeEnv: "production" }, { adminUserId: "a", email: "e" }, "333444");
+  assert.equal(JSON.stringify(admin.lines).includes("333444"), false);
+});
