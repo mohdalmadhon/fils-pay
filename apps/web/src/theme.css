@@ -157,6 +157,93 @@
   --shadow-pop: 0 20px 50px -14px rgba(8, 10, 40, 0.7), 0 0 0 1px rgba(200, 205, 255, 0.08);
 }
 
+/* Blush ------------------------------------------------------------------
+ * Soft and editorial: a blush-to-peach page, warm white cards, black pill
+ * buttons and very large, heavy numbers (image 1 of the brief). Dark is a
+ * warm plum, not black, with blush buttons. Bricolage Grotesque for
+ * display type. */
+:root[data-design="blush"] {
+  color-scheme: light;
+  --font-display: "Bricolage Grotesque Variable", "Geist", system-ui, sans-serif;
+  --c-bg: #f6e3df;
+  --c-surface: #fff8f5;
+  --c-surface-2: #fbeeea;
+  --c-surface-3: #f2dcd6;
+  --c-line: #ecd3cc;
+  --c-line-2: #dcbab1;
+  --c-ink: #151314;
+  --c-ink-2: #3f3a3b;
+  --c-ink-3: #625a5b;
+  --c-ink-4: #a8999a;
+  --c-primary: #151314;
+  --c-primary-hover: #2e2a2b;
+  --c-on-primary: #fff8f5;
+  --c-accent: #e6a596;
+  --c-accent-ink: #8e3f3a;
+  --c-accent-soft: #f7d9d3;
+  --c-good: #1d6b43;
+  --c-good-soft: #dceee0;
+  --c-warn: #7a5000;
+  --c-warn-soft: #f6e5c4;
+  --c-danger: #a52a2a;
+  --c-danger-soft: #f8d8d4;
+  --c-neutral-soft: #efdcd6;
+  --c-focus: rgba(21, 19, 20, 0.3);
+  --c-scrim: rgba(40, 20, 25, 0.35);
+  --art-1: #e6c49b;
+  --art-2: #e6a596;
+  --art-3: #f2c6c2;
+  --art-4: #fbe3d1;
+  --art-5: #151314;
+  --hero-bg: #151314;
+  --hero-ink: #fff8f5;
+  --hero-ink-2: #e8d3cd;
+  --r-1: 8px;
+  --r-2: 14px;
+  --r-3: 22px;
+  --r-4: 32px;
+  --r-button: 999px;
+  --shadow-xs: 0 1px 2px rgba(80, 40, 40, 0.05);
+  --shadow-sm: 0 4px 14px -6px rgba(80, 40, 40, 0.12);
+  --shadow-pop: 0 24px 60px -20px rgba(80, 40, 40, 0.35);
+}
+
+:root[data-design="blush"][data-theme="night"] {
+  color-scheme: dark;
+  --c-bg: #2b2127;
+  --c-surface: #382b33;
+  --c-surface-2: #3e3039;
+  --c-surface-3: #4a3943;
+  --c-line: #4e3d47;
+  --c-line-2: #67525d;
+  --c-ink: #fbeee9;
+  --c-ink-2: #e8d3cd;
+  --c-ink-3: #c9b0aa;
+  --c-ink-4: #957d82;
+  --c-primary: #f2b8b0;
+  --c-primary-hover: #f7cbc5;
+  --c-on-primary: #2b2127;
+  --c-accent: #f2b8b0;
+  --c-accent-ink: #f5c9a0;
+  --c-accent-soft: #4d3a3c;
+  --c-good: #8fd9ae;
+  --c-good-soft: #2f3d36;
+  --c-warn: #f2cc85;
+  --c-warn-soft: #4a3d30;
+  --c-danger: #ff9e98;
+  --c-danger-soft: #4d3036;
+  --c-neutral-soft: #463640;
+  --c-focus: rgba(242, 184, 176, 0.5);
+  --c-scrim: rgba(20, 10, 15, 0.55);
+  --hero-bg: #f2c6c2;
+  --hero-ink: #2b2127;
+  --hero-ink-2: #5b4650;
+  --art-5: #fbeee9;
+  --shadow-xs: 0 1px 2px rgba(10, 4, 8, 0.3);
+  --shadow-sm: 0 4px 14px -6px rgba(10, 4, 8, 0.45);
+  --shadow-pop: 0 24px 60px -20px rgba(10, 4, 8, 0.7);
+}
+
 /* Halloween costume: a pixel-art Halloween night. Pumpkin orange, witch
  * purple and slime green on a purple-black sky; square pixel corners, hard
  * pixel shadows and a pixel font for headings. Set from the pumpkin button
