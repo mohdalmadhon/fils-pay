@@ -1,3 +1,5 @@
+import { recordKycReviewInTx } from "../onboarding/review.js";
+import { UnauthorizedError } from "../lib/errors.js";
 import type { Pool } from "pg";
 import { insertAdminAuditLog } from "../adminAudit/log.js";
 import { withTransaction } from "../db/withTransaction.js";
@@ -23,14 +25,21 @@ export async function bulkApproveMerchantsKyc(
   input: BulkApproveMerchantsKycInput,
 ): Promise<BulkApproveMerchantsKycResult> {
   return withTransaction(pool, async (client) => {
+    const reviewer = await client.query<{ email: string }>(
+      `SELECT email FROM admin_users WHERE id = $1`, [input.adminUserId]);
+    if (!reviewer.rows[0]) throw new UnauthorizedError("unauthenticated");
     const result = await client.query<{ id: string }>(
-      `UPDATE merchants
-          SET onboarding_status = 'approved', kyc_passed = true
-        WHERE id = ANY($1::uuid[])
-      RETURNING id`,
-      [input.merchantIds],
-    );
-    const approvedMerchantIds = result.rows.map((row) => row.id);
+      `SELECT id FROM merchants
+        WHERE id = ANY($1::uuid[]) AND onboarding_status = 'under_review'
+        ORDER BY id FOR UPDATE`, [input.merchantIds]);
+    const approvedMerchantIds: string[] = [];
+    for (const row of result.rows) {
+      await recordKycReviewInTx(client, {
+        merchantId: row.id, outcome: "approved", reviewerIdentifier: reviewer.rows[0].email,
+        reviewerAdminUserId: input.adminUserId, notes: input.notes,
+      });
+      approvedMerchantIds.push(row.id);
+    }
 
     await insertAdminAuditLog(client, {
       adminUserId: input.adminUserId,
