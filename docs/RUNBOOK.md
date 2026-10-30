@@ -51,6 +51,31 @@ SELECT filename FROM schema_migrations WHERE filename LIKE '005%' ORDER BY 1;
 `db/migrate.integration.test.ts` applies every migration to an empty
 database; run it before shipping a new migration.
 
+## `npm run migrate` says a migration "changed after it was applied"
+
+The runner stores a sha256 of every migration it applies
+(`schema_migrations.checksum`) and, before applying anything, checks every
+applied file still matches. If one was edited, it stops, names the file and
+applies nothing: this database ran the old text, so it no longer matches a
+new database built from the same files.
+
+1. See what changed: `git log -p -- db/migrations/<file>`.
+2. Usually: restore the file (`git checkout <last good commit> -- db/migrations/<file>`)
+   and put the change in a new, higher-numbered migration.
+3. If the edit is reviewed and harmless for databases that already ran it
+   (a comment, or a fix that makes the file idempotent like 0054/0055 above),
+   accept it once:
+
+   ```bash
+   MIGRATE_ACCEPT_CHANGED=<file>[,<file>...] npm run migrate
+   ```
+
+   The new checksum is recorded and later runs need no flag.
+
+Line endings don't count: a Windows checkout with `core.autocrlf` has the same
+checksum. Databases migrated before checksums existed record each file's
+current checksum on their next run (`RECORD` lines in the output).
+
 ## Is the money flow healthy end to end?
 
 `node scripts/e2e/payment-check.mjs` (see `docs/verification/`) takes one

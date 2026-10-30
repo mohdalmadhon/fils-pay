@@ -73,6 +73,12 @@ reference. If the code behaves differently from what the docs describe,
 - New coverage goes in new tests. CI (`.github/workflows/ci.yml`) must stay
   green.
 
+## Migrations
+
+- Never edit a migration that has been applied anywhere; add a new one.
+  `npm run migrate` stores a checksum per applied file and refuses to run if
+  one changed (`docs/RUNBOOK.md` has the recovery steps).
+
 ## Security
 
 Corrected 2026-10-30 after the security review (`docs/cyper/`). The two

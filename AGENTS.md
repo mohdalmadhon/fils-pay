@@ -31,6 +31,9 @@ silently changing `packages/money` and breaking the settlement reconciliation.
   exception is a test that asserts what an accepted ADR, a fix report or
   ARCHITECTURE says is wrong (several did, and kept the suite red; see
   `docs/improvements/01-02`). Change it in its own commit and record why.
+- Applied migrations (`db/migrations/*.sql`): add a new file instead.
+  `npm run migrate` checks each applied file's checksum and stops if one
+  changed.
 
 ### Settlement
 
