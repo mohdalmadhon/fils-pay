@@ -6,6 +6,7 @@ import { router } from "./router.js";
 import { initTheme } from "./components/kit/theme.js";
 import { HalloweenToggle, initCostume } from "./components/kit/Halloween.js";
 // Display faces for the three designs. Each only downloads when used.
+import "@fontsource/liter/latin-400.css";
 import "@fontsource-variable/unbounded/index.css";
 import "@fontsource-variable/bricolage-grotesque/index.css";
 import "@fontsource-variable/lexend/index.css";

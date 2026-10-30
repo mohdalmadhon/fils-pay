@@ -4,10 +4,10 @@
  * light and dark mode by itself. One component holds all three; CSS shows
  * the one for the current design (data-design on <html>).
  *
- *   Carnival  bold geometric shapes: half-discs, a diamond, a triangle,
- *             a quarter-circle with a dot, like a festival poster
- *   Blush     soft overlapping blobs and a sand-coloured card
- *   Slate     a line chart with a dot grid, drawn in strokes
+ *   Orchid    bold geometric shapes: half-discs, a diamond, a triangle,
+ *             a quarter-circle with a dot, like a poster
+ *   Saffron   soft overlapping blobs and a card
+ *   Lagoon    a line chart with a dot grid, drawn in strokes
  *   Halloween shown instead of all three in the costume: a moon, a
  *             haunted house on its hill, bats, a ghost and pumpkins
  *
@@ -21,7 +21,7 @@ export function DesignArt({ className }: { className?: string }) {
       aria-hidden
       focusable={false}
     >
-      <g className="fp-art-carnival">
+      <g className="fp-art-orchid">
         {/* A large disc split into mint and sun halves. */}
         <path className="a3" d="M190 30a80 80 0 0 0 0 160Z" />
         <path className="a1" d="M190 30a80 80 0 0 1 0 160Z" />
@@ -39,7 +39,7 @@ export function DesignArt({ className }: { className?: string }) {
         <path className="a1 stroke" d="M262 132c14 6 22 18 24 34" />
       </g>
 
-      <g className="fp-art-blush">
+      <g className="fp-art-saffron">
         <path className="a2" d="M210 20c48 0 92 30 92 76s-40 70-86 70-88-22-88-64 34-82 82-82Z" />
         <path className="a1" d="M80 70c38-8 76 14 78 52s-26 66-66 70-74-22-74-58 24-56 62-64Z" />
         <circle className="a3" cx="270" cy="170" r="30" />
@@ -54,7 +54,7 @@ export function DesignArt({ className }: { className?: string }) {
         <circle className="a5" cx="300" cy="96" r="3" />
       </g>
 
-      <g className="fp-art-slate">
+      <g className="fp-art-lagoon">
         {/* A dot grid, as in the brief's image 3. */}
         <g className="a3">
           {[0, 1, 2, 3, 4].flatMap((row) =>

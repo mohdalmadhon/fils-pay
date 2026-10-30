@@ -71,106 +71,121 @@
   --control-h-lg: 44px;
 }
 
-/* Carnival --------------------------------------------------------------
- * A festival poster: indigo ink, with sun, rose, mint and peach shapes.
- * Light is a lavender page; dark is a clear indigo, never black. Pill
- * buttons and generous rounding. Unbounded for display type. */
+/* Orchid -----------------------------------------------------------------
+ * The default. Violet ink and actions with lime highlights and magenta in
+ * its art; a soft lilac page in light, and in dark a deep violet-black,
+ * dark but never flat grey. Pill buttons with a violet-to-magenta action
+ * gradient. Liter, the display face from Orbit, at its one weight. */
 :root,
-:root[data-design="carnival"] {
-  --hero-action-bg: #ffb42e;
-  --hero-action-ink: #151a52;
-  --side-bg: #1f2672;
-  --side-surface: #283090;
-  --side-surface-3: #323ba3;
-  --side-line: #3b45ad;
-  --side-ink: #f6f5ff;
-  --side-ink-2: #d9dbfa;
-  --side-ink-3: #bfc3f2;
-  --side-active-bg: #ffb42e;
-  --side-active-ink: #151a52;
+:root[data-design="orchid"] {
   color-scheme: light;
-  --font-display: "Unbounded Variable", "Geist", system-ui, sans-serif;
-  --display-tracking: -0.01em; /* Unbounded is wide already */
-  --display-weight: 600;
-  --c-bg: #eceafb;
-  --c-surface: #f8f7ff;
-  --c-surface-2: #f2f0fd;
-  --c-surface-3: #e3e0f7;
-  --c-line: #d9d6f2;
-  --c-line-2: #bdb8e6;
-  --c-ink: #151a52;
-  --c-ink-2: #3a3f7a;
-  --c-ink-3: #5a5e93;
-  --c-ink-4: #8f92c0;
-  --c-primary: #2b34b8;
-  --c-primary-hover: #3a44cc;
+  --font-display: "Liter", "Geist", system-ui, sans-serif;
+  --display-tracking: -0.015em;
+  --display-weight: 400;
+  --c-bg: #ece8f4;
+  --c-surface: #f7f5fb;
+  --c-surface-2: #f1eef7;
+  --c-surface-3: #e4def0;
+  --c-ink: #1d1430;
+  --c-ink-2: #43385a;
+  --c-ink-3: #5c5274;
+  --c-primary: #6236c9;
+  --c-primary-hover: #5229b2;
   --c-on-primary: #ffffff;
-  --c-accent: #ffb42e;
-  --c-accent-ink: #8a4b00;
-  --c-accent-soft: #fff0d4;
-  --c-good: #05744b;
-  --c-good-soft: #d6f5e7;
-  --c-warn: #8a5300;
-  --c-warn-soft: #ffefcc;
-  --c-danger: #c0123f;
-  --c-danger-soft: #ffe0e7;
-  --c-neutral-soft: #e6e4f8;
-  --c-focus: rgba(43, 52, 184, 0.4);
-  --c-scrim: rgba(21, 26, 82, 0.45);
-  /* The shapes in the art (overview band, sign-in, empty states). */
-  --art-1: #ffb42e;
-  --art-2: #ff3d68;
-  --art-3: #07c983;
-  --art-4: #ffc8c8;
-  --art-5: #2b34b8;
-  --hero-bg: #1f2672;
-  --hero-ink: #ffffff;
-  --hero-ink-2: #d9dbfa;
+  --c-accent-ink: #4f6400;
+  --c-accent-soft: #ecf7c8;
+  --c-good: #16704a;
+  --c-good-soft: #d8f0e3;
+  --c-warn: #835400;
+  --c-warn-soft: #f7e8c8;
+  --c-danger: #b4234f;
+  --c-danger-soft: #f8dce6;
+  --c-neutral-soft: #e6e0f1;
+  --c-line: #ddd6ea;
+  --c-line-2: #c4b9d9;
+  --c-ink-4: #9a90b0;
+  --c-accent: #c6f04a;
+  --c-input: #e4def0;
+  --c-focus: rgba(98, 54, 201, 0.35);
+  --c-scrim: rgba(29, 20, 48, 0.45);
+  --gradient-action: linear-gradient(120deg, #7b4be0, #e0479e);
+  --art-1: #c6f04a;
+  --art-2: #e0479e;
+  --art-3: #a98bff;
+  --art-4: #cdb8ff;
+  --art-5: #6236c9;
+  --side-bg: #1d1430;
+  --side-surface: #291e42;
+  --side-surface-3: #33264f;
+  --side-ink: #f3effb;
+  --side-ink-2: #d5cbea;
+  --side-ink-3: #b9addb;
+  --side-active-bg: #c6f04a;
+  --side-active-ink: #1d1430;
+  --hero-bg: #2a1650;
+  --hero-ink: #f7f5fb;
+  --hero-ink-2: #d5cbea;
+  --hero-action-bg: #c6f04a;
+  --hero-action-ink: #1d1430;
+  --side-line: color-mix(in srgb, #f3effb 14%, transparent);
   --r-1: 6px;
   --r-2: 10px;
   --r-3: 16px;
-  --r-4: 24px;
+  --r-4: 22px;
   --r-button: 999px;
-  --shadow-xs: 0 1px 1px rgba(21, 26, 82, 0.05);
-  --shadow-sm: 0 2px 6px rgba(21, 26, 82, 0.08);
-  --shadow-pop: 0 18px 44px -14px rgba(21, 26, 82, 0.35), 0 2px 6px rgba(21, 26, 82, 0.08);
+  --shadow-xs: 0 1px 1px rgba(29, 20, 48, 0.05);
+  --shadow-sm: 0 2px 8px -2px rgba(29, 20, 48, 0.12);
+  --shadow-pop: 0 20px 50px -18px rgba(29, 20, 48, 0.4), 0 2px 6px rgba(29, 20, 48, 0.08);
 }
 
 :root:not([data-design])[data-theme="night"],
-:root[data-design="carnival"][data-theme="night"] {
-  --side-bg: #171d5e;
-  --side-surface: #222a85;
-  --side-surface-3: #2b3496;
+:root[data-design="orchid"][data-theme="night"] {
   color-scheme: dark;
-  --c-bg: #1f2672;
-  --c-surface: #283090;
-  --c-surface-2: #2d3699;
-  --c-surface-3: #353fa8;
-  --c-line: #3b45ad;
-  --c-line-2: #5059c0;
-  --c-ink: #f6f5ff;
-  --c-ink-2: #d9dbfa;
-  --c-ink-3: #bfc3f2;
-  --c-ink-4: #8a90d6;
-  --c-primary: #ffb42e;
-  --c-primary-hover: #ffc456;
-  --c-on-primary: #151a52;
-  --c-accent: #ffb42e;
-  --c-accent-ink: #ffc65c;
-  --c-accent-soft: #3b3a83;
-  --c-good: #5fe3a6;
-  --c-good-soft: #244a86;
-  --c-warn: #ffd06b;
-  --c-warn-soft: #3d3a7e;
-  --c-danger: #ff8aa6;
-  --c-danger-soft: #40307f;
-  --c-neutral-soft: #323ba2;
-  --c-focus: rgba(255, 180, 46, 0.55);
-  --c-scrim: rgba(10, 12, 50, 0.6);
-  --hero-bg: #151a52;
-  --shadow-xs: 0 1px 1px rgba(8, 10, 40, 0.3);
-  --shadow-sm: 0 2px 6px rgba(8, 10, 40, 0.35);
-  --shadow-pop: 0 20px 50px -14px rgba(8, 10, 40, 0.7), 0 0 0 1px rgba(200, 205, 255, 0.08);
+  --c-bg: #0f0b18;
+  --c-surface: #171226;
+  --c-surface-2: #1c162e;
+  --c-surface-3: #241c3a;
+  --c-ink: #f3effb;
+  --c-ink-2: #cfc6e6;
+  --c-ink-3: #a89dc6;
+  --c-primary: #a98bff;
+  --c-primary-hover: #bba3ff;
+  --c-on-primary: #140c26;
+  --c-accent-ink: #d4f56e;
+  --c-accent-soft: #232a17;
+  --c-good: #5ee0a0;
+  --c-good-soft: #10291f;
+  --c-warn: #ffc857;
+  --c-warn-soft: #2a2210;
+  --c-danger: #ff7a9c;
+  --c-danger-soft: #2e1220;
+  --c-neutral-soft: #241c3a;
+  --c-line: #2c2345;
+  --c-line-2: #3d3260;
+  --c-ink-4: #6f6590;
+  --c-accent: #c6f04a;
+  --c-input: #1c162e;
+  --c-focus: rgba(169, 139, 255, 0.5);
+  --c-scrim: rgba(29, 20, 48, 0.7);
+  --gradient-action: linear-gradient(120deg, #a98bff, #e0479e);
+  --art-5: #f3effb;
+  --side-bg: #0a0711;
+  --side-surface: #151021;
+  --side-surface-3: #1e172e;
+  --side-ink: #f3effb;
+  --side-ink-2: #cfc6e6;
+  --side-ink-3: #a89dc6;
+  --side-active-bg: #c6f04a;
+  --side-active-ink: #140c26;
+  --hero-bg: #21123f;
+  --hero-ink: #f7f5fb;
+  --hero-ink-2: #d5cbea;
+  --hero-action-bg: #c6f04a;
+  --hero-action-ink: #140c26;
+  --side-line: color-mix(in srgb, #f3effb 14%, transparent);
+  --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.6);
+  --shadow-pop: 0 24px 60px -18px rgba(0, 0, 0, 0.85), 0 0 0 1px color-mix(in srgb, #f3effb 7%, transparent);
 }
 
 /* Blush ------------------------------------------------------------------
@@ -178,7 +193,7 @@
  * buttons and very large, heavy numbers (image 1 of the brief). Dark is a
  * warm plum, not black, with blush buttons. Bricolage Grotesque for
  * display type. */
-:root[data-design="blush"] {
+:root[data-design="saffron"] {
   --hero-action-bg: #f2c6c2;
   --hero-action-ink: #151314;
   --side-bg: #fbeee9;
@@ -237,7 +252,7 @@
   --shadow-pop: 0 24px 60px -20px rgba(80, 40, 40, 0.35);
 }
 
-:root[data-design="blush"][data-theme="night"] {
+:root[data-design="saffron"][data-theme="night"] {
   --hero-action-bg: #2b2127;
   --hero-action-ink: #fbeee9;
   --side-bg: #33272e;
@@ -289,7 +304,7 @@
  * line illustrations and a dot grid (image 3 of the brief). Tighter
  * corners and squarer buttons than the other two. Dark is a mid slate
  * (#26324d), clearly lighter than night-black. Lexend for display type. */
-:root[data-design="slate"] {
+:root[data-design="lagoon"] {
   --hero-action-bg: #ff6b6b;
   --hero-action-ink: #1e2a46;
   --side-bg: #2f3d5c;
@@ -348,7 +363,7 @@
   --shadow-pop: 0 16px 40px -12px rgba(30, 42, 70, 0.35);
 }
 
-:root[data-design="slate"][data-theme="night"] {
+:root[data-design="lagoon"][data-theme="night"] {
   --side-bg: #1f2a44;
   --side-surface: #2a3756;
   --side-surface-3: #334264;
@@ -554,9 +569,9 @@ h1 {
   display: none;
 }
 
-:is(:root[data-design="carnival"], :root:not([data-design])):not([data-costume="halloween"]) .fp-art-carnival,
-:root[data-design="blush"]:not([data-costume="halloween"]) .fp-art-blush,
-:root[data-design="slate"]:not([data-costume="halloween"]) .fp-art-slate,
+:is(:root[data-design="orchid"], :root:not([data-design])):not([data-costume="halloween"]) .fp-art-orchid,
+:root[data-design="saffron"]:not([data-costume="halloween"]) .fp-art-saffron,
+:root[data-design="lagoon"]:not([data-costume="halloween"]) .fp-art-lagoon,
 :root[data-costume="halloween"] .fp-art-halloween {
   display: inline;
 }
@@ -649,7 +664,7 @@ h1 {
 }
 
 /* The card picture on checkout, in each design's colours. */
-:root[data-design="carnival"]:not([data-costume="halloween"]) .checkout-card,
+:root[data-design="orchid"]:not([data-costume="halloween"]) .checkout-card,
 :root:not([data-design]):not([data-costume="halloween"]) .checkout-card {
   color: #ffffff;
   /* Shapes kept to the right edge, softened, so the card's text stays clear. */
@@ -660,18 +675,18 @@ h1 {
     #2b34b8;
 }
 
-:root[data-design="blush"]:not([data-costume="halloween"]) .checkout-card {
+:root[data-design="saffron"]:not([data-costume="halloween"]) .checkout-card {
   color: #3b2a1a;
   background:
     radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.55), transparent 55%),
     linear-gradient(135deg, #f0d6b4, #e6c49b 55%, #d9ae7f);
 }
 
-:root[data-design="blush"]:not([data-costume="halloween"]) :is(.checkout-card-brand, .checkout-card-bottom) {
+:root[data-design="saffron"]:not([data-costume="halloween"]) :is(.checkout-card-brand, .checkout-card-bottom) {
   color: rgba(59, 42, 26, 0.75);
 }
 
-:root[data-design="slate"]:not([data-costume="halloween"]) .checkout-card {
+:root[data-design="lagoon"]:not([data-costume="halloween"]) .checkout-card {
   color: #f1f4fa;
   background:
     linear-gradient(180deg, transparent 62%, #ff6b6b 62% 66%, transparent 66%),
@@ -971,7 +986,7 @@ h1 {
 
 /* Page backdrops. Carnival and Slate get a dot grid in the top corner
  * (from the brief's images 2 and 3); Blush a blush-to-peach wash. */
-:is(:root[data-design="carnival"], :root:not([data-design]), :root[data-design="slate"]):not([data-costume="halloween"]) body::before {
+:is(:root[data-design="orchid"], :root:not([data-design]), :root[data-design="lagoon"]):not([data-costume="halloween"]) body::before {
   content: "";
   position: fixed;
   top: 0;
@@ -985,7 +1000,7 @@ h1 {
   opacity: 0.8;
 }
 
-:root[data-design="blush"]:not([data-costume="halloween"]) body {
+:root[data-design="saffron"]:not([data-costume="halloween"]) body {
   background:
     radial-gradient(900px 520px at 0% 0%, color-mix(in srgb, var(--art-2) 45%, transparent), transparent 70%),
     radial-gradient(800px 600px at 100% 100%, color-mix(in srgb, var(--art-1) 35%, transparent), transparent 70%),
