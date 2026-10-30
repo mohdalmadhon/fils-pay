@@ -130,12 +130,12 @@ export async function processRefund(
     // The fee this transaction was actually charged, read from the ledger
     // rather than recomputed from the merchant's current mdr_bps, so a rate
     // change after capture can never retroactively alter what a refund
-    // reverses. "Actually charged" is net of the negotiated discount: a
-    // capture credits the full MDR to platform_fee_revenue, and
-    // applyCaptureDiscountAdjustment then debits the merchant's discount back
-    // out of it. Summing only the credits (as this used to) reversed the
-    // discounted part a second time, so a merchant with a discount got back
-    // more fee than they ever paid. Earlier refunds' own fee reversals are
+    // reverses. "Actually charged" is net of the negotiated discount. New
+    // captures post the discounted fee directly; captures made before
+    // docs/improvements/06 posted the full MDR and then a separate
+    // "capture: negotiated discount adjustment" debit. Netting credits and
+    // debits handles both. Summing only the credits (as this used to)
+    // reversed the discounted part a second time. Earlier refunds' own fee reversals are
     // excluded here; they are accounted for by the proportion below.
     const feeResult = await client.query<{ fee_fils: string }>(
       `SELECT COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount_fils ELSE -amount_fils END), 0)::text AS fee_fils
