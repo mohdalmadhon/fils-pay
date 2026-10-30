@@ -25,3 +25,4 @@ more detail, with how to reproduce it.
 | [005](005-capture-after-authorization-expired.md) | An authorization can still be captured after its 7-day hold has lapsed | API: payments | Medium |
 | [006](006-recapture-after-refund-wrong-status.md) | Capturing the rest of a payment after a refund marks it 'captured' and forgets the refund | API: payments | Low |
 | [007](007-refund-rest-of-spent-partial-capture-wrong-error.md) | Refunding "the rest" of a fully refunded partial capture answers "bad amount" instead of "not refundable" | API: refunds | Low |
+| [008](008-malformed-amounts-and-cards-500.md) | Malformed amounts or card details on authorize, capture and checkout return a 500 | API: payments | Low |

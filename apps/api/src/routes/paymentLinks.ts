@@ -10,6 +10,7 @@ import { payPaymentLink } from "../paymentLinks/pay.js";
 import { cancelPaymentLink } from "../paymentLinks/cancel.js";
 import { listPaymentLinks } from "../paymentLinks/query.js";
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../lib/errors.js";
+import { parseCardInput } from "../lib/paymentInput.js";
 import type { SimulatedCardInput } from "../acquirer/types.js";
 import { parseLimitParam } from "../lib/queryParams.js";
 
@@ -156,10 +157,7 @@ export async function paymentLinkPublicRoutes(app: FastifyInstance): Promise<voi
 
   app.post<{ Params: TokenParams; Body: PayPaymentLinkBody }>("/:token/pay", async (request, reply) => {
     const idempotencyKey = getIdempotencyKey(request);
-    const { card } = request.body ?? {};
-    if (!card) {
-      throw new BadRequestError("invalid_request", "card is required");
-    }
+    const card = parseCardInput(request.body?.card);
 
     const result = await payPaymentLink(
       app.db,

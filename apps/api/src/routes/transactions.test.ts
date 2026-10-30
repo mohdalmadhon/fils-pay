@@ -339,3 +339,29 @@ test("POST /v1/refunds returns 501 not_implemented", async () => {
   assert.equal(res.statusCode, 501, res.body);
   assert.equal(res.json().error, "not_implemented");
 });
+
+test("malformed amounts and cards are a 400, not a 500 (docs/bugs/008)", async () => {
+  const { rawKey } = await createApprovedMerchantWithApiKey("bad-input");
+  const authorizeWith = (payload: object) =>
+    app.inject({
+      method: "POST",
+      url: "/v1/transactions",
+      headers: { ...authHeader(rawKey), "idempotency-key": randomUUID() },
+      payload,
+    });
+  const card = { pan: "4242424242424242", expiryMonth: 12, expiryYear: 2030, cvv: "123" };
+  for (const amountFils of [0, -1, 1.5, "100"]) {
+    const res = await authorizeWith({ amountFils, card });
+    assert.equal(res.statusCode, 400, `amountFils ${JSON.stringify(amountFils)}: ${res.body}`);
+  }
+  for (const bad of [{}, { ...card, pan: 4242 }, { ...card, expiryMonth: 13 }, { ...card, cvv: 123 }]) {
+    const res = await authorizeWith({ amountFils: 1_000, card: bad });
+    assert.equal(res.statusCode, 400, `card ${JSON.stringify(bad)}: ${res.body}`);
+  }
+
+  const txn = await authorize(rawKey, 5_000);
+  for (const amountFils of [0, -1, 1.5, "100"]) {
+    const res = await capture(rawKey, txn.id, { amountFils } as unknown as { amountFils: number });
+    assert.equal(res.statusCode, 400, `capture amountFils ${JSON.stringify(amountFils)}: ${res.body}`);
+  }
+});

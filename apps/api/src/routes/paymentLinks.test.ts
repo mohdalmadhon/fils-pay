@@ -368,3 +368,14 @@ test(
     assert.equal(finalLink.rows[0]!.transaction_id, txnId);
   },
 );
+
+test("paying with a malformed card is a 400 and leaves the link payable (docs/bugs/008)", async () => {
+  const { rawKey, merchantId } = await createApprovedMerchantWithApiKey("bad-card");
+  const link = await createLink(rawKey, merchantId, { amountFils: 4_750 });
+  const bad = await pay(link.token, {} as typeof APPROVED_CARD);
+  assert.equal(bad.statusCode, 400, bad.body);
+  const read = await getPublicLink(link.token);
+  assert.equal(read.json().status, "active");
+  const good = await pay(link.token, APPROVED_CARD);
+  assert.equal(good.statusCode, 200, good.body);
+});

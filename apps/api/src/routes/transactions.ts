@@ -1,5 +1,4 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { toFils } from "@filspay/money";
 import { requireApiKey } from "../apiKeys/verify.js";
 import { requireMerchantAuth, requireMerchantRole, requireMerchantWriterActor } from "../auth/requireMerchantAuth.js";
 import { authorizeTransaction, type AuthorizeInput } from "../payments/authorize.js";
@@ -11,6 +10,7 @@ import { listTransactionEvents } from "../transactions/events.js";
 import { BadRequestError, NotFoundError } from "../lib/errors.js";
 import type { SimulatedCardInput } from "../acquirer/types.js";
 import { parseLimitParam } from "../lib/queryParams.js";
+import { parseCardInput, parsePositiveFils } from "../lib/paymentInput.js";
 
 interface AuthorizeBody {
   amountFils?: number;
@@ -76,8 +76,8 @@ export async function transactionRoutes(app: FastifyInstance): Promise<void> {
 
       const input: AuthorizeInput = {
         merchantId: request.apiKeyAuth!.merchantId,
-        amountFils: toFils(amountFils),
-        card,
+        amountFils: parsePositiveFils(amountFils, "amountFils"),
+        card: parseCardInput(card),
         reference,
         idempotencyKey,
         actor: { type: "merchant_api_key", id: request.apiKeyAuth!.apiKeyId },
@@ -101,7 +101,7 @@ export async function transactionRoutes(app: FastifyInstance): Promise<void> {
       const result = await captureTransaction(app.db, app.acquirer, {
         transactionId: request.params.id,
         merchantId: request.merchantAuth!.merchantId,
-        amountFils: amountFils !== undefined ? toFils(amountFils) : undefined,
+        amountFils: amountFils !== undefined ? parsePositiveFils(amountFils, "amountFils") : undefined,
         idempotencyKey,
         actor: requireMerchantWriterActor(request.merchantAuth!),
       });
