@@ -104,3 +104,14 @@ test("reactivating the merchant makes the link payable again", async () => {
   assert.equal((await read(token)).json().status, "active");
   assert.equal((await pay(token)).statusCode, 200);
 });
+
+test("a payment already in flight still reads as processing after a suspension, not 'nothing was taken'", async () => {
+  const { merchantId, token } = await merchantWithLink();
+  // As pay.ts leaves it between the claim and the capture.
+  await pool.query(
+    `UPDATE payment_links SET status = 'reserved', reserved_at = now(), reservation_token = $2 WHERE token = $1`,
+    [token, randomUUID()],
+  );
+  await setStatus(merchantId, "suspended");
+  assert.equal((await read(token)).json().status, "processing");
+});
