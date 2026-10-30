@@ -39,6 +39,12 @@ export async function createPaymentLink(
   } catch (err) {
     throw new BadRequestError("invalid_amount", err instanceof Error ? err.message : String(err));
   }
+  // toFils accepts 0, but payment_links has CHECK (amount_fils > 0), so a
+  // zero amount used to reach the INSERT and come back as a 500.
+  // docs/bugs/009.
+  if (amountFils <= 0) {
+    throw new BadRequestError("invalid_amount", "amountFils must be more than 0");
+  }
 
   const expiresAtDate = new Date(input.expiresAt);
   if (Number.isNaN(expiresAtDate.getTime()) || expiresAtDate.getTime() <= Date.now()) {

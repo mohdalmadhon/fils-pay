@@ -26,3 +26,4 @@ more detail, with how to reproduce it.
 | [006](006-recapture-after-refund-wrong-status.md) | Capturing the rest of a payment after a refund marks it 'captured' and forgets the refund | API: payments | Low |
 | [007](007-refund-rest-of-spent-partial-capture-wrong-error.md) | Refunding "the rest" of a fully refunded partial capture answers "bad amount" instead of "not refundable" | API: refunds | Low |
 | [008](008-malformed-amounts-and-cards-500.md) | Malformed amounts or card details on authorize, capture and checkout return a 500 | API: payments | Low |
+| [009](009-zero-amount-payment-link-500.md) | Creating a payment link for 0 fils returns a 500 | API: payment links | Low |

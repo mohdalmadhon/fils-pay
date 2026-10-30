@@ -379,3 +379,15 @@ test("paying with a malformed card is a 400 and leaves the link payable (docs/bu
   const good = await pay(link.token, APPROVED_CARD);
   assert.equal(good.statusCode, 200, good.body);
 });
+
+test("a payment link for 0 fils is a 400 invalid_amount, not a 500 (docs/bugs/009)", async () => {
+  const { rawKey, merchantId } = await createApprovedMerchantWithApiKey("zero-link");
+  const res = await app.inject({
+    method: "POST",
+    url: `/v1/merchants/${merchantId}/payment-links`,
+    headers: authHeader(rawKey),
+    payload: { amountFils: 0, expiresAt: new Date(Date.now() + 3_600_000).toISOString() },
+  });
+  assert.equal(res.statusCode, 400, res.body);
+  assert.equal(res.json().error, "invalid_amount");
+});
