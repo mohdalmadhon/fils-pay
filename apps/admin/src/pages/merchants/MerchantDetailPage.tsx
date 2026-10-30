@@ -11,6 +11,7 @@ import { useAdminAuth } from "../../auth/AdminAuthContext.js";
 import { RequireRole } from "../../auth/RequireRole.js";
 import { bahrainToday } from "../../bahrainDate.js";
 import { openInNewTab } from "../../utils/openTab.js";
+import { feeReversalLabel } from "./feeReversalLabel.js";
 import type { AdminMerchantDetail, CreditReasonCode, RotatedApiKey } from "../../types.js";
 
 function bhd(fils: number): string {
@@ -398,7 +399,7 @@ export function MerchantDetailPage() {
               checked={creditReverseFee}
               onChange={(e) => setCreditReverseFee(e.target.checked)}
             />{" "}
-            Also reverse the MDR on this amount ({(merchant.mdrBps / 100).toFixed(2)}%)
+            {feeReversalLabel(detail)}
           </label>
           <label>
             Memo (optional)
