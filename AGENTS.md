@@ -56,11 +56,25 @@ silently changing `packages/money` and breaking the settlement reconciliation.
 
 ### Auth & security
 
-- `Math.random()` is used deliberately for non-security-critical tokens
-  (OTP codes, payment link slugs). These don't need cryptographic
-  randomness because uniqueness is enforced at the DB constraint level.
-- The `displayName` comparison in `creditApproval.ts` matches the audit
-  log format intentionally — see the inline JSDoc.
+Corrected 2026-10-30 after the security review (`docs/cyper/README.md`).
+The two notes that used to be here were wrong, and following them would
+undo fixes.
+
+- OTP codes and payment link tokens are **secrets**, not "non-security-
+  critical tokens": whoever holds one can finish a login or pay a link. A
+  unique constraint stops collisions, not guessing. They come from
+  `apps/api/src/lib/random.ts` (`node:crypto`), and so must anything new
+  like them. `scripts/repoHygiene.test.ts` fails on new `Math.random()`
+  calls.
+- Two-person credit approval compares **admin user ids**, not display names
+  (`creditApproval.ts`). Display names are free text and not unique.
+- Every merchant write route needs `requireMerchantRole(...)`; it is what
+  keeps "view as merchant" read-only. Look a merchant user up by
+  `(merchant_id, email)`, never by email alone.
+- Security fixes can make an existing test wrong when that test asserted the
+  insecure behaviour (one asserted that the public payment-link read returned
+  the API key prefix). Change such a test, and say so in the fix report under
+  `docs/cyper/`.
 
 ### Database
 
