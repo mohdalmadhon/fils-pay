@@ -96,13 +96,19 @@ earlier (see `docs/fixes`, `docs/cyper`, `docs/improvements`), or not a bug.
 | [090](090-seed-docs-say-empty-database-only.md) | The deploy docs say SEED=1 only loads into an empty database | Docs: deploy | Low |
 | [091](091-seeded-fees-ignore-seeded-fee-schedules.md) | The demo data charges Alpha Retail 2.50% while its fee schedule says less | DB: seed | Low |
 
-## Needs a decision (not changed)
+## Known limitation (kept on purpose)
 
 - **A refund larger than a day's payout.** Since bug 022, refunds come off
-  payouts, but a payout can't go below zero, so a refund bigger than any
-  single day's net waits (and `merchant_payable` stays negative) until a
-  large enough batch arrives. Collecting that money another way is a
-  product decision.
+  payouts. A payout can't go below zero (a bank transfer can't take money
+  back), so a refund bigger than a day's net is carried forward and taken
+  off the next batch that is big enough. Until then `merchant_payable`
+  stays negative, which is the true position. This is the usual way
+  acquirers handle it, so it was kept. Collecting the money another way (an
+  invoice, a direct debit) would be a new feature.
+
+The two reports first left for a decision were decided and fixed: the
+March sweep now uses the Bahrain month (017, ADR 0009), and big adjustment
+imports need a second admin (053).
 
 ## Checked and not bugs
 
