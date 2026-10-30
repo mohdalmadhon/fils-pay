@@ -21,6 +21,7 @@ import { reportingRoutes } from "./routes/reporting.js";
 import { adminRoutes, type AdminRoutesOptions } from "./routes/admin.js";
 import { acquirerCallbackRoutes } from "./routes/acquirerCallbacks.js";
 import { createFetchTransport, type WebhookTransport } from "./webhooks/transport.js";
+import { requestLogSerializer } from "./lib/logRedaction.js";
 
 export interface BuildAppOptions {
   /** Test seam for the admin plane's cross-process settlement calls only —
@@ -40,7 +41,12 @@ export interface BuildAppOptions {
  * tests use `app.inject(...)` against this — no real socket needed.
  */
 export function buildApp(config: Config, pool: Pool, options: BuildAppOptions = {}): FastifyInstance {
-  const app = Fastify({ logger: true, trustProxy: config.trustProxy });
+  const app = Fastify({
+    // Request lines go through requestLogSerializer so payment link tokens
+    // (bearer credentials for the public pay page) never reach the logs.
+    logger: { serializers: { req: requestLogSerializer } },
+    trustProxy: config.trustProxy,
+  });
 
   app.decorate("db", pool);
   app.decorate("config", config);
