@@ -25,3 +25,10 @@ test("a busy API's 503 keeps the form and says nothing was charged", () => {
   assert.equal(f.countsAsDecline, false);
   assert.match(f.message, /No payment was taken/);
 });
+
+test("a merchant that isn't approved yet ends the checkout with a clear message", () => {
+  const f = describePayFailure(403, { error: "merchant_not_approved" });
+  assert.equal(f.kind, "terminal");
+  assert.equal(f.countsAsDecline, false);
+  assert.equal(f.message, "This business can't accept payments yet. No payment was taken.");
+});
