@@ -34,6 +34,13 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
   database.
 
 ### Fixed
+- **Remaining capacity work:** index all branches of transaction search;
+  batch webhook creation, reporting receipts and adjustment-import details;
+  deliver to up to four independent webhook endpoints concurrently while
+  retaining each endpoint's queue order; buffer CSV without retaining all
+  decoded database rows. Compile the existing TypeScript services for Docker
+  and align the API limits with 0.5 vCPU / 512 MiB. Output comparisons,
+  measurements and migration 0084: `docs/perf/2026-10-30-remaining-capacity-fixes.md`.
 - **Capacity follow-up:** bulk KYC and status recompute batch their writes;
   capture posts gross/fee legs together.
   Preserves review/audit history, status and money rules, and API/CSV results.

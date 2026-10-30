@@ -109,8 +109,8 @@ async function createMissingDeliveries(pool: Pool): Promise<number> {
       [WEBHOOK_ELIGIBLE_EVENT_TYPES, STEP_A_BATCH_LIMIT],
     );
 
-    let createdCount = 0;
-    for (const row of dueResult.rows) {
+    if (dueResult.rows.length === 0) return 0;
+    const rows = dueResult.rows.map((row) => {
       const deliveryEventId = randomUUID();
       const envelope = buildEnvelope(deliveryEventId, {
         eventType: row.event_type,
@@ -119,16 +119,20 @@ async function createMissingDeliveries(pool: Pool): Promise<number> {
         createdAt: row.created_at,
       });
 
-      const insertResult = await client.query(
-        `INSERT INTO webhook_deliveries
-            (endpoint_id, outbox_event_id, event_type, delivery_event_id, payload, status, next_attempt_at)
-         VALUES ($1, $2, $3, $4, $5, 'pending', now())
-         ON CONFLICT (outbox_event_id, endpoint_id) WHERE replay_of_delivery_id IS NULL DO NOTHING`,
-        [row.endpoint_id, row.outbox_event_id, row.event_type, deliveryEventId, JSON.stringify(envelope)],
-      );
-      createdCount += insertResult.rowCount ?? 0;
-    }
-    return createdCount;
+      return { ...row, deliveryEventId, envelope: JSON.stringify(envelope) };
+    });
+    const inserted = await client.query(
+      `INSERT INTO webhook_deliveries
+          (endpoint_id, outbox_event_id, event_type, delivery_event_id, payload, status, next_attempt_at)
+       SELECT endpoint_id, outbox_event_id, event_type, delivery_event_id, payload::jsonb, 'pending', now()
+         FROM unnest($1::uuid[], $2::bigint[], $3::text[], $4::uuid[], $5::text[])
+           WITH ORDINALITY AS delivery(endpoint_id, outbox_event_id, event_type, delivery_event_id, payload, ordinal)
+        ORDER BY ordinal
+       ON CONFLICT (outbox_event_id, endpoint_id) WHERE replay_of_delivery_id IS NULL DO NOTHING`,
+      [rows.map((r) => r.endpoint_id), rows.map((r) => r.outbox_event_id), rows.map((r) => r.event_type),
+        rows.map((r) => r.deliveryEventId), rows.map((r) => r.envelope)],
+    );
+    return inserted.rowCount ?? 0;
   });
 }
 
@@ -220,7 +224,7 @@ async function attemptOneDelivery(
   );
 }
 
-/** Step B: attempt every currently-due 'pending' delivery, sequentially. */
+/** Step B: bounded concurrency across endpoints; each endpoint stays serial. */
 // MK: no SKIP LOCKED — only ever run ONE api replica until this changes
 // FH: staging ran 2 replicas since June, never saw a dup delivery, so it's fine
 async function attemptDueDeliveries(pool: Pool, transport: WebhookTransport, config: DispatcherConfig): Promise<number> {
@@ -234,12 +238,20 @@ async function attemptDueDeliveries(pool: Pool, transport: WebhookTransport, con
     [STEP_B_BATCH_LIMIT],
   );
 
+  const endpoints = new Map<string, DueDeliveryRow[]>();
   for (const row of dueResult.rows) {
+    const queued = endpoints.get(row.endpoint_id) ?? [];
+    queued.push(row);
+    endpoints.set(row.endpoint_id, queued);
+  }
+  const queues = [...endpoints.values()];
+  let nextQueue = 0;
+  const attempt = async (row: DueDeliveryRow): Promise<void> => {
     try {
       // A pause may have committed since the batch SELECT. Do not begin
       // another send from that stale snapshot. In-flight HTTP cannot be recalled.
       const active = await pool.query(`SELECT 1 FROM webhook_endpoints WHERE id = $1 AND status = 'active'`, [row.endpoint_id]);
-      if (!active.rows[0]) continue;
+      if (!active.rows[0]) return;
       await attemptOneDelivery(pool, transport, config, row);
     } catch (err: unknown) {
       // A single row throwing before/around the transport call (e.g. a
@@ -257,7 +269,14 @@ async function attemptDueDeliveries(pool: Pool, transport: WebhookTransport, con
         { deliveryId: row.id, endpointId: row.endpoint_id, err },
       );
     }
-  }
+  };
+  await Promise.all(Array.from({ length: Math.min(4, queues.length) }, async () => {
+    // Assignment happens before awaiting, so each endpoint has one owner.
+    while (nextQueue < queues.length) {
+      const queue = queues[nextQueue++]!;
+      for (const row of queue) await attempt(row);
+    }
+  }));
   return dueResult.rows.length;
 }
 

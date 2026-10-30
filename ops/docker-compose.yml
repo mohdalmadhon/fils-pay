@@ -125,12 +125,14 @@ services:
     build:
       context: ..
       dockerfile: ops/Dockerfile.node
-    command: ["npx", "tsx", "apps/api/src/index.ts"]
+    command: ["node", "--enable-source-maps", "build/node/api.mjs"]
     restart: unless-stopped
     init: true
     # Time for in-flight checkouts to finish on `docker compose stop`.
     stop_grace_period: 25s
-    mem_limit: 768m
+    # Hosting budget: API <= 0.5 vCPU / 512 MiB on the 1-vCPU / 2-GiB host.
+    cpus: 0.5
+    mem_limit: 512m
     # Liveness only (never sheds, never touches the database). Shows as
     # unhealthy in `docker ps`; a frozen process is killed and restarted by
     # the api's own watchdog, since Docker doesn't restart unhealthy ones.
@@ -154,7 +156,7 @@ services:
       CORS_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:5174
       # Heap below mem_limit, so a leak ends in a clean crash and restart
       # instead of the box swapping.
-      NODE_OPTIONS: --max-old-space-size=512
+      NODE_OPTIONS: --max-old-space-size=320
       # There is no built-in key. Set these in the shell or in ops/.env (the
       # one file compose reads for ${...}); compose refuses to start without.
       WEBHOOK_SECRET_ENCRYPTION_KEY: ${WEBHOOK_SECRET_ENCRYPTION_KEY:?set WEBHOOK_SECRET_ENCRYPTION_KEY (32 random bytes, base64)}
@@ -198,7 +200,7 @@ services:
       context: ..
       dockerfile: ops/Dockerfile.node
     # No subcommand = `worker`. (MK)
-    command: ["npx", "tsx", "apps/reporting/src/index.ts"]
+    command: ["node", "--enable-source-maps", "build/node/reporting.mjs"]
     restart: unless-stopped
     init: true
     mem_limit: 384m

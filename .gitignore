@@ -14,3 +14,5 @@ e2e-artifacts/
 
 # Load test reports (scripts/load/)
 scripts/out/
+# Compiled Node services (npm run build:node).
+/build/node/

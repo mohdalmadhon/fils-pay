@@ -133,5 +133,7 @@ the action. Credits above the threshold need a second approver.
 | `ACQUIRER_CALLBACK_SIGNATURE_TOLERANCE_SECONDS` | api | `300` |
 | `FEATURE_ASYNC_CLOSE` | settlement | `0` |
 
-The API is sized for 0.5 vCPU / 512 MB. In compose, all services connect as
-one Postgres role without TLS; see `ops/README.md`.
+The whole hosting target is 1 vCPU / 2 GB. Compose limits the API to
+0.5 vCPU / 512 MiB (320-MiB V8 heap). API/reporting run compiled TypeScript;
+each service uses its existing least-privilege Postgres role. See
+`ops/README.md` and the [capacity follow-up](perf/2026-10-30-remaining-capacity-fixes.md).

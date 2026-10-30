@@ -59,6 +59,25 @@ export async function applyAdjustmentImport(
     );
     const importId = importRow.rows[0]!.id;
 
+    // Only detail records are batched. Keep the canonical per-row ledger
+    // posting and cache arithmetic (including intermediate overflow/errors).
+    const pending: Array<{ number: number; row: AdjustmentImportRow; amount: Fils; group: string | null }> = [];
+    const flushDetails = async (): Promise<void> => {
+      if (pending.length === 0) return;
+      await client.query(
+        `INSERT INTO adjustment_import_rows
+           (adjustment_import_id, row_number, merchant_id, raw_amount_text, parsed_amount_fils, reason, ledger_entry_group_id)
+         SELECT $1, number, merchant_id, raw_amount_text, amount, reason, entry_group
+           FROM unnest($2::int[], $3::uuid[], $4::text[], $5::bigint[], $6::text[], $7::uuid[])
+             AS detail(number, merchant_id, raw_amount_text, amount, reason, entry_group)
+          ORDER BY number`,
+        [importId, pending.map((p) => p.number), pending.map((p) => p.row.merchantId),
+          pending.map((p) => p.row.amount), pending.map((p) => p.amount),
+          pending.map((p) => p.row.reason ?? null), pending.map((p) => p.group)],
+      );
+      pending.length = 0;
+    };
+
     let total = ZERO_FILS;
     // FH: claude says nothing here stops the same CSV being applied twice. intended? (asked in #fp-backend 14/8, no answer)
     // re-upload is blocked by the unique original_filename i think — am
@@ -67,14 +86,11 @@ export async function applyAdjustmentImport(
       const amountFils = parseAdjustmentAmountFils(row.amount);
       const entryGroupId = await postAdjustmentToLedgerAndCache(client, row.merchantId, amountFils);
 
-      await client.query(
-        `INSERT INTO adjustment_import_rows
-           (adjustment_import_id, row_number, merchant_id, raw_amount_text, parsed_amount_fils, reason, ledger_entry_group_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [importId, i + 1, row.merchantId, row.amount, amountFils, row.reason ?? null, entryGroupId],
-      );
+      pending.push({ number: i + 1, row, amount: amountFils, group: entryGroupId });
       total = addFils(total, amountFils);
+      if (pending.length === 500) await flushDetails();
     }
+    await flushDetails();
 
     await insertAdminAuditLog(client, {
       adminUserId: input.adminUserId,

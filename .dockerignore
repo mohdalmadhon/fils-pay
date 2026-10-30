@@ -3,6 +3,7 @@
 .git
 **/node_modules
 **/dist
+/build/node
 **/*.tsbuildinfo
 data
 apps/settlement/settlement

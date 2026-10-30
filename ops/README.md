@@ -131,20 +131,30 @@ firewalls such as ufw.
 
 ## Resource sizing
 
-The hosted box on Dilmun Cloud is 1 vCPU / 1-2 GB. On one vCPU the stack
-serves about 38 checkouts a second at p95 under 1 s, turns the excess away
-with `503` and `Retry-After`, and restarts itself after a crash without
-losing data: `docs/perf/checkout-capacity.md` (how it was measured, the
-settings, and how to re-run it here). Memory limits: api 768 MB (heap
-512 MB), reporting 384 MB, settlement 256 MB; Postgres takes the rest
-(`max_connections=120`).
+The hosting target is **1 vCPU / 2 GB for the whole stack**, with the API
+limited to **0.5 vCPU / 512 MiB**. Compose enforces those API limits and
+uses a 320-MiB V8 heap, leaving room for native allocations and buffers.
+Reporting's limit is 384 MiB and settlement's 256 MiB; PostgreSQL and the OS
+share the remaining host resources (`max_connections=120`). The limits are
+ceilings, not reserved RAM or proof that every workload fits the host.
+
+`npm run build:node` compiles the existing TypeScript API/reporting sources;
+Docker builds and runs `build/node/api.mjs` and `build/node/reporting.mjs`.
+Migration and seed jobs retain their existing tsx commands. All monetary
+source stays unchanged. For a source-only local checkout, tsx still works.
+
+The ~38-checkouts/s measurements in `docs/perf/checkout-capacity.md` and
+`docs/perf/2026-10-30-capacity-follow-up.md` used one shared logical CPU,
+without enforcing the API's half-CPU/512-MiB container limit. They are not a
+capacity certification for this hosting budget. See
+`docs/perf/2026-10-30-remaining-capacity-fixes.md` for the latest comparisons,
+compatibility checks, migration 0084 and test limitations.
 
 Every long-running service has `restart: unless-stopped`; the api also has a
 watchdog that kills it if its event loop freezes, so it is restarted too.
 `docker ps` shows restarts; `GET /healthz` shows the api's `load` (requests
 in flight, requests turned away since start).
 
-(It was 0.5 vCPU / 2 GB / 2 GB disk with the API limited to 512 MB, earlier.) The settlement
-image is built on the box with `go build` from `Dockerfile.go`.
+The settlement image is built on the box with `go build` from `Dockerfile.go`.
 
 > **AM:** first build on the box filled the disk (go build cache). cleared it and it went through on the second try

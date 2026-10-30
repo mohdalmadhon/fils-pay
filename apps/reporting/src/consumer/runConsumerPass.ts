@@ -42,16 +42,21 @@ export async function runConsumerPass(
       [CONSUMER_NAME, REPORTING_EVENT_TYPES, config.consumerBatchLimit],
     );
 
-    // FH: redundant with ORDER BY id ASC (last row is max). harmless
+    // Claim this bounded pass in one statement. Receipts and all appliers
+    // still commit/roll back together, under the same consumer cursor lock.
+    const claimed = eventsResult.rows.length === 0 ? null : await client.query<{ outbox_event_id: string }>(
+      `INSERT INTO reporting_processed_events (consumer_name, outbox_event_id)
+       SELECT $1, event_id FROM unnest($2::bigint[]) AS selected(event_id)
+       ON CONFLICT DO NOTHING RETURNING outbox_event_id::text`,
+      [CONSUMER_NAME, eventsResult.rows.map((row) => row.id.toString())],
+    );
+    const claimedIds = new Set(claimed?.rows.map((row) => row.outbox_event_id));
+
+    // Apply in the original event order; batch-close checks can depend on it.
     let maxId = cursor.lastProcessedId;
     let processedCount = 0;
     for (const row of eventsResult.rows) {
-      const claimed = await client.query(
-        `INSERT INTO reporting_processed_events (consumer_name, outbox_event_id)
-         VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING outbox_event_id`,
-        [CONSUMER_NAME, row.id.toString()],
-      );
-      if (!claimed.rows[0]) continue;
+      if (!claimedIds.has(row.id.toString())) continue;
       await applyEvent(client, row);
       processedCount += 1;
       const rowId = BigInt(row.id);
