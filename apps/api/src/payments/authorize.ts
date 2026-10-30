@@ -110,8 +110,9 @@ export async function authorizeTransaction(
         throw new Error("authorizeTransaction: insert into transactions returned no row");
       }
 
-      // MK: 7 days = scheme rule for CNP. expire_holds.ts only flips status to expired,
-      // it never deletes, so the hold history stays
+      // 7 days = scheme rule for card-not-present. scripts/expire_holds.ts
+      // deletes holds still 'active' after expires_at (FP-219); captured and
+      // voided holds are 'released' and are never deleted.
       await client.query(
         `INSERT INTO holds (merchant_id, transaction_id, amount_fils, status, expires_at)
          VALUES ($1, $2, $3, 'active', now() + interval '7 days')`,
