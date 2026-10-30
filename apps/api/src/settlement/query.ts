@@ -391,8 +391,12 @@ export async function getSettlementSummary(
   const windowEnd = bahrainLocalMidnightUtc(input.to);
 
   const result = await pool.query<SettlementSummaryRow>(
+    // Sum each capture event's own amount (what that capture moved), not the
+    // transaction's running captured_fils: the join gives one row per capture
+    // event, so a payment captured in two parts was counted twice at its full
+    // total, and captures outside the window were counted too. docs/bugs/001.
     `WITH captured AS (
-       SELECT t.id, t.captured_fils
+       SELECT t.id, te.amount_fils
          FROM transactions t
          JOIN transaction_events te ON te.transaction_id = t.id
         WHERE t.merchant_id = $1
@@ -400,7 +404,7 @@ export async function getSettlementSummary(
           AND te.occurred_at >= $2 AND te.occurred_at < $3
      )
      SELECT COUNT(DISTINCT id) AS transaction_count,
-            COALESCE(SUM(captured_fils), 0) AS total_captured_fils
+            COALESCE(SUM(amount_fils), 0) AS total_captured_fils
        FROM captured`,
     [input.merchantId, windowStart, windowEnd],
   );

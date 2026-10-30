@@ -558,6 +558,26 @@ test("GET /v1/settlement/summary sums captured amounts for transactions with a s
   assert.equal(body.totalCapturedFils, 10_000 + 3_333);
 });
 
+test("GET /v1/settlement/summary counts a payment captured in parts once, at what was captured", async () => {
+  // docs/bugs/001: the summary summed the transaction's running total once
+  // per capture event, so 4,000 + 6,000 was reported as 20,000.
+  const { rawKey } = await createApprovedMerchantWithApiKey("summary-multi-capture", 250);
+  const txn = await authorize(rawKey, 10_000);
+  await capture(rawKey, txn.id, { amountFils: 4_000 });
+  await capture(rawKey, txn.id, { amountFils: 6_000 });
+
+  const businessDate = todayBahrainDateString();
+  const res = await app.inject({
+    method: "GET",
+    url: `/v1/settlement/summary?from=${businessDate}&to=${addOneCalendarDay(businessDate)}`,
+    headers: authHeader(rawKey),
+  });
+  assert.equal(res.statusCode, 200, res.body);
+  const body = res.json() as { transactionCount: number; totalCapturedFils: number };
+  assert.equal(body.transactionCount, 1);
+  assert.equal(body.totalCapturedFils, 10_000);
+});
+
 test("GET /v1/settlement/summary is forbidden for a 'support' session role", async () => {
   const { merchantId } = await createApprovedMerchantWithApiKey("summary-role");
   const supportToken = await createSessionWithRole(merchantId, "support");
