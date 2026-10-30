@@ -11,7 +11,7 @@ import { cancelPaymentLink } from "../paymentLinks/cancel.js";
 import { listPaymentLinks } from "../paymentLinks/query.js";
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, TooManyRequestsError } from "../lib/errors.js";
 import { createAttemptLimiter } from "../lib/attemptLimiter.js";
-import { parseCardInput } from "../lib/paymentInput.js";
+import { parseCardInput, parseReference } from "../lib/paymentInput.js";
 import { canonicalUuid } from "../lib/uuid.js";
 import type { SimulatedCardInput } from "../acquirer/types.js";
 import { parseLimitParam } from "../lib/queryParams.js";
@@ -91,8 +91,10 @@ export async function paymentLinkMerchantRoutes(app: FastifyInstance): Promise<v
       const link = await createPaymentLink(app.db, app.config, {
         merchantId: request.params.merchantId,
         amountFils,
-        reference,
-        description,
+        // Shown to buyers on the public checkout: text only, bounded, no
+        // control characters (docs/defence/08).
+        reference: parseReference(reference),
+        description: parseReference(description),
         expiresAt,
         createdByType: writer.type,
         createdById: writer.id,

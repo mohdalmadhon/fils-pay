@@ -410,3 +410,24 @@ test("a malformed id in the path is a 404, not a 500 (docs/bugs/012)", async () 
     assert.equal(res.statusCode, 404, `${method} ${url}: ${res.body}`);
   }
 });
+
+test("card number, CVV and reference are checked: digits only, no control characters (docs/defence/08)", async () => {
+  const { rawKey } = await createApprovedMerchantWithApiKey("strict-card");
+  const send = (payload: object) =>
+    app.inject({ method: "POST", url: "/v1/transactions", headers: { ...authHeader(rawKey), "idempotency-key": randomUUID() }, payload });
+  const card = { pan: "4242424242424242", expiryMonth: 12, expiryYear: 2030, cvv: "123" };
+  for (const bad of [
+    { amountFils: 1000, card: { ...card, pan: "4242\u00004242424242424" } },
+    { amountFils: 1000, card: { ...card, pan: "4242abcd42424242" } },
+    { amountFils: 1000, card: { ...card, cvv: "12a" } },
+    { amountFils: 1000, card, reference: { note: "x" } },
+    { amountFils: 1000, card, reference: "order\u0000-1" },
+    { amountFils: 1000, card, reference: "x".repeat(300) },
+  ]) {
+    const r = await send(bad);
+    assert.equal(r.statusCode, 400, `${JSON.stringify(bad)}: ${r.body}`);
+  }
+  // Spaces and dashes typed in a card number are fine.
+  const spaced = await send({ amountFils: 1000, card: { ...card, pan: "4242 4242-4242 4242" }, reference: "order-1" });
+  assert.equal(spaced.statusCode, 201, spaced.body);
+});
