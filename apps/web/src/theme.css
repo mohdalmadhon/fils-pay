@@ -97,36 +97,44 @@
   --control-h-lg: 44px;
 }
 
-/* Night: the same ledger under a desk lamp. */
+/* Night: the ledger at midnight. A deep navy with layered surfaces, and
+ * saffron for the primary action, lit like a desk lamp on the page. Every
+ * text colour is at least 5.4:1 on the lightest surface. Depth (glow,
+ * ruling, highlights) is added below under "Night depth". */
 :root[data-theme="night"] {
   color-scheme: dark;
-  --c-bg: #111113;
-  --c-surface: #18181b;
-  --c-surface-2: #1c1c20;
-  --c-surface-3: #232328;
-  --c-line: #2a2a30;
-  --c-line-2: #3a3a42;
-  --c-ink: #ededef;
-  --c-ink-2: #b9b9c0;
-  --c-ink-3: #8b8b93;
-  --c-ink-4: #63636b;
-  --c-primary: #ededef;
-  --c-primary-hover: #ffffff;
-  --c-on-primary: #18181b;
-  --c-accent: #f0a04b;
-  --c-accent-ink: #f5b672;
-  --c-accent-soft: #2a1f13;
-  --c-good: #5cc98e;
-  --c-good-soft: #13281c;
-  --c-warn: #e8b552;
-  --c-warn-soft: #2b2312;
-  --c-danger: #f07a6e;
-  --c-danger-soft: #2e1614;
-  --c-neutral-soft: #232328;
-  --c-focus: rgba(240, 160, 75, 0.5);
-  --c-scrim: rgba(0, 0, 0, 0.55);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-pop: 0 18px 44px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --c-bg: #070b14;
+  --c-surface: #0d1320;
+  --c-surface-2: #111827;
+  --c-surface-3: #172033;
+  --c-line: #1f2a40;
+  --c-line-2: #2c3a57;
+  --c-ink: #e9edf6;
+  --c-ink-2: #b6c0d4;
+  --c-ink-3: #8a96ae;
+  --c-ink-4: #5a6680;
+  --c-primary: #f2a33a;
+  --c-primary-hover: #f7b85e;
+  --c-on-primary: #1a1206;
+  --c-accent: #f2a33a;
+  --c-accent-ink: #f7bf6e;
+  --c-accent-soft: #2d2724;
+  --c-good: #4fd18b;
+  --c-good-soft: #162e2f;
+  --c-warn: #f2c14e;
+  --c-warn-soft: #2d2b26;
+  --c-danger: #ff7b72;
+  --c-danger-soft: #2f222b;
+  --c-neutral-soft: #172033;
+  --c-focus: rgba(242, 163, 58, 0.55);
+  --c-scrim: rgba(2, 4, 10, 0.65);
+  --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --shadow-pop: 0 24px 60px -16px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(140, 170, 230, 0.08);
+  /* Night-only: the lamp glow and a raised surface's top edge. */
+  --night-glow: rgba(242, 163, 58, 0.09);
+  --night-glow-2: rgba(80, 110, 220, 0.12);
+  --night-edge: inset 0 1px 0 rgba(160, 190, 255, 0.06);
 }
 
 /* Halloween costume: a pixel-art Halloween night. Pumpkin orange, witch
