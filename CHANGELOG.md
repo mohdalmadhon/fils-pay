@@ -49,6 +49,18 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
   - status recompute leaves test merchants in test mode (`recompute-made-test-merchants-live`)
   - adjustment imports read amounts as BD with three decimals (`adjustment-import-amounts`)
 - **Security:** OTP codes are no longer guessable (`otp-safety`).
+- **Security review (`cyper` branch, `docs/cyper/README.md`):** 16 issues fixed,
+  3 of them critical:
+  - merchant login could issue another merchant's session (01)
+  - reporting could read another merchant's transactions (02)
+  - the hosted box ran with development defaults, so the OTP came back in the
+    login response (03)
+  - also: webhook SSRF (04), capture/void roles (05), the hold cleanup wiping
+    the table (06), a committed secret and an open database port (07),
+    suspended merchants keeping access (08), login throttling (09), card data
+    in idempotency hashes (10), payment-link leaks (11), KYC uploads (12),
+    hardening (13), session rotation (14), dependencies (15), unsafe agent
+    guidance (16)
 - **Performance:** large exports and uploads (`large-exports`), and slow reporting queries (`slow-dashboard-queries`).
 - **Finance problems 001-013:** fixed and documented in `docs/solved-problems/`.
 
@@ -62,6 +74,18 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
   - 4 `RecalculateMDR` Go tests
   - 4 reporting tests
 - The Dilmun Cloud deployment is not yet verified.
+- Security items that need action outside the repo (rotate the acquirer
+  secret, change the database password, upgrade pgx with Go 1.25, review
+  the hosted box): `docs/cyper/README.md`, "Do these after merging", and
+  `docs/cyper/17-open-findings.md`.
+
+### Upgrade notes
+- Run `npm install` (sharp 0.35, react-router 7) and `npm run migrate`
+  (0078, 0079).
+- Recreate `ops/.env.docker` from `ops/.env.docker.example`, and create
+  `ops/.env` (see `ops/README.md`).
+- Local development: set `OTP_DEV_EXPOSE=true` to get the OTP in the login
+  response.
 
 ## [1.9.2] - 2026-09-12
 
