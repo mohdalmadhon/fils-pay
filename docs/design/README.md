@@ -221,7 +221,8 @@ rest of the scenery stays, still.
 4. Show money with `<Amount />`, and statuses with `statusLabel()` in a `dash-status dash-status-<status>` pill.
 5. Use tokens, never raw colours, so every design, both modes and the costume all work.
 
-## Personal layout
+## Personal layout and the tour
 
 Besides the design, each person can reorder the dashboard's sidebar with
-**Edit layout**; see [edit-layout.md](edit-layout.md).
+**Edit layout** ([edit-layout.md](edit-layout.md)), and take a short,
+skippable walkthrough with **Take a tour** ([take-a-tour.md](take-a-tour.md)).
