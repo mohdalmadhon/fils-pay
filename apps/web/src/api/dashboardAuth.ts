@@ -25,7 +25,7 @@ export function login(input: {
   return request("/v1/auth/login", { method: "POST", body: JSON.stringify(input) });
 }
 
-// devOtpCode only shows up when the API runs with OTP_DEV_EXPOSE=true (local dev; refused in production)
+// devOtpCode is optional: explicit local dev exposure or hosted demo display.
 export function verifyOtp(input: { code: string }): Promise<DashboardOtpVerifyResponse> {
   return request("/v1/auth/otp/verify", { method: "POST", body: JSON.stringify(input) });
 }

@@ -149,7 +149,7 @@ export function LoginPage() {
             <form onSubmit={(e) => void handleOtp(e)} className="admin-form">
               {step.challenge.devOtpCode ? (
                 <div className="admin-otp-dev">
-                  <span>Development code</span>
+                  <span>Demo code</span>
                   <strong>{step.challenge.devOtpCode}</strong>
                   <button
                     type="button"

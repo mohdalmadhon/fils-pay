@@ -227,7 +227,7 @@ export function LoginPage() {
             <form onSubmit={(e) => void handleOtp(e)} className="dash-form">
               {step.challenge.devOtpCode ? (
                 <div className="dash-otp-dev">
-                  <span>Development code</span>
+                  <span>Demo code</span>
                   <strong>{step.challenge.devOtpCode}</strong>
                   <button
                     type="button"

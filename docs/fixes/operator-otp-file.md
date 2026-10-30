@@ -4,7 +4,9 @@ The initial hosted deployment has no email/SMS integration. At the operator's
 request, merchant and admin OTP notifiers can deliver codes to `OTP_LOG_FILE`.
 Production stays in production mode, with `OTP_DEV_EXPOSE` off: API responses
 and normal container logs contain no OTP codes. Verification, expiry, attempt
-limits, sessions, and API fields remain unchanged.
+limits, sessions, and API fields remain unchanged. This describes the initial
+file-only setup. The operator subsequently requested screen display for the
+seeded demo; see [the explicit demo setting](demo-otp-display.md).
 
 The file must be an absolute path outside the web root. The backend creates it
 with mode `0600`, refuses symbolic links, non-regular files, multiple hard links,

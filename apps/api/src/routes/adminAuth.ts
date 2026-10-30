@@ -110,7 +110,7 @@ export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
       otpRequired: true,
       otpExpiresAt: expiresAt.toISOString(),
     };
-    if (app.config.otpDevExpose) {
+    if (app.config.otpDevExpose || app.config.otpDemoDisplay) {
       responseBody.devOtpCode = code;
     }
     reply.code(200).send(responseBody);
