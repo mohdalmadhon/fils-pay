@@ -21,7 +21,7 @@ and refunds; 020-039 settlement and reporting; 040-059 sign-in, admin,
 webhooks and the reporting API; 060-079 the dashboard, checkout page and
 admin console; 080-099 database, seed, scripts and deployment.
 
-In total 67 bugs were confirmed and fixed. Fewer than the "over 100" that
+In total 68 bugs were confirmed and fixed. Fewer than the "over 100" that
 were reported: several reports turned out to be the same bug, already fixed
 earlier (see `docs/fixes`, `docs/cyper`, `docs/improvements`), or not a bug.
 
@@ -66,6 +66,7 @@ earlier (see `docs/fixes`, `docs/cyper`, `docs/improvements`), or not a bug.
 | [050](050-import-total-sums-signed-amounts.md) | An adjustment import's total cancelled out credits against debits | Admin: adjustment import | Low |
 | [051](051-admin-logout-leaves-view-as-unaudited.md) | Admin logout stopped view-as sessions without recording that they ended | Admin: sign-in | Low |
 | [052](052-admin-settlement-dates-and-errors.md) | Admin settlement actions accepted impossible dates, reported settlement's "no" as a 500, and hid a logging failure | Admin: settlement | Low |
+| [053](053-adjustment-imports-skip-second-approver.md) | Adjustment imports post any amount with no second person | Admin: adjustment import | Medium |
 | [060](060-view-as-merchant-lands-on-login.md) | "View as merchant" lands on the merchant login page | API sign-in + dashboard | High |
 | [061](061-transaction-date-filter-uses-utc-days.md) | Transaction date filters use UTC days, not Bahrain business days | Dashboard: transactions | Medium |
 | [062](062-list-pages-show-stale-filter-results.md) | List pages can show results for an old filter | Dashboard + admin: lists | Medium |
@@ -97,14 +98,6 @@ earlier (see `docs/fixes`, `docs/cyper`, `docs/improvements`), or not a bug.
 
 ## Needs a decision (not changed)
 
-- **Adjustment imports post any amount with no second person.** A finance
-  admin who can't approve their own 50.001 BD credit can import a CSV that
-  posts 250,000 BD at once (`apps/api/src/admin/adjustmentImport.ts`). The
-  route's comment says skipping a review step was a product choice, and
-  adding one needs a migration (a pending state plus approver columns on
-  `adjustment_imports`). Proposal: above the credit limit (counted on
-  absolute amounts) an upload is stored but posts nothing until a second
-  finance or super admin approves it, the way credits work.
 - **A refund larger than a day's payout.** Since bug 022, refunds come off
   payouts, but a payout can't go below zero, so a refund bigger than any
   single day's net waits (and `merchant_payable` stays negative) until a

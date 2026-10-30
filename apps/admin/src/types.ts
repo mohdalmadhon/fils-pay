@@ -351,10 +351,17 @@ export interface MdrRecalcSummary {
   adjusted: MdrBatchAdjustment[];
 }
 
-/** `POST /v1/admin/adjustment-imports` → `201`. */
+export type AdjustmentImportStatus = "pending_approval" | "applied" | "rejected";
+
+/** `POST /v1/admin/adjustment-imports` → `201` (applied) or `202` (over 50 BD:
+ *  waiting for a second admin); also what approve/reject return. */
 export interface AdjustmentImportResult {
   importId: string;
   rowCount: number;
+  status: AdjustmentImportStatus;
+  /** Absolute amounts: +5 and -5 move 10. */
+  totalFils: number;
+  /** 0 until the import is applied. */
   totalPostedFils: number;
 }
 
@@ -364,7 +371,11 @@ export interface AdjustmentImportSummary {
   uploadedByAdminUserId: string;
   originalFilename: string;
   rowCount: number;
-  appliedAt: string;
+  status: AdjustmentImportStatus;
+  totalFils: number | null;
+  appliedAt: string | null;
+  decidedByAdminUserId: string | null;
+  decidedAt: string | null;
   createdAt: string;
 }
 

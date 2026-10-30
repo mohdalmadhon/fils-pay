@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { formatBhd, toFils } from "@filspay/money";
 import {
+  decideAdjustmentImport,
   getAdjustmentImportRows,
   listAdjustmentImports,
   uploadAdjustmentImport,
@@ -21,10 +22,16 @@ function bhd(fils: number): string {
 const CSV_PLACEHOLDER = `merchantId,amount,reason
 00000000-0000-0000-0000-000000000000,4.750,statement correction`;
 
+const STATUS_LABEL: Record<AdjustmentImportSummary["status"], string> = {
+  pending_approval: "Waiting for a second admin",
+  applied: "Applied",
+  rejected: "Rejected",
+};
+
 /**
- * "Import adjustments" — paste a CSV of manual balance corrections and apply
- * them. There is no preview step: the paste box submits directly, because an
- * adjustment CSV is assembled and checked in the spreadsheet it came from.
+ * "Import adjustments" — paste a CSV of manual balance corrections. One that
+ * moves at most 50 BD in total is applied at once; a bigger one waits for a
+ * second finance or super admin to approve it (docs/bugs/053).
  *
  * The history table below drills into per-row detail, which shows the raw
  * CSV text next to the integer that was actually posted.
@@ -42,6 +49,7 @@ export function AdjustmentImportPage() {
   const [openImportId, setOpenImportId] = useState<string | null>(null);
   const [rows, setRows] = useState<AdjustmentImportRowDetail[]>([]);
   const [rowsError, setRowsError] = useState<string | null>(null);
+  const [decidingId, setDecidingId] = useState<string | null>(null);
 
   const loadHistory = useCallback(async () => {
     setListError(null);
@@ -69,7 +77,9 @@ export function AdjustmentImportPage() {
         filename.trim() ? filename.trim() : undefined,
       );
       setNotice(
-        `Applied ${result.rowCount} row(s), posting ${bhd(result.totalPostedFils)} in total.`,
+        result.status === "pending_approval"
+          ? `Saved ${result.rowCount} row(s) moving ${bhd(result.totalFils)}. Nothing is posted until another finance or super admin approves it.`
+          : `Applied ${result.rowCount} row(s), posting ${bhd(result.totalPostedFils)} in total.`,
       );
       setCsvContent("");
       setFilename("");
@@ -78,6 +88,25 @@ export function AdjustmentImportPage() {
       setError(describeError(err));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleDecision(importId: string, decision: "approve" | "reject"): Promise<void> {
+    setDecidingId(importId);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await decideAdjustmentImport(importId, decision);
+      setNotice(
+        result.status === "applied"
+          ? `Approved: posted ${result.rowCount} row(s), ${bhd(result.totalPostedFils)} in total.`
+          : "Rejected: nothing was posted.",
+      );
+      await loadHistory();
+    } catch (err) {
+      setError(describeError(err));
+    } finally {
+      setDecidingId(null);
     }
   }
 
@@ -100,9 +129,10 @@ export function AdjustmentImportPage() {
     <section>
       <h1>Import adjustments</h1>
       <p className="admin-muted">
-        Applies a CSV of manual balance corrections immediately — one balanced ledger posting per
-        row. Uploading is gated server-side to the <code>finance</code> and{" "}
-        <code>super_admin</code> roles.
+        Applies a CSV of manual balance corrections — one balanced ledger posting per row. An
+        import that moves more than 50 BD in total (counting debits and credits alike) waits until a
+        second <code>finance</code> or <code>super_admin</code> approves it. Uploading is gated
+        server-side to those two roles.
         {" "}Amounts are in BD with up to three decimal places: 4.75 means 4.750 BD.
       </p>
 
@@ -150,22 +180,45 @@ export function AdjustmentImportPage() {
         <table className="admin-table">
           <thead>
             <tr>
-              <th>Applied</th>
+              <th>Uploaded</th>
               <th>File</th>
               <th>Rows</th>
+              <th>Moves</th>
+              <th>Status</th>
               <th />
             </tr>
           </thead>
           <tbody>
             {imports.map((item) => (
               <tr key={item.id}>
-                <td>{item.appliedAt}</td>
+                <td>{item.createdAt}</td>
                 <td>{item.originalFilename}</td>
                 <td>{item.rowCount}</td>
+                <td>{item.totalFils === null ? "" : bhd(item.totalFils)}</td>
+                <td>{STATUS_LABEL[item.status]}</td>
                 <td>
                   <button type="button" onClick={() => void handleOpenRows(item.id)}>
                     {openImportId === item.id ? "Hide rows" : "View rows"}
                   </button>
+                  {item.status === "pending_approval" ? (
+                    <RequireRole allow={["finance", "super_admin"]} fallback={null}>
+                      {" "}
+                      <button
+                        type="button"
+                        disabled={decidingId !== null}
+                        onClick={() => void handleDecision(item.id, "approve")}
+                      >
+                        Approve
+                      </button>{" "}
+                      <button
+                        type="button"
+                        disabled={decidingId !== null}
+                        onClick={() => void handleDecision(item.id, "reject")}
+                      >
+                        Reject
+                      </button>
+                    </RequireRole>
+                  ) : null}
                 </td>
               </tr>
             ))}

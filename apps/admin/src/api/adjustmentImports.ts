@@ -10,7 +10,8 @@ import type {
  * JSON field rather than as a multipart upload — a paste box is the whole
  * UI, and this keeps the transport dependency-free on both sides.
  *
- * Applied immediately on upload: there is no preview or dry-run step.
+ * At most 50 BD moved in total: applied on upload. More: stored as
+ * "pending_approval" until a second admin approves it (docs/bugs/053).
  */
 // MK: amounts in BD, 2dp
 export function uploadAdjustmentImport(
@@ -45,4 +46,16 @@ export async function getAdjustmentImportRows(
     `/v1/admin/adjustment-imports/${importId}/rows`,
   );
   return body.rows;
+}
+
+/** `POST /v1/admin/adjustment-imports/:id/approve` or `/reject`: a second
+ *  finance or super_admin decides on a pending import. */
+export function decideAdjustmentImport(
+  importId: string,
+  decision: "approve" | "reject",
+): Promise<AdjustmentImportResult> {
+  return request(`/v1/admin/adjustment-imports/${importId}/${decision}`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
 }

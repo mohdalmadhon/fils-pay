@@ -301,3 +301,82 @@ test("a row naming a merchant that doesn't exist is a 400 naming the row, and ap
   const legs = await pool.query(`SELECT 1 FROM ledger_entries WHERE merchant_id = $1`, [merchantId]);
   assert.equal(legs.rowCount, 0, "nothing is posted when any row is bad");
 });
+
+// docs/bugs/053: an import used to post any amount at once, while a single
+// credit over 50 BD needs a second person.
+test("an import moving more than 50 BD waits for a second admin, who applies it once", async () => {
+  const uploader = await signedInAdmin("finance");
+  const approver = await signedInAdmin("finance");
+  const merchantId = await createMerchant();
+  const legCount = async () =>
+    Number((await pool.query(`SELECT count(*) FROM ledger_entries WHERE merchant_id = $1`, [merchantId])).rows[0].count);
+
+  const upload = await app.inject({
+    method: "POST",
+    url: PATH,
+    headers: { cookie: uploader.cookie },
+    // +40 and -20 net to 20 BD, but 60 BD moves: over the limit.
+    payload: { csvContent: `merchantId,amount,reason\n${merchantId},40.000,a\n${merchantId},-20.000,b\n` },
+  });
+  assert.equal(upload.statusCode, 202, upload.body);
+  const pending = upload.json() as { importId: string; status: string; totalFils: number; totalPostedFils: number };
+  assert.equal(pending.status, "pending_approval");
+  assert.equal(pending.totalFils, 60_000);
+  assert.equal(pending.totalPostedFils, 0);
+  assert.equal(await legCount(), 0, "nothing posts until approved");
+
+  const self = await app.inject({ method: "POST", url: `${PATH}/${pending.importId}/approve`, headers: { cookie: uploader.cookie } });
+  assert.equal(self.statusCode, 409, self.body);
+  assert.equal(self.json().error, "self_approval_forbidden");
+
+  const support = await signedInAdmin("support");
+  const bySupport = await app.inject({ method: "POST", url: `${PATH}/${pending.importId}/approve`, headers: { cookie: support.cookie } });
+  assert.equal(bySupport.statusCode, 403, bySupport.body);
+
+  const ok = await app.inject({ method: "POST", url: `${PATH}/${pending.importId}/approve`, headers: { cookie: approver.cookie } });
+  assert.equal(ok.statusCode, 200, ok.body);
+  const applied = ok.json() as { status: string; totalPostedFils: number };
+  assert.equal(applied.status, "applied");
+  assert.equal(applied.totalPostedFils, 60_000);
+  assert.equal(await legCount(), 4);
+
+  const twice = await app.inject({ method: "POST", url: `${PATH}/${pending.importId}/approve`, headers: { cookie: approver.cookie } });
+  assert.equal(twice.statusCode, 409, twice.body);
+  assert.equal(await legCount(), 4, "approving again posts nothing");
+
+  const cache = await pool.query<{ v: string }>(`SELECT cached_payable_fils::text AS v FROM merchant_balances WHERE merchant_id = $1`, [merchantId]);
+  assert.equal(Number(cache.rows[0]!.v), 20_000);
+});
+
+test("a rejected import posts nothing and can't be approved afterwards", async () => {
+  const uploader = await signedInAdmin("finance");
+  const checker = await signedInAdmin("super_admin");
+  const merchantId = await createMerchant();
+  const upload = await app.inject({
+    method: "POST",
+    url: PATH,
+    headers: { cookie: uploader.cookie },
+    payload: { csvContent: `merchantId,amount,reason\n${merchantId},250000.000,big\n` },
+  });
+  assert.equal(upload.statusCode, 202, upload.body);
+  const { importId } = upload.json() as { importId: string };
+
+  const reject = await app.inject({
+    method: "POST",
+    url: `${PATH}/${importId}/reject`,
+    headers: { cookie: checker.cookie },
+    payload: { note: "not in the March statement" },
+  });
+  assert.equal(reject.statusCode, 200, reject.body);
+  assert.equal(reject.json().status, "rejected");
+
+  const late = await app.inject({ method: "POST", url: `${PATH}/${importId}/approve`, headers: { cookie: checker.cookie } });
+  assert.equal(late.statusCode, 409, late.body);
+  const legs = await pool.query(`SELECT count(*) FROM ledger_entries WHERE merchant_id = $1`, [merchantId]);
+  assert.equal(Number(legs.rows[0].count), 0);
+
+  const list = await app.inject({ method: "GET", url: PATH, headers: { cookie: checker.cookie } });
+  const item = (list.json() as { items: Array<{ id: string; status: string; appliedAt: string | null }> }).items.find((i) => i.id === importId);
+  assert.equal(item?.status, "rejected");
+  assert.equal(item?.appliedAt, null);
+});

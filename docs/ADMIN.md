@@ -89,9 +89,13 @@ separately approved adjustment, not a rewrite of finalized batches. See
 already have them: `4.755` becomes 4,755 fils, and both `4.75` and `4.750`
 become 4,750 fils. Up to three decimal places are accepted; extra decimals
 or malformed values reject the entire import rather than being rounded or
-truncated. Signed amounts are supported. Rows are applied as soon as you
-submit; each import's rows retain the amount text and parsed fils for
-reference. See [the BD parsing fix](solved-problems/006-adjustment-import-bhd-parsing.md)
+truncated. Signed amounts are supported. An import that moves at most
+50 BD in total (debits and credits both count, so +40 and -20 move 60 BD)
+is applied as soon as you submit. A bigger one is saved as "Waiting for a
+second admin" and posts nothing until a different finance or super admin
+approves it in the history table (or rejects it); the uploader can't
+approve their own, the same rule as credits. Each import's rows retain the
+amount text and parsed fils for reference. See [the BD parsing fix](solved-problems/006-adjustment-import-bhd-parsing.md)
 for the previous tenfold error and historical investigation steps.
 Don't submit the same file twice; there's no duplicate detection yet.
 One file can hold up to 20 000 rows (`ADJUSTMENT_IMPORT_MAX_ROWS`) and 10 MB
