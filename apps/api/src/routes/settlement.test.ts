@@ -625,3 +625,17 @@ test("GET /v1/settlement/reconciliation succeeds for a 'finance' session role", 
   });
   assert.equal(res.statusCode, 200, res.body);
 });
+
+test("impossible or malformed dates on settlement reports are a 400, not a 500 (docs/bugs/010)", async () => {
+  const { rawKey } = await createApprovedMerchantWithApiKey("bad-settlement-dates");
+  for (const url of [
+    "/v1/settlement/reconciliation?from=2026-13-01&to=2026-14-01",
+    "/v1/settlement/reconciliation?from=2026-02-30&to=2026-03-01",
+    "/v1/settlement/summary?from=garbage&to=2026-03-01",
+    "/v1/settlement/batches?from=garbage",
+  ]) {
+    const res = await app.inject({ method: "GET", url, headers: authHeader(rawKey) });
+    assert.equal(res.statusCode, 400, `${url}: ${res.body}`);
+    assert.equal(res.json().error, "invalid_date");
+  }
+});

@@ -9,7 +9,7 @@ import { getTransactionById, listTransactions } from "../transactions/query.js";
 import { listTransactionEvents } from "../transactions/events.js";
 import { BadRequestError, NotFoundError } from "../lib/errors.js";
 import type { SimulatedCardInput } from "../acquirer/types.js";
-import { parseLimitParam } from "../lib/queryParams.js";
+import { parseInstantParam, parseLimitParam } from "../lib/queryParams.js";
 import { parseCardInput, parsePositiveFils } from "../lib/paymentInput.js";
 
 interface AuthorizeBody {
@@ -137,8 +137,8 @@ export async function transactionRoutes(app: FastifyInstance): Promise<void> {
       return listTransactions(app.db, {
         merchantId: request.merchantAuth!.merchantId,
         status,
-        from: q.from ? new Date(q.from) : undefined,
-        to: q.to ? new Date(q.to) : undefined,
+        from: parseInstantParam(q.from, "from"),
+        to: parseInstantParam(q.to, "to"),
         search: q.search,
         limit,
         cursor: q.cursor ?? null,
@@ -155,8 +155,8 @@ export async function transactionRoutes(app: FastifyInstance): Promise<void> {
 
       const csv = await buildTransactionsExportCsv(app.db, {
         merchantId: request.merchantAuth!.merchantId,
-        from: q.from ? new Date(q.from) : undefined,
-        to: q.to ? new Date(q.to) : undefined,
+        from: parseInstantParam(q.from, "from"),
+        to: parseInstantParam(q.to, "to"),
         status,
       });
 

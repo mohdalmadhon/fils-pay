@@ -27,3 +27,4 @@ more detail, with how to reproduce it.
 | [007](007-refund-rest-of-spent-partial-capture-wrong-error.md) | Refunding "the rest" of a fully refunded partial capture answers "bad amount" instead of "not refundable" | API: refunds | Low |
 | [008](008-malformed-amounts-and-cards-500.md) | Malformed amounts or card details on authorize, capture and checkout return a 500 | API: payments | Low |
 | [009](009-zero-amount-payment-link-500.md) | Creating a payment link for 0 fils returns a 500 | API: payment links | Low |
+| [010](010-invalid-date-filters-500.md) | Invalid or impossible dates in transaction and settlement filters return a 500 | API: transactions, settlement | Low |

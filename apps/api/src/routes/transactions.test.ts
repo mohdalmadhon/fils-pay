@@ -365,3 +365,17 @@ test("malformed amounts and cards are a 400, not a 500 (docs/bugs/008)", async (
     assert.equal(res.statusCode, 400, `capture amountFils ${JSON.stringify(amountFils)}: ${res.body}`);
   }
 });
+
+test("an invalid date filter on the list and export is a 400, not a 500 (docs/bugs/010)", async () => {
+  const { rawKey } = await createApprovedMerchantWithApiKey("bad-dates");
+  for (const url of [
+    "/v1/transactions?from=garbage",
+    "/v1/transactions?to=2026-13-45T00:00:00Z",
+    "/v1/transactions?from=a&from=b",
+    "/v1/transactions/export?from=garbage",
+  ]) {
+    const res = await app.inject({ method: "GET", url, headers: authHeader(rawKey) });
+    assert.equal(res.statusCode, 400, `${url}: ${res.body}`);
+    assert.equal(res.json().error, "invalid_date");
+  }
+});
