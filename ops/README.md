@@ -66,6 +66,23 @@ the `seed` job above — `db/seed/index.ts` truncates and regenerates its
 fixture tables on every invocation; it doesn't need the volume removed
 first.
 
+## Building the images
+
+Compose builds two images from the repo root:
+
+| Image | Used by | Notes |
+|---|---|---|
+| `ops/Dockerfile.node` | migrate, seed, api, reporting | Node 22; runs TypeScript with tsx; non-root `node` user; KYC uploads in the `filspay_kyc` volume |
+| `ops/Dockerfile.go` | settlement | static binary on distroless, non-root; `GO_VERSION` build arg (default 1.24) |
+
+```bash
+docker compose -f ops/docker-compose.yml build
+docker compose -f ops/docker-compose.yml up
+```
+
+`.dockerignore` keeps `.git`, `node_modules` and every `.env*` file (except
+`*.example`) out of the images; secrets reach the containers at run time.
+
 ## Required settings per service
 
 | Service | Needs | Where it comes from in compose |

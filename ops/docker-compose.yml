@@ -12,8 +12,8 @@
 # file), so without `env_file:` the containers ran with NODE_ENV unset and
 # development defaults. See docs/cyper/03-insecure-defaults.md.
 #
-# — M?: Dockerfile.node / Dockerfile.go live next to this file. if they're
-# missing for you, pull main again.
+# ops/Dockerfile.node (migrate, seed, api, reporting) and ops/Dockerfile.go
+# (settlement) build the images; the repo root is the build context.
 #
 # Run from the repo root: `docker compose -f ops/docker-compose.yml up`.
 
@@ -102,6 +102,10 @@ services:
       # one file compose reads for ${...}); compose refuses to start without.
       WEBHOOK_SECRET_ENCRYPTION_KEY: ${WEBHOOK_SECRET_ENCRYPTION_KEY:?set WEBHOOK_SECRET_ENCRYPTION_KEY (32 random bytes, base64)}
       SETTLEMENT_INTERNAL_TOKEN: ${SETTLEMENT_INTERNAL_TOKEN:?set SETTLEMENT_INTERNAL_TOKEN}
+    # KYC uploads live in /app/data/kyc (KYC_UPLOAD_DIR default); keep them
+    # across container restarts and rebuilds.
+    volumes:
+      - filspay_kyc:/app/data/kyc
     depends_on:
       postgres:
         condition: service_healthy
@@ -139,3 +143,4 @@ services:
 
 volumes:
   filspay_pgdata:
+  filspay_kyc:
