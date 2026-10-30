@@ -1,7 +1,7 @@
 import type { Pool } from "pg";
 import type { ReportingConfig } from "../config.js";
 import { withTransaction } from "../db/withTransaction.js";
-import { resetCursor } from "../consumer/cursor.js";
+import { resetCursor, readCursor } from "../consumer/cursor.js";
 import { runConsumerPass, CONSUMER_NAME } from "../consumer/runConsumerPass.js";
 
 interface RollupCounts {
@@ -50,6 +50,8 @@ export async function runRebuild(pool: Pool, config: ReportingConfig): Promise<v
 
   // FH: truncate + reset in one tx, replay outside it -- a live worker can race the replay? (MK: worker is stopped during rebuild per RUNBOOK)
   await withTransaction(pool, async (client) => {
+    // Lock in worker order: cursor before rollups, avoiding rebuild/worker deadlock.
+    await readCursor(client, CONSUMER_NAME);
     await client.query(`TRUNCATE merchant_daily_volume`);
     await client.query(`TRUNCATE merchant_payout_trends`);
     await resetCursor(client, CONSUMER_NAME);
