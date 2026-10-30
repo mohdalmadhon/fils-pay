@@ -98,3 +98,35 @@ test("rows from before checksums existed adopt the current file's checksum once"
     await admin.end();
   }
 });
+
+test("a refused run records nothing, not even the changes it would accept", async () => {
+  const admin = new Client({ connectionString: databaseUrl });
+  await admin.connect();
+  const name = `${scratch}_atomic`;
+  await admin.query(`DROP DATABASE IF EXISTS ${name}`);
+  await admin.query(`CREATE DATABASE ${name}`);
+  const dir = mkdtempSync(join(tmpdir(), "fp-migrations-"));
+  const client = new Client({ connectionString: urlFor(name) });
+  await client.connect();
+  try {
+    writeFileSync(join(dir, "0001_a.sql"), "CREATE TABLE a (id int);\n");
+    writeFileSync(join(dir, "0002_b.sql"), "CREATE TABLE b (id int);\n");
+    await runMigrations(client, dir, quiet);
+    const before = await client.query(`SELECT filename, checksum FROM schema_migrations ORDER BY filename`);
+
+    writeFileSync(join(dir, "0001_a.sql"), "CREATE TABLE a (id int); -- accepted\n");
+    writeFileSync(join(dir, "0002_b.sql"), "CREATE TABLE b (id int); -- not accepted\n");
+    process.env.MIGRATE_ACCEPT_CHANGED = "0001_a.sql";
+    try {
+      await assert.rejects(runMigrations(client, dir, quiet), /0002_b\.sql.*changed/);
+    } finally {
+      delete process.env.MIGRATE_ACCEPT_CHANGED;
+    }
+    const after = await client.query(`SELECT filename, checksum FROM schema_migrations ORDER BY filename`);
+    assert.deepEqual(after.rows, before.rows, "\"Nothing was applied\" must be true");
+  } finally {
+    await client.end();
+    await admin.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`);
+    await admin.end();
+  }
+});

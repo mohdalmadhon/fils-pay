@@ -46,10 +46,34 @@ export async function runMigrations(
   dir: string,
   log: (line: string) => void = console.log,
 ): Promise<{ applied: number; upToDate: number }> {
+  // One runner at a time per database (two deploys starting together would
+  // otherwise both try to apply the same file). Released in the finally.
+  await client.query("SELECT pg_advisory_lock(hashtext('filspay:migrate'))");
+  try {
+    return await runLocked(client, dir, log);
+  } finally {
+    await client.query("SELECT pg_advisory_unlock(hashtext('filspay:migrate'))");
+  }
+}
+
+async function runLocked(
+  client: Client,
+  dir: string,
+  log: (line: string) => void,
+): Promise<{ applied: number; upToDate: number }> {
   await bootstrapSchemaMigrationsTable(client);
   const applied = await getAppliedMigrations(client);
   const files = listMigrationFiles(dir);
-  await verifyAppliedChecksums(client, dir, files, applied, log);
+  // The check and any checksums it records commit together, or not at all,
+  // so a refused run leaves schema_migrations exactly as it was.
+  await client.query("BEGIN");
+  try {
+    await verifyAppliedChecksums(client, dir, files, applied, log);
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  }
 
   let appliedCount = 0;
   for (const filename of files) {
@@ -114,7 +138,9 @@ async function getAppliedMigrations(client: Client): Promise<Map<string, string 
  * the checksum recorded for it. A mismatch means the file was edited after
  * it ran, so this database and a new one built from the same files would
  * differ; the runner stops and names the files. Rows from before checksums
- * existed (checksum NULL) adopt the current file's checksum, once.
+ * existed (checksum NULL) adopt the current file's checksum, once: that
+ * first run trusts the files on disk, so run it from main, not from a
+ * branch that edits an applied migration.
  *
  * MIGRATE_ACCEPT_CHANGED=<file>[,<file>...] accepts a reviewed change
  * (a comment fix, say) and records the new checksum. See docs/RUNBOOK.md.
