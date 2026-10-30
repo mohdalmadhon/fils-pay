@@ -257,7 +257,9 @@ export async function listBatchTransactions(
 /**
  * gapFils = ledgerMerchantPayableNetFils - settlementNetPayoutFils -
  * pendingUnbatchedFils. Refund legs are included both in the ledger figure
- * and in pending, so a period with refunds still explains to zero.
+ * and, until a batch claims the refund, in pending (amount_fils minus
+ * fee_reversed_fils, subtracted), so a period with refunds still explains
+ * to zero. Once claimed, the refund is in the batch's net_payout_fils.
  *
  * ledgerMerchantPayableNetFils is what the merchant EARNED in the period
  * (captures, fees, refunds, adjustments), not what was paid out: payout legs
@@ -301,7 +303,8 @@ export async function getReconciliationReport(
   const windowStart = bahrainLocalMidnightUtc(input.from);
   const windowEnd = bahrainLocalMidnightUtc(input.to);
 
-  const [ledgerResult, settlementResult, pendingResult, merchantResult, scheduleResult, platformResult] = await Promise.all([
+  const [ledgerResult, settlementResult, pendingResult, merchantResult, scheduleResult, platformResult, pendingRefundResult] =
+    await Promise.all([
     pool.query<{ net: string }>(
       `SELECT COALESCE(SUM(CASE WHEN direction = 'credit' THEN amount_fils ELSE -amount_fils END), 0) AS net
          FROM ledger_entries
@@ -335,6 +338,17 @@ export async function getReconciliationReport(
       [input.merchantId],
     ),
     pool.query<{ total_processed_fils: string | number }>(`SELECT total_processed_fils FROM platform_stats WHERE id = 1`),
+    // Refunds no batch has claimed yet. Each one already moved
+    // merchant_payable by -(amount - fee reversed); CloseBatch will take
+    // the same amount off a later payout.
+    pool.query<{ net: string | number }>(
+      `SELECT COALESCE(SUM(amount_fils - fee_reversed_fils), 0) AS net
+         FROM refunds
+        WHERE merchant_id = $1 AND status = 'succeeded'
+          AND settlement_batch_id IS NULL
+          AND occurred_at >= $2 AND occurred_at < $3`,
+      [input.merchantId, windowStart, windowEnd],
+    ),
   ]);
 
   // merchants.mdr_bps is only the fallback for a merchant with no schedule
@@ -361,6 +375,8 @@ export async function getReconciliationReport(
     const mdrBps = Math.max(0, effectiveMdrBpsAt(schedules, row.occurred_at, fallbackMdrBps) - tierBonusBps);
     pendingUnbatchedFils += amountFils - settlementFeeFils(amountFils, mdrBps, discountBps);
   }
+
+  pendingUnbatchedFils -= Number(pendingRefundResult.rows[0]?.net ?? 0);
 
   const ledgerMerchantPayableNetFils = Number(ledgerResult.rows[0]?.net ?? 0);
   const settlementNetPayoutFils = Number(settlementResult.rows[0]?.total ?? 0);

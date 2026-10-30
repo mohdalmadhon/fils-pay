@@ -512,6 +512,36 @@ test("GET /v1/settlement/reconciliation with an unbatched capture reports it as 
   assert.equal(report.explained, true);
 });
 
+test("GET /v1/settlement/reconciliation explains an unbatched refund as pending, not as a gap", async () => {
+  const { merchantId, rawKey } = await createApprovedMerchantWithApiKey("reconciliation-refund", 250);
+  const txn = await authorize(rawKey, 10_000);
+  await capture(rawKey, txn.id);
+  const refundRes = await app.inject({
+    method: "POST",
+    url: `/v1/merchants/${merchantId}/refunds`,
+    headers: { ...authHeader(rawKey), "idempotency-key": randomUUID() },
+    payload: { transactionId: txn.id, amountFils: 4_000 },
+  });
+  assert.equal(refundRes.statusCode, 200, refundRes.body);
+  const refundRow = await pool.query<{ amount_fils: string; fee_reversed_fils: string }>(
+    `SELECT amount_fils, fee_reversed_fils FROM refunds WHERE transaction_id = $1`,
+    [txn.id],
+  );
+  const refundNet = Number(refundRow.rows[0]!.amount_fils) - Number(refundRow.rows[0]!.fee_reversed_fils);
+
+  const businessDate = todayBahrainDateString();
+  const res = await app.inject({
+    method: "GET",
+    url: `/v1/settlement/reconciliation?from=${businessDate}&to=${addOneCalendarDay(businessDate)}`,
+    headers: authHeader(rawKey),
+  });
+  assert.equal(res.statusCode, 200, res.body);
+  const report = res.json() as { pendingUnbatchedFils: number; gapFils: number; explained: boolean };
+  assert.equal(report.pendingUnbatchedFils, 10_000 - Number(applyRateFils(toFils(10_000), 250)) - refundNet);
+  assert.equal(report.gapFils, 0);
+  assert.equal(report.explained, true);
+});
+
 test("GET /v1/settlement/reconciliation prices a pending capture at the merchant's negotiated schedule", async () => {
   // merchants.mdr_bps = 250 is only the fallback; the schedule says 225 bps
   // since yesterday, and capture charges 225. Pending must use 225 too.
