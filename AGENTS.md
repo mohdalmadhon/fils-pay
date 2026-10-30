@@ -26,9 +26,11 @@ silently changing `packages/money` and breaking the settlement reconciliation.
   intentional and matches the acquirer's test vectors.
 - `apps/settlement/internal/money/` — Go mirror of `packages/money`. Same
   freeze applies.
-- Test files (`*.test.ts`, `*_test.go`) — Tests are regression-locked.
-  They assert current correct behavior. If a test fails after your change,
-  your change is wrong, not the test.
+- Test files (`*.test.ts`, `*_test.go`): don't edit a test to make your
+  change pass; a failing test usually means the change is wrong. The one
+  exception is a test that asserts what an accepted ADR, a fix report or
+  ARCHITECTURE says is wrong (several did, and kept the suite red; see
+  `docs/improvements/01-02`). Change it in its own commit and record why.
 
 ### Settlement
 

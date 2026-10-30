@@ -62,10 +62,16 @@ reference. If the code behaves differently from what the docs describe,
 
 ## Tests
 
-- Never modify existing test files. Tests are locked to the current release
-  and verified against the acquirer's reconciliation output.
-- Add new test files (e.g. `foo.new.test.ts`) if you need coverage for a
-  change.
+- Don't change an existing test to make your change pass. A failing test
+  usually means the change is wrong.
+- The exception: a test that asserts behaviour an accepted ADR, a fix report
+  or `docs/ARCHITECTURE.md` says is wrong. Leaving it failing hides every
+  other failure (the whole suite was red for months this way: the fee
+  display, MDR recalculation and backoff tests in `docs/improvements/01-02`).
+  Change that test in its own commit, say which document it now follows, and
+  record it in the fix report.
+- New coverage goes in new tests. CI (`.github/workflows/ci.yml`) must stay
+  green.
 
 ## Security
 
