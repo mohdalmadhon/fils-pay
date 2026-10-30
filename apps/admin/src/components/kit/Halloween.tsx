@@ -24,8 +24,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { prefersReducedMotion } from "./motion.js";
-import { PixelArt } from "./pixelArt.js";
-import { Bat, Cobweb, Ghost, Moon, Pumpkin, Spider } from "./halloweenArt.js";
+import { Bat, Cloud, Cobweb, Ghost, Moon, NightScene, Pumpkin, Spider, Witch } from "./halloweenArt.js";
 
 const KEY = "fp-costume";
 const CHANGE = "fp-costume-change";
@@ -144,24 +143,20 @@ const STARS = (() => {
   }));
 })();
 
-/** Graveyard props along the bottom: [sprite, left %]. */
-const GRAVES: ReadonlyArray<readonly ["tombRound" | "tombCross" | "pumpkinLit", number]> = [
-  ["tombCross", 4],
-  ["tombRound", 11],
-  ["pumpkinLit", 17],
-  ["tombRound", 29],
-  ["tombCross", 46],
-  ["tombRound", 58],
-  ["pumpkinLit", 66],
-  ["tombCross", 74],
-  ["tombRound", 86],
+/** Jack-o'-lanterns glowing on the ground, as [left %, size px]. */
+const LANTERNS: ReadonlyArray<readonly [number, number]> = [
+  [20, 34],
+  [31, 26],
+  [57, 30],
+  [88, 28],
 ];
 
 /**
  * Scenery behind the page content (z-index -1, so it never covers text or
- * takes a click): twinkling pixel stars, a witch who crosses the sky now
- * and then, a graveyard with tombstones and jack-o'-lanterns along the
- * bottom, and drifting pixel fog.
+ * takes a click): twinkling stars, a witch who crosses the sky now and
+ * then, and along the bottom a night scene (NightScene: hills, a haunted
+ * house with lit windows, bare trees, a fence, a graveyard and a black
+ * cat), glowing jack-o'-lanterns and drifting fog.
  */
 function HalloweenSky() {
   return (
@@ -174,16 +169,14 @@ function HalloweenSky() {
         />
       ))}
       <div className="fp-hw-witch">
-        <PixelArt sprite="witch" />
+        <Witch />
       </div>
-      <div className="fp-hw-graveyard">
-        {GRAVES.map(([sprite, left]) => (
-          <span key={`${sprite}-${left}`} className="fp-hw-grave-slot" style={{ left: `${left}%` }}>
-            <PixelArt sprite={sprite} className={`fp-hw-grave fp-hw-grave-${sprite}`} />
-          </span>
-        ))}
-        <div className="fp-hw-ground" />
-      </div>
+      <NightScene className="fp-hw-scene" />
+      {LANTERNS.map(([left, size]) => (
+        <span key={left} className="fp-hw-lantern-slot" style={{ left: `${left}%`, width: size, height: size * 0.9 }}>
+          <Pumpkin />
+        </span>
+      ))}
       <div className="fp-hw-fog fp-hw-fog-back" />
       <div className="fp-hw-fog fp-hw-fog-front" />
     </div>
@@ -426,6 +419,8 @@ function HalloweenLayer() {
       <div className="fp-hw-lantern" />
       <div className="fp-hw-vignette" />
       <Moon className="fp-hw-moon" />
+      <Cloud className="fp-hw-cloud fp-hw-cloud-a" />
+      <Cloud className="fp-hw-cloud fp-hw-cloud-b" />
       <Cobweb className="fp-hw-web fp-hw-web-left" />
       <Cobweb className="fp-hw-web fp-hw-web-right" />
 

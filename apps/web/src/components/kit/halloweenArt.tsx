@@ -192,3 +192,144 @@ export function Witch({ className }: { className?: string }) {
     </svg>
   );
 }
+
+/** A soft cloud, for drifting across the moon. */
+export function Cloud({ className }: { className?: string }) {
+  const id = useId();
+  return (
+    <svg className={className} viewBox="0 0 160 56" {...svgProps}>
+      <defs>
+        <linearGradient id={`${id}-c`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#5b4a85" />
+          <stop offset="100%" stopColor="#2e2148" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M18 48c-10 0-16-6-14-13s10-9 16-7c1-9 10-15 20-12 4-9 16-13 26-7 6-8 20-8 26 1 9-3 19 2 20 11 10-1 18 5 17 14-1 8-8 13-17 13Z"
+        fill={`url(#${id}-c)`}
+      />
+      <path d="M40 22c3-6 10-8 15-6M86 14c5-3 11-2 14 2" stroke="#8f7cc2" strokeWidth="1.4" fill="none" strokeLinecap="round" opacity=".6" />
+    </svg>
+  );
+}
+
+/** One bare tree, branching, drawn in strokes that thin toward the tips. */
+function Tree({ x, scale = 1, flip = false }: { x: number; scale?: number; flip?: boolean }) {
+  return (
+    <g transform={`translate(${x} 260) scale(${flip ? -scale : scale} ${scale})`} stroke="#120a1c" strokeLinecap="round" fill="none">
+      <path d="M0 0c2-40-6-80 4-120" strokeWidth="9" />
+      <path d="M2-60c-18-10-30-24-34-44M-14-88c-8-4-12-10-14-18" strokeWidth="5" />
+      <path d="M4-90c16-12 26-26 28-46M22-118c8-2 14-8 16-16" strokeWidth="4" />
+      <path d="M4-118c-6-14-4-26 4-36M6-134c6-6 14-8 20-6" strokeWidth="3" />
+      <path d="M-32-104c-10-2-16 2-22 8M28-136c4-10 2-18-4-24" strokeWidth="2" />
+    </g>
+  );
+}
+
+/** A rounded tombstone with RIP carved in, lit faintly from the left. */
+function Tombstone({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
+  return (
+    <g transform={`translate(${x} ${y}) scale(${scale})`}>
+      <path d="M0 0v-30c0-11 8-19 18-19s18 8 18 19V0Z" fill="#3a2d55" />
+      <path d="M2 0v-30c0-10 7-17 16-17" stroke="#6d5a99" strokeWidth="1.5" fill="none" />
+      <text x="18" y="-22" textAnchor="middle" fontSize="9" fontWeight="700" fill="#1e1530" fontFamily="Georgia, serif">
+        RIP
+      </text>
+      <path d="M8-12h20M10-7h16" stroke="#1e1530" strokeWidth="1.4" />
+    </g>
+  );
+}
+
+function Cross({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
+  return (
+    <path
+      transform={`translate(${x} ${y}) scale(${scale})`}
+      d="M-3 0v-26h-9v-6h9v-9h6v9h9v6H3V0Z"
+      fill="#3a2d55"
+    />
+  );
+}
+
+/**
+ * The night scene along the bottom of the page: far hills, a haunted house
+ * with lit windows on its hill, bare trees, an iron fence, a graveyard of
+ * tombstones and crosses, and a black cat on a tombstone who blinks.
+ * Stretches to any width (xMidYMax slice); the house stays on the right.
+ */
+export function NightScene({ className }: { className?: string }) {
+  const id = useId();
+  const fence = Array.from({ length: 16 }, (_, i) => 360 + i * 14);
+  return (
+    <svg className={className} viewBox="0 0 1440 260" preserveAspectRatio="xMidYMax slice" {...svgProps}>
+      <defs>
+        <linearGradient id={`${id}-far`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#3b2766" />
+          <stop offset="100%" stopColor="#1d1236" />
+        </linearGradient>
+        <radialGradient id={`${id}-window`}>
+          <stop offset="0%" stopColor="#fff3b0" />
+          <stop offset="100%" stopColor="#ff9b1a" />
+        </radialGradient>
+      </defs>
+
+      {/* Far hills. */}
+      <path d="M0 200c120-50 260-60 420-30s300 10 420-30 300-60 600-10v130H0Z" fill={`url(#${id}-far)`} opacity=".9" />
+
+      {/* The haunted house on its hill, right of centre. */}
+      <path d="M940 260c40-70 120-100 220-100s190 40 280 100Z" fill="#170e29" />
+      <g fill="#120a1c">
+        <path d="M1070 168v-60l40-36 40 36v60Z" />
+        <path d="M1140 168v-46l-6-2 34-30 34 30-6 2v46Z" />
+        {/* The tower, with its spire. */}
+        <path d="M1046 168v-92h28v92Z" />
+        <path d="M1040 78l20-52 20 52Z" />
+        <path d="M1059 26v-10" stroke="#120a1c" strokeWidth="2" />
+        <path d="M1150 100h12v-26h-12Z" />
+      </g>
+      <g className="fp-hw-windows" fill={`url(#${id}-window)`}>
+        <rect x="1053" y="96" width="14" height="18" rx="7" />
+        <rect x="1086" y="120" width="14" height="16" />
+        <rect x="1120" y="120" width="14" height="16" />
+        <path d="M1100 104a10 10 0 0 1 20 0Z" />
+        <rect x="1160" y="128" width="16" height="14" />
+        <rect x="1098" y="146" width="16" height="22" rx="8" />
+      </g>
+      <path d="M1093 128h8M1127 128h8M1168 128v14M1160 135h16" stroke="#120a1c" strokeWidth="1.5" />
+
+      {/* Bare trees: one on the left, one by the house. */}
+      <Tree x={160} scale={1.05} />
+      <Tree x={1300} scale={0.9} flip />
+
+      {/* Near ground, with a bump for the graveyard. */}
+      <path d="M0 236c80-14 160-18 240-10s200 14 320 4 240-20 380-10 340 30 500 18v22H0Z" fill="#120a1c" />
+
+      {/* An iron fence with pointed posts. */}
+      <g stroke="#2c1f45" strokeWidth="3" fill="#2c1f45">
+        <path d="M356 216h226M356 236h226" strokeWidth="2.5" fill="none" />
+        {fence.map((fx) => (
+          <path key={fx} d={`M${fx} 240v-34l3-6 3 6v34Z`} strokeWidth="0" />
+        ))}
+      </g>
+
+      {/* The graveyard. */}
+      <Tombstone x={40} y={240} />
+      <Cross x={110} y={236} />
+      <Tombstone x={250} y={236} scale={0.85} />
+      <Tombstone x={640} y={242} scale={1.1} />
+      <Cross x={720} y={236} scale={0.9} />
+      <Tombstone x={820} y={238} scale={0.9} />
+      <Cross x={1380} y={238} />
+
+      {/* A black cat on the big tombstone; its eyes blink. */}
+      <g transform="translate(660 190)">
+        <path d="M12 2c-6 0-10 4-10 10 0 4 2 7 4 9-3 3-4 7-2 9h20c2-3 1-7-2-10 3-2 4-5 4-8 0-6-4-10-10-10l-2-6-3 6Z" fill="#05030a" />
+        <path d="M5 2l2-8 5 6M19 2l-2-8-5 6" fill="#05030a" />
+        <path d="M24 28c10-2 14-10 10-18" stroke="#05030a" strokeWidth="3" fill="none" strokeLinecap="round" />
+        <g className="fp-hw-cat-eyes" fill="#8fe36b">
+          <ellipse cx="8.5" cy="8" rx="1.8" ry="2.2" />
+          <ellipse cx="15.5" cy="8" rx="1.8" ry="2.2" />
+        </g>
+      </g>
+    </svg>
+  );
+}

@@ -2153,42 +2153,44 @@ button.fp-nav-search:hover {
   position: absolute;
   width: 3px;
   height: 3px;
+  border-radius: 50%;
   background: var(--hw-bone);
-  opacity: 0.55;
-  animation: fp-twinkle 3.2s steps(1) infinite;
+  box-shadow: 0 0 6px rgba(247, 239, 224, 0.6);
+  opacity: 0.6;
+  animation: fp-twinkle 3.2s ease-in-out infinite;
 }
 
+/* A few bigger stars: a soft four-point sparkle in candy yellow. */
 .fp-hw-star.is-big {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
   background: var(--hw-candy);
-  /* A four-point pixel sparkle. */
-  box-shadow: 6px 0 0 -1.5px var(--hw-candy), -6px 0 0 -1.5px var(--hw-candy), 0 6px 0 -1.5px var(--hw-candy), 0 -6px 0 -1.5px var(--hw-candy);
+  box-shadow: 0 0 10px 2px rgba(255, 210, 63, 0.55);
 }
 
 @keyframes fp-twinkle {
   0%,
   100% {
-    opacity: 0.55;
+    opacity: 0.6;
   }
-  40% {
+  45% {
     opacity: 0.15;
   }
   60% {
-    opacity: 0.85;
+    opacity: 0.9;
   }
 }
 
-/* The witch: 28x15 pixels at 3x, crossing the sky every 24 seconds. */
+/* The witch crosses the sky every 24 seconds on a gentle wave. */
 .fp-hw-witch {
   position: absolute;
   top: 14%;
   left: 0;
-  width: 84px;
-  height: 45px;
-  opacity: 0.9;
-  translate: -120px 0;
+  width: 96px;
+  height: 52px;
+  translate: -140px 0;
   animation: fp-witch 24s linear 3s infinite;
+  filter: drop-shadow(0 0 6px rgba(180, 92, 240, 0.5));
 }
 
 .fp-hw-witch svg {
@@ -2199,7 +2201,7 @@ button.fp-nav-search:hover {
 
 @keyframes fp-witch {
   0% {
-    translate: -120px 40px;
+    translate: -140px 40px;
   }
   10% {
     translate: 15vw 0;
@@ -2212,91 +2214,135 @@ button.fp-nav-search:hover {
   }
   45%,
   100% {
-    translate: calc(100vw + 120px) 20px;
+    translate: calc(100vw + 140px) 20px;
   }
 }
 
-.fp-hw-graveyard {
+/* The night scene along the bottom, kept dim enough for text over it. */
+.fp-hw-scene {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 64px;
-  opacity: 0.6;
+  width: 100%;
+  height: 220px;
+  opacity: 0.85;
 }
 
-.fp-hw-grave-slot {
+/* The haunted house's windows flicker like candlelight. */
+.fp-hw-windows {
+  filter: drop-shadow(0 0 6px rgba(255, 180, 46, 0.8));
+  animation: fp-candle 3.6s ease-in-out infinite;
+}
+
+@keyframes fp-candle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.8;
+  }
+  48% {
+    opacity: 0.55;
+  }
+  56% {
+    opacity: 0.95;
+  }
+}
+
+/* The cat blinks every few seconds. */
+.fp-hw-cat-eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+  filter: drop-shadow(0 0 3px rgba(143, 227, 107, 0.9));
+  animation: fp-blink-cat 5s infinite;
+}
+
+@keyframes fp-blink-cat {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+.fp-hw-lantern-slot {
   position: absolute;
-  bottom: 12px;
+  bottom: 18px;
+  filter: drop-shadow(0 0 12px rgba(255, 140, 26, 0.75));
+  animation: fp-candle 2.9s ease-in-out infinite;
 }
 
-.fp-hw-grave {
+.fp-hw-lantern-slot svg {
   display: block;
+  width: 100%;
+  height: 100%;
 }
 
-.fp-hw-grave-tombRound {
-  width: 30px; /* 10x10 at 3x */
-  height: 30px;
-}
-
-.fp-hw-grave-tombCross {
-  width: 27px; /* 9x9 at 3x */
-  height: 27px;
-}
-
-.fp-hw-grave-pumpkinLit {
-  width: 36px; /* 18x16 at 2x */
-  height: 32px;
-  filter: drop-shadow(0 0 10px rgba(255, 122, 26, 0.7));
-  animation: fp-flicker 2.8s steps(1) infinite;
-}
-
-/* The ground: a dark band with a stepped, pixel top edge. */
-.fp-hw-ground {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 15px;
-  background:
-    linear-gradient(#1d1430, #1d1430) 0 3px / 100% 12px no-repeat,
-    repeating-linear-gradient(90deg, #1d1430 0 24px, transparent 24px 33px, #1d1430 33px 45px, transparent 45px 51px) 0 0 / 100% 3px no-repeat;
-}
-
-/* Fog: blocky bands that drift sideways in steps. */
+/* Fog: soft banks that drift slowly to and fro. */
 .fp-hw-fog {
   position: absolute;
-  left: -200px;
-  right: -200px;
-  height: 18px;
-  background: repeating-linear-gradient(
-    90deg,
-    rgba(220, 203, 242, 0.05) 0 54px,
-    rgba(220, 203, 242, 0.03) 54px 96px,
-    transparent 96px 132px,
-    rgba(220, 203, 242, 0.045) 132px 210px,
-    transparent 210px 270px
-  );
-  /* Thin out toward the top in three hard steps, not a smooth fade. */
-  -webkit-mask-image: linear-gradient(to top, #000 0 33%, rgba(0, 0, 0, 0.6) 33% 66%, rgba(0, 0, 0, 0.25) 66%);
-  mask-image: linear-gradient(to top, #000 0 33%, rgba(0, 0, 0, 0.6) 33% 66%, rgba(0, 0, 0, 0.25) 66%);
-  animation: fp-fog 40s steps(60) infinite alternate;
+  left: -15%;
+  right: -15%;
+  height: 90px;
+  background:
+    radial-gradient(40% 60% at 20% 70%, rgba(200, 185, 235, 0.16), transparent 70%),
+    radial-gradient(35% 55% at 60% 80%, rgba(200, 185, 235, 0.12), transparent 70%),
+    radial-gradient(30% 50% at 90% 70%, rgba(200, 185, 235, 0.14), transparent 70%);
+  animation: fp-fog 40s ease-in-out infinite alternate;
 }
 
 .fp-hw-fog-back {
-  bottom: 20px;
+  bottom: 40px;
 }
 
 .fp-hw-fog-front {
-  bottom: 2px;
-  height: 12px;
+  bottom: -10px;
   animation-duration: 28s;
   animation-direction: alternate-reverse;
 }
 
 @keyframes fp-fog {
   to {
-    translate: 180px 0;
+    translate: 8% 0;
+  }
+}
+
+/* Clouds drifting across the moon (over the page, so in front of it). */
+.fp-hw-cloud {
+  position: absolute;
+  width: 150px;
+  height: 52px;
+  opacity: 0.9;
+  animation: fp-cloud 60s linear infinite;
+}
+
+.fp-hw-cloud-a {
+  top: 96px;
+  right: calc(9% - 60px);
+}
+
+.fp-hw-cloud-b {
+  top: 54px;
+  right: calc(9% + 70px);
+  width: 110px;
+  height: 38px;
+  opacity: 0.75;
+  animation-duration: 80s;
+  animation-direction: reverse;
+}
+
+@keyframes fp-cloud {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: -120px 0;
   }
 }
 
