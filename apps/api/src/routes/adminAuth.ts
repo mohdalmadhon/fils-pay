@@ -3,6 +3,7 @@ import { verifyPassword } from "../adminAuth/passwords.js";
 import { issueAdminChallenge } from "../adminAuth/otp.js";
 import { attemptOtp, consumeOtpChallenge } from "../auth/otp.js";
 import { sendAdminOtpCode } from "../adminAuth/notifier.js";
+import { adminAccountKey, assertLoginAllowed, recordAuthFailure } from "../auth/throttle.js";
 import { requireAdminSession } from "../adminAuth/middleware.js";
 import {
   createPendingAdminSession,
@@ -58,6 +59,10 @@ export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
       throw new BadRequestError("invalid_request", "email and password are required");
     }
 
+    // Same throttle as merchant login, checked before the password.
+    const accountKey = adminAccountKey(email);
+    await assertLoginAllowed(app.db, app.config, accountKey, request.ip);
+
     const userResult = await app.db.query<AdminUserRow>(
       `SELECT id, email, role, password_hash FROM admin_users WHERE email = $1 AND status = 'active'`,
       [email],
@@ -69,6 +74,7 @@ export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
     // The same generic error in every failure case (no row, disabled
     // account, or wrong password) — the response never discloses which.
     if (!user || !passwordOk) {
+      await recordAuthFailure(app.db, app.config, { plane: "admin", kind: "password", accountKey, ipAddress: request.ip });
       throw new UnauthorizedError("invalid_credentials");
     }
 
@@ -136,6 +142,15 @@ export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
       throw new TooManyRequestsError("too_many_attempts");
     }
     if (attempt.outcome === "invalid_code") {
+      const who = await app.db.query<{ email: string }>(`SELECT email FROM admin_users WHERE id = $1`, [pending.adminUserId]);
+      if (who.rows[0]) {
+        await recordAuthFailure(app.db, app.config, {
+          plane: "admin",
+          kind: "otp",
+          accountKey: adminAccountKey(who.rows[0].email),
+          ipAddress: request.ip,
+        });
+      }
       throw new UnauthorizedError("invalid_code");
     }
 

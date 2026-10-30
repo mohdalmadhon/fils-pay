@@ -31,6 +31,11 @@ export interface Config {
    *  meaningful with TRUST_PROXY set correctly behind a load balancer. */
   loginMaxFailuresPerIp: number;
   loginFailureWindowMinutes: number;
+  /** Fastify trustProxy: false (default, request.ip is the socket peer),
+   *  true, or a comma list of proxy addresses/CIDRs (preferred over true). Set it to
+   *  the load balancer when there is one, or every request.ip (audit rows,
+   *  the per-IP login limit) is the balancer's address. */
+  trustProxy: boolean | string;
 
   argon2MemoryKib: number;
   argon2TimeCost: number;
@@ -158,6 +163,12 @@ function parseNodeEnv(value: string | undefined): Config["nodeEnv"] {
   throw new Error(`loadConfig: NODE_ENV must be production, development or test, got "${value}"`);
 }
 
+function parseTrustProxy(value: string | undefined): boolean | string {
+  if (value === undefined || value === "" || value === "false") return false;
+  if (value === "true") return true;
+  return value;
+}
+
 /** Private webhook destinations: on by default only outside production, and
  *  refused in production (the SSRF guard must not be switchable off there). */
 function parseWebhookAllowPrivateHosts(value: string | undefined, nodeEnv: Config["nodeEnv"]): boolean {
@@ -280,6 +291,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     loginMaxFailures: parseIntEnv(env.LOGIN_MAX_FAILURES, 10),
     loginMaxFailuresPerIp: parseIntEnv(env.LOGIN_MAX_FAILURES_PER_IP, nodeEnv === "production" ? 100 : 0),
     loginFailureWindowMinutes: parseIntEnv(env.LOGIN_FAILURE_WINDOW_MINUTES, 15),
+    trustProxy: parseTrustProxy(env.TRUST_PROXY),
 
     argon2MemoryKib: parseIntEnv(env.ARGON2_MEMORY_KIB, 19_456),
     argon2TimeCost: parseIntEnv(env.ARGON2_TIME_COST, 2),
