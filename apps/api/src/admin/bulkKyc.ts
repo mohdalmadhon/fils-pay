@@ -1,4 +1,4 @@
-import { recordKycReviewInTx } from "../onboarding/review.js";
+import { recordKycApprovalsInTx } from "../onboarding/review.js";
 import { UnauthorizedError } from "../lib/errors.js";
 import type { Pool } from "pg";
 import { insertAdminAuditLog } from "../adminAudit/log.js";
@@ -32,14 +32,11 @@ export async function bulkApproveMerchantsKyc(
       `SELECT id FROM merchants
         WHERE id = ANY($1::uuid[]) AND onboarding_status = 'under_review'
         ORDER BY id FOR UPDATE`, [input.merchantIds]);
-    const approvedMerchantIds: string[] = [];
-    for (const row of result.rows) {
-      await recordKycReviewInTx(client, {
-        merchantId: row.id, outcome: "approved", reviewerIdentifier: reviewer.rows[0].email,
-        reviewerAdminUserId: input.adminUserId, notes: input.notes,
-      });
-      approvedMerchantIds.push(row.id);
-    }
+    const approvedMerchantIds = result.rows.map((row) => row.id);
+    await recordKycApprovalsInTx(client, {
+      merchantIds: approvedMerchantIds, reviewerIdentifier: reviewer.rows[0].email,
+      reviewerAdminUserId: input.adminUserId, notes: input.notes,
+    });
 
     await insertAdminAuditLog(client, {
       adminUserId: input.adminUserId,

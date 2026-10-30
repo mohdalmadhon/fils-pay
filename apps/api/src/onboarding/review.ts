@@ -18,12 +18,36 @@ export interface RecordKycReviewResult {
   kycPassed: boolean;
 }
 
+/** Approve distinct merchants already selected and locked by the caller.
+ * Keep one review per merchant, deriving both cached KYC fields from that
+ * inserted review, without two database round trips for every merchant.
+ */
+export async function recordKycApprovalsInTx(
+  client: PoolClient,
+  input: Omit<RecordKycReviewInput, "merchantId" | "outcome"> & { merchantIds: string[] },
+): Promise<void> {
+  if (input.merchantIds.length === 0) return;
+  await client.query(
+    `WITH reviews AS (
+       INSERT INTO merchant_kyc_reviews
+         (merchant_id, outcome, reviewer_identifier, reviewer_admin_user_id, notes)
+       SELECT merchant_id, 'approved', $2, $3::uuid, $4
+         FROM unnest($1::uuid[]) AS selected(merchant_id)
+       RETURNING merchant_id, outcome
+     )
+     UPDATE merchants AS merchant
+        SET onboarding_status = review.outcome, kyc_passed = (review.outcome = 'approved')
+       FROM reviews AS review WHERE merchant.id = review.merchant_id`,
+    [input.merchantIds, input.reviewerIdentifier, input.reviewerAdminUserId ?? null, input.notes ?? null],
+  );
+}
+
 /**
- * The one function permitted to write `merchants.kyc_passed` or set
- * `onboarding_status` to `'approved'`/`'rejected'`. Inserts a
+ * The single-merchant form of this module's canonical review writers.
+ * Sets the KYC boolean and the approved/rejected onboarding status. Inserts a
  * `merchant_kyc_reviews` row and updates `merchants` in the same
- * transaction, deriving the merchant-row values directly from the row it
- * just inserted, so the two columns can never disagree.
+ * transaction, deriving the merchant-row values from the inserted review's
+ * outcome. The batch form above does the same through INSERT ... RETURNING.
  *
  * Takes an already-open transaction's client so a caller can compose it
  * with further writes that must succeed or fail with it — specifically the

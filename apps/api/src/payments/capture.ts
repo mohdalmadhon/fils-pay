@@ -244,19 +244,13 @@ export async function captureTransactionWithClient(
        (entry_group_id, merchant_id, transaction_id, account_id, direction, amount_fils, occurred_at, description)
      VALUES
        ($1, $2, $3, 'card_scheme_clearing', 'debit',  $4, now(), 'capture: gross'),
-       ($1, $2, $3, 'merchant_payable',     'credit', $4, now(), 'capture: gross')`,
-    [entryGroupId, input.merchantId, txn.id, requestedAmount],
+       ($1, $2, $3, 'merchant_payable',     'credit', $4, now(), 'capture: gross')${feeFils > 0 ? `,
+       ($1, $2, $3, 'merchant_payable',     'debit',  $5, now(), 'capture: MDR fee'),
+       ($1, $2, $3, 'platform_fee_revenue', 'credit', $5, now(), 'capture: MDR fee')` : ""}`,
+    feeFils > 0
+      ? [entryGroupId, input.merchantId, txn.id, requestedAmount, feeFils]
+      : [entryGroupId, input.merchantId, txn.id, requestedAmount],
   );
-  if (feeFils > 0) {
-    await client.query(
-      `INSERT INTO ledger_entries
-         (entry_group_id, merchant_id, transaction_id, account_id, direction, amount_fils, occurred_at, description)
-       VALUES
-         ($1, $2, $3, 'merchant_payable',     'debit',  $4, now(), 'capture: MDR fee'),
-         ($1, $2, $3, 'platform_fee_revenue', 'credit', $4, now(), 'capture: MDR fee')`,
-      [entryGroupId, input.merchantId, txn.id, feeFils],
-    );
-  }
 
   await applyPayableCacheDelta(client, input.merchantId, requestedAmount - feeFils);
 

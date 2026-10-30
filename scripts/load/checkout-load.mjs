@@ -218,7 +218,8 @@ async function checkout(token, deadline) {
 
 async function runStep(users, tokens) {
   const results = [];
-  const deadline = performance.now() + STEP_SECONDS * 1000;
+  const started = performance.now();
+  const deadline = started + STEP_SECONDS * 1000;
   let next = 0;
   await Promise.all(
     Array.from({ length: users }, async () => {
@@ -228,7 +229,10 @@ async function runStep(users, tokens) {
       }
     }),
   );
-  const elapsed = STEP_SECONDS;
+  // Include the drain: requests started before the deadline can finish
+  // afterwards. Dividing those completions by just STEP_SECONDS inflates
+  // throughput, especially on a slow or overloaded server.
+  const elapsed = (performance.now() - started) / 1000;
   const count = (o) => results.filter((r) => r.outcome === o).length;
   // Latency of checkouts the server actually handled (shed answers are
   // instant by design and would flatter the percentiles).
@@ -240,6 +244,8 @@ async function runStep(users, tokens) {
   const errors = results.filter((r) => r.outcome === "error");
   const step = {
     users,
+    arrivalWindowSeconds: STEP_SECONDS,
+    elapsedSeconds: Number(elapsed.toFixed(3)),
     checkouts: results.length,
     paid: count("paid"),
     declined: count("declined"),
@@ -262,8 +268,9 @@ async function runStep(users, tokens) {
     max: handled.length ? Math.round(handled[handled.length - 1]) : null,
     buyerP95: percentile(buyer, 95),
     unusedLinks: tokens.length - next,
+    exhaustedLinkSupply: next >= tokens.length,
   };
-  step.fastAndCorrect = step.errors === 0 && step.shedResponses === 0 && step.recoveredAfterFailure === 0 && step.p95 !== null && step.p95 <= P95_MS;
+  step.fastAndCorrect = !step.exhaustedLinkSupply && step.errors === 0 && step.shedResponses === 0 && step.recoveredAfterFailure === 0 && step.p95 !== null && step.buyerP95 <= P95_MS;
   return { step, results };
 }
 
