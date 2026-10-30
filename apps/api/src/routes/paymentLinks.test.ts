@@ -123,7 +123,17 @@ test("create -> public read (active) -> pay (approved) -> public read (paid) -> 
   assert.equal(readActive.statusCode, 200, readActive.body);
   assert.equal(readActive.json().status, "active");
   assert.equal(readActive.json().amountFils, 4_750);
-  assert.ok(readActive.json().merchantPublicKey?.startsWith("fp_"));
+  // The public read is unauthenticated: nothing about the merchant's API keys.
+  assert.equal("merchantPublicKey" in readActive.json(), false, "API key prefix leaked");
+  assert.equal("merchantIntegrationId" in readActive.json(), false, "API key hash leaked");
+  const keyRow = await pool.query<{ key_hash: string; key_prefix: string }>(
+    `SELECT key_hash, key_prefix FROM api_keys WHERE merchant_id = $1`,
+    [merchantId],
+  );
+  for (const k of keyRow.rows) {
+    assert.equal(readActive.body.includes(k.key_hash), false);
+    assert.equal(readActive.body.includes(k.key_prefix), false);
+  }
 
   const payRes = await pay(link.token, APPROVED_CARD);
   assert.equal(payRes.statusCode, 200, payRes.body);
