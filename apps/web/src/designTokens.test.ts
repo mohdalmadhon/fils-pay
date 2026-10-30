@@ -85,6 +85,8 @@ const REQUIRED = [
   "--hero-ink-2",
   "--hero-action-bg",
   "--hero-action-ink",
+  "--action-from",
+  "--action-to",
 ];
 
 /** [text token, background token]: the pairs components actually draw. */
@@ -112,6 +114,9 @@ const PAIRS: Array<[string, string]> = [
   ["--hero-ink", "--hero-bg"],
   ["--hero-ink-2", "--hero-bg"],
   ["--hero-action-ink", "--hero-action-bg"],
+  // Primary buttons: a gradient, so its text is checked against both ends.
+  ["--c-on-primary", "--action-from"],
+  ["--c-on-primary", "--action-to"],
 ];
 
 for (const design of DESIGNS) {

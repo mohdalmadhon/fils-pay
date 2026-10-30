@@ -111,7 +111,9 @@
   --c-input: #e4def0;
   --c-focus: rgba(98, 54, 201, 0.35);
   --c-scrim: rgba(29, 20, 48, 0.45);
-  --gradient-action: linear-gradient(120deg, #7b4be0, #e0479e);
+  --action-from: #6236c9;
+  --action-to: #b02a78;
+  --gradient-action: linear-gradient(120deg, var(--action-from), var(--action-to));
   --art-1: #c6f04a;
   --art-2: #e0479e;
   --art-3: #a98bff;
@@ -170,7 +172,9 @@
   --c-input: #1c162e;
   --c-focus: rgba(169, 139, 255, 0.5);
   --c-scrim: rgba(29, 20, 48, 0.7);
-  --gradient-action: linear-gradient(120deg, #a98bff, #e0479e);
+  --action-from: #a98bff;
+  --action-to: #f07ab8;
+  --gradient-action: linear-gradient(120deg, var(--action-from), var(--action-to));
   --art-5: #f3effb;
   --side-bg: #0a0711;
   --side-surface: #151021;
@@ -227,7 +231,9 @@
   --c-input: #ebdfcb;
   --c-focus: rgba(168, 63, 12, 0.3);
   --c-scrim: rgba(42, 23, 8, 0.45);
-  --gradient-action: linear-gradient(120deg, #a83f0c, #d0610f);
+  --action-from: #a83f0c;
+  --action-to: #b84a0d;
+  --gradient-action: linear-gradient(120deg, var(--action-from), var(--action-to));
   --art-1: #f2a51a;
   --art-2: #e2617a;
   --art-3: #8a9a3b;
@@ -285,7 +291,9 @@
   --c-input: #231c13;
   --c-focus: rgba(242, 165, 26, 0.5);
   --c-scrim: rgba(42, 23, 8, 0.7);
-  --gradient-action: linear-gradient(120deg, #f2a51a, #f6c15a);
+  --action-from: #f2a51a;
+  --action-to: #f6c15a;
+  --gradient-action: linear-gradient(120deg, var(--action-from), var(--action-to));
   --art-5: #f8efe1;
   --side-bg: #0d0906;
   --side-surface: #18120c;
@@ -342,7 +350,9 @@
   --c-input: #dbe8e9;
   --c-focus: rgba(10, 111, 109, 0.35);
   --c-scrim: rgba(14, 42, 46, 0.45);
-  --gradient-action: linear-gradient(120deg, #0a6f6d, #11908b);
+  --action-from: #0a6f6d;
+  --action-to: #0b6a85;
+  --gradient-action: linear-gradient(120deg, var(--action-from), var(--action-to));
   --art-1: #ff7a59;
   --art-2: #5fd3c6;
   --art-3: #0a6f6d;
@@ -400,7 +410,9 @@
   --c-input: #10292e;
   --c-focus: rgba(95, 211, 198, 0.5);
   --c-scrim: rgba(14, 42, 46, 0.7);
-  --gradient-action: linear-gradient(120deg, #5fd3c6, #9ce8de);
+  --action-from: #5fd3c6;
+  --action-to: #9ce8de;
+  --gradient-action: linear-gradient(120deg, var(--action-from), var(--action-to));
   --art-5: #e8f6f5;
   --side-bg: #041013;
   --side-surface: #0a1e22;
@@ -1378,6 +1390,103 @@ h1 {
   :root :is(.dash-dl, .admin-dl) dd {
     padding-top: 0;
   }
+}
+
+/* Buttons and tabs (after Orbit) ----------------------------------------
+ * The primary action on every form and page is a 44px pill filled with the
+ * design's action gradient (--action-from to --action-to; its text is
+ * contrast-tested against both ends). Settings' light/dark choice is a row
+ * of underline tabs, and filter checkboxes are filled toggle pills. */
+:root:not([data-costume="halloween"]) :is(
+    .dash-form button[type="submit"],
+    .dash-button-primary,
+    .dash-button-link,
+    .admin-form button[type="submit"],
+    .admin-button-primary,
+    .checkout-form button[type="submit"]
+  ) {
+  min-height: var(--control-h-lg);
+  height: auto;
+  padding-inline: 22px;
+  font-weight: 700;
+  color: var(--c-on-primary);
+  background: var(--gradient-action);
+  border: 0;
+  border-radius: var(--r-button);
+  box-shadow: 0 8px 20px -10px var(--action-to);
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+:root:not([data-costume="halloween"]) :is(
+    .dash-form button[type="submit"],
+    .dash-button-primary,
+    .dash-button-link,
+    .admin-form button[type="submit"],
+    .admin-button-primary,
+    .checkout-form button[type="submit"]
+  ):hover {
+  color: var(--c-on-primary);
+  background: var(--gradient-action);
+  filter: brightness(1.08);
+}
+
+:root :is(.dash-form, .admin-form, .checkout-form) button[type="submit"]:disabled {
+  cursor: not-allowed;
+  filter: none;
+  opacity: 0.55;
+}
+
+/* Light / Dark / Match my device as underline tabs. */
+:root .fp-settings-segment {
+  gap: 28px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--c-line);
+  border-radius: 0;
+}
+
+:root .fp-settings-segment label {
+  flex: none;
+  height: 44px;
+  padding: 0 0 2px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--c-ink-3);
+  background: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+}
+
+:root .fp-settings-segment label:hover {
+  color: var(--c-ink);
+}
+
+:root .fp-settings-segment label:has(input:checked) {
+  color: var(--c-ink);
+  background: none;
+  border-bottom-color: var(--c-primary);
+}
+
+/* Filter checkboxes: filled toggle pills. */
+:root :is(.dash-filters, .admin-filters) label:has(> input[type="checkbox"]) {
+  height: 34px;
+  padding: 0 14px 0 10px;
+  font-size: 0.8125rem;
+  color: var(--c-ink-2);
+  background: var(--c-input);
+  border: 1px solid transparent;
+  border-radius: 999px;
+}
+
+:root :is(.dash-filters, .admin-filters) label:has(> input[type="checkbox"]:checked) {
+  color: var(--c-ink);
+  background: var(--c-surface);
+  border-color: var(--c-primary);
+}
+
+:root :is(.dash-filters, .admin-filters) input[type="checkbox"] {
+  accent-color: var(--c-primary);
 }
 
 /* Page backdrops. Carnival and Slate get a dot grid in the top corner
