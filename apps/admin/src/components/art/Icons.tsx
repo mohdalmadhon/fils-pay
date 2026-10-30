@@ -131,4 +131,13 @@ export const icons = {
       <path d="M19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7Z" />
     </Icon>
   ),
+  /** Settings: three sliders. */
+  settings: (
+    <Icon>
+      <path d="M4 7h10M18 7h2M4 17h4M12 17h8M4 12h2M10 12h10" />
+      <circle cx="16" cy="7" r="2" />
+      <circle cx="10" cy="17" r="2" />
+      <circle cx="8" cy="12" r="2" />
+    </Icon>
+  ),
 };

@@ -90,9 +90,10 @@ export function DashboardLayout() {
       list.push({ id: "new-link", label: "Create a payment link", group: "Actions", icon: icons.plus, keywords: "new invoice", run: () => navigate("/dashboard/payment-links/new") });
     }
     list.push(
+      go("settings", "Settings", "/dashboard/settings", icons.settings, "appearance design theme layout compact carnival blush slate"),
       {
         id: "theme",
-        label: theme === "night" ? "Switch to light theme" : "Switch to night theme",
+        label: theme === "night" ? "Switch to light mode" : "Switch to dark mode",
         group: "Actions",
         icon: theme === "night" ? icons.sun : icons.moon,
         keywords: "theme dark light mode",
@@ -194,6 +195,11 @@ export function DashboardLayout() {
               Webhooks
             </NavLink>
           </RequireRole>
+          <span className="dash-nav-label">You</span>
+          <NavLink to="/dashboard/settings">
+            {icons.settings}
+            Settings
+          </NavLink>
         </nav>
 
         <div className="dash-sidebar-foot">
@@ -204,7 +210,7 @@ export function DashboardLayout() {
             </button>
             <button type="button" aria-pressed={theme === "night"} onClick={() => setTheme("night")}>
               {icons.moon}
-              Night
+              Dark
             </button>
           </div>
           <button type="button" className="dash-signout" onClick={() => void handleSignOut()}>
