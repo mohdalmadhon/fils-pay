@@ -50,7 +50,7 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
   - adjustment imports read amounts as BD with three decimals (`adjustment-import-amounts`)
 - **Security:** OTP codes are no longer guessable (`otp-safety`).
 - **Security review (`cyper` branch, `docs/cyper/README.md`):** 16 issues fixed,
-  3 of them critical:
+  3 of them critical, plus a round of fixes from an independent review (18):
   - merchant login could issue another merchant's session (01)
   - reporting could read another merchant's transactions (02)
   - the hosted box ran with development defaults, so the OTP came back in the
