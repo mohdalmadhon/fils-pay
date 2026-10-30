@@ -31,8 +31,16 @@ function isRealCalendarDate(value: string): boolean {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 
+/** Accounting dates follow Bahrain's business calendar, including 21:00Z midnight. */
+export function assertCreditDateNotFuture(effectiveDate: string, now: Date = new Date()): void {
+  const today = new Date(now.getTime() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  if (effectiveDate > today) {
+    throw new BadRequestError("invalid_effective_date", "effectiveDate must be today or earlier in Asia/Bahrain");
+  }
+}
+
 /** Validates and normalises an "issue credit" request body. */
-export function parseCreditRequestInput(body: unknown): CreditRequestDraft {
+export function parseCreditRequestInput(body: unknown, now: Date = new Date()): CreditRequestDraft {
   if (typeof body !== "object" || body === null || Array.isArray(body)) {
     throw new BadRequestError("invalid_request", "a JSON object body is required");
   }
@@ -81,5 +89,6 @@ export function parseCreditRequestInput(body: unknown): CreditRequestDraft {
     );
   }
 
+  assertCreditDateNotFuture(rawDate, now);
   return { baseAmountFils, reasonCode, memo, reverseFee, effectiveDate: rawDate };
 }

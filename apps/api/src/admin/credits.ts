@@ -9,7 +9,7 @@ import { withTransaction } from "../db/withTransaction.js";
 import { ConflictError, NotFoundError } from "../lib/errors.js";
 import { assertDistinctApprover } from "./creditApproval.js";
 import { creditRequiresSecondApprover } from "./creditThreshold.js";
-import { parseCreditRequestInput, type CreditReasonCode } from "./creditRequestValidation.js";
+import { assertCreditDateNotFuture, parseCreditRequestInput, type CreditReasonCode } from "./creditRequestValidation.js";
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
@@ -146,6 +146,8 @@ interface PostableCredit {
  * part of the create-or-approve decision that authorised it.
  */
 async function postCreditToLedger(client: PoolClient, credit: PostableCredit): Promise<string> {
+  // Also reject a future-dated legacy request at approval/posting time.
+  assertCreditDateNotFuture(credit.effectiveDate);
   const entryGroupId = randomUUID();
   const postedAmountFils = addFils(credit.baseAmountFils, credit.feeReversalFils);
 
