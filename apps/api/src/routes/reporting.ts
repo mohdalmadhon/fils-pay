@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { requireMerchantAuth } from "../auth/requireMerchantAuth.js";
+import { requireMerchantAuth, requireMerchantRole, requireMerchantWriterActor } from "../auth/requireMerchantAuth.js";
 import { runTransactionsReport, type TransactionReportFilter } from "../reporting/transactionsReportQuery.js";
 import { resolveReportMerchantId } from "../reporting/scope.js";
 import { createSavedFilter, listSavedFilters } from "../reporting/savedFilters.js";
@@ -15,10 +15,11 @@ interface SaveFilterBody {
 }
 
 /**
- * Registered with prefix '/v1/reporting'. `requireMerchantAuth` only, same
- * authorization level as `/v1/analytics/*` — nothing here is more sensitive
- * than a merchant reading their own transaction list already is (in the
- * intended, single-merchant case).
+ * Registered with prefix '/v1/reporting'. The reads need `requireMerchantAuth`
+ * only, same authorization level as `/v1/analytics/*` — nothing here is more
+ * sensitive than a merchant reading their own transaction list already is
+ * (in the intended, single-merchant case). Saving a filter is a write and is
+ * gated like one.
  */
 export async function reportingRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Querystring: ReportQuery }>(
@@ -49,10 +50,13 @@ export async function reportingRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
+  /** A write: owner and finance only (like the other merchant write routes),
+   *  and never from a view-only "view as merchant" session. */
   app.post<{ Body: SaveFilterBody }>(
     "/saved-filters",
-    { preHandler: requireMerchantAuth },
+    { preHandler: [requireMerchantAuth, requireMerchantRole("owner", "finance")] },
     async (request, reply) => {
+      requireMerchantWriterActor(request.merchantAuth!);
       const { name, filter } = request.body ?? {};
       if (!name || typeof name !== "string") {
         throw new BadRequestError("invalid_request", "name is required");

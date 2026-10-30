@@ -1,4 +1,10 @@
 import type { Pool } from "pg";
+import { withTransaction } from "../db/withTransaction.js";
+import { ConflictError } from "../lib/errors.js";
+
+/** Most saved filters one merchant may keep. Enforced in createSavedFilter;
+ *  there is no database constraint for it. */
+export const MAX_SAVED_FILTERS_PER_MERCHANT = 50;
 
 export interface SavedFilterDto {
   id: string;
@@ -31,19 +37,36 @@ export async function createSavedFilter(
   pool: Pool,
   input: { merchantId: string; name: string; filter: Record<string, unknown> },
 ): Promise<SavedFilterDto> {
-  const result = await pool.query<SavedFilterRow>(
-    `INSERT INTO reporting_saved_filters (merchant_id, name, filter_json)
-     VALUES ($1, $2, $3::jsonb)
-     RETURNING id, name, filter_json, created_at`,
-    [input.merchantId, input.name, JSON.stringify(input.filter)],
-  );
-  return serialize(result.rows[0]!);
+  return withTransaction(pool, async (client) => {
+    // One writer per merchant at a time, so two saves sent together can't
+    // both see 49 and end up at 51.
+    await client.query(`SELECT pg_advisory_xact_lock(hashtext('reporting_saved_filters'), hashtext($1))`, [
+      input.merchantId,
+    ]);
+    const count = await client.query<{ n: number }>(
+      `SELECT COUNT(*)::int AS n FROM reporting_saved_filters WHERE merchant_id = $1`,
+      [input.merchantId],
+    );
+    if (count.rows[0]!.n >= MAX_SAVED_FILTERS_PER_MERCHANT) {
+      throw new ConflictError(
+        "saved_filter_limit_reached",
+        `a merchant can keep at most ${MAX_SAVED_FILTERS_PER_MERCHANT} saved filters`,
+      );
+    }
+    const result = await client.query<SavedFilterRow>(
+      `INSERT INTO reporting_saved_filters (merchant_id, name, filter_json)
+       VALUES ($1, $2, $3::jsonb)
+       RETURNING id, name, filter_json, created_at`,
+      [input.merchantId, input.name, JSON.stringify(input.filter)],
+    );
+    return serialize(result.rows[0]!);
+  });
 }
 
 /**
  * Lists a merchant's saved filters, newest first. Scoped by merchant_id;
- * there is no pagination because a merchant is capped at 50 saved filters
- * by a CHECK in the 0061 migration.
+ * there is no pagination because createSavedFilter caps a merchant at
+ * MAX_SAVED_FILTERS_PER_MERCHANT (50). No migration enforces it.
  */
 export async function listSavedFilters(pool: Pool, input: { merchantId: string }): Promise<SavedFilterDto[]> {
   const result = await pool.query<SavedFilterRow>(
