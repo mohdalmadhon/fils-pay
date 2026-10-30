@@ -132,7 +132,7 @@ async function loginAdmin(email: string): Promise<string> {
   const loginBody = loginRes.json() as { otpRequired: boolean; devOtpCode?: string };
   assert.equal(loginBody.otpRequired, true);
   assert.ok(loginBody.devOtpCode);
-  const cookie = parseCookie(loginRes.headers["set-cookie"], config.adminCookieName);
+  let cookie = parseCookie(loginRes.headers["set-cookie"], config.adminCookieName);
 
   const verifyRes = await app.inject({
     method: "POST",
@@ -141,6 +141,8 @@ async function loginAdmin(email: string): Promise<string> {
     payload: { code: loginBody.devOtpCode },
   });
   assert.equal(verifyRes.statusCode, 200, verifyRes.body);
+  // OTP verify issues a new session token; the pending one is dead.
+  cookie = (([] as string[]).concat(verifyRes.headers["set-cookie"] ?? [])[0] ?? "").split(";")[0]!;
   return cookie;
 }
 

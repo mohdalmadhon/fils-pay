@@ -50,7 +50,7 @@ export async function loginAdmin(app: App, config: Config, email: string): Promi
   assert.equal(loginRes.statusCode, 200, loginRes.body);
   const { devOtpCode } = loginRes.json() as { devOtpCode?: string };
   assert.ok(devOtpCode, "OTP_DEV_EXPOSE must be on for fixtures");
-  const cookie = parseCookie(loginRes.headers["set-cookie"], config.adminCookieName);
+  let cookie = parseCookie(loginRes.headers["set-cookie"], config.adminCookieName);
   const verifyRes = await app.inject({
     method: "POST",
     url: "/v1/admin/auth/otp/verify",
@@ -58,6 +58,8 @@ export async function loginAdmin(app: App, config: Config, email: string): Promi
     payload: { code: devOtpCode },
   });
   assert.equal(verifyRes.statusCode, 200, verifyRes.body);
+  // OTP verify issues a new session token; the pending one is dead.
+  cookie = (([] as string[]).concat(verifyRes.headers["set-cookie"] ?? [])[0] ?? "").split(";")[0]!;
   return cookie;
 }
 
