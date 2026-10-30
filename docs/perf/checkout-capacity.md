@@ -86,27 +86,43 @@ in stays fast:
   loads are let in.
 - **Never shed**: `/healthz`, `/readyz` and CORS preflights, so a busy API
   is never mistaken for a dead one.
-- **Cheap to refuse**: refused requests are not logged one by one (that cost
-  more CPU than the refusal); `/healthz` reports `load.inFlight` and
-  `load.shedTotal` instead. Real requests log one "request completed" line.
+- **Quiet when refusing**: refused requests are not logged one by one (a
+  flood is refused thousands of times a second); `/healthz` reports
+  `load.inFlight` and `load.shedTotal` instead. Real requests log one
+  "request completed" line.
 - **The checkout page** says "We're very busy right now. No payment was
   taken. Try again in a few seconds." on a refused payment, and on a refused
   page load waits and retries (1, 2, 4, then every 5 s) instead of saying
   the link doesn't exist.
 
-The 32 was measured: 48 let more in but made everyone slower; 40 made the
-waiting buyers wait longer (buyer p95 2.7 s against 0.9 s).
+The 32 was compared with 40 on the same database: 40 made the buyers who
+were asked to wait, wait longer (buyer p95 2.7 s against 0.9 s) for the same
+throughput.
 
-Two things learned on the way, both in the code's comments:
-
-- Refusing payments on event-loop lag as well made throughput collapse
-  under a flood: answering the flood kept the CPU busy, the lag stayed
-  high, and every payment was refused. Payments are refused only by the
-  in-flight limit.
-- A client that retries a refused request instantly is the worst case. Hammered
+A client that retries a refused request instantly is the worst case. Hammered
   that way (200 buyers, **137,472 refusals in 30 s**, ~4,600 a second), the
   API still completed **35.7 checkouts/s** at p95 1.16 s with no errors, and
   the step after it (20 buyers) was back to p95 0.75 s straight away.
+
+## Corrections
+
+Two statements made while this work was in progress were wrong, and one
+went into the code before it was caught:
+
+- **"Refusing payments on event-loop lag makes throughput collapse."** A run
+  showed throughput falling from ~24/s to ~2/s once the guard started
+  refusing. Watching the guard's own counters (`/healthz` every second)
+  showed requests in flight dropping to 0 within about five seconds of a 15-second
+  step: the load script moved on to a new payment link after every 503,
+  used up the step's links in seconds, and its buyers sat idle. The script
+  now retries the same link, as a buyer does, and with that the guard holds
+  throughput steady. The guard still refuses payments only by the in-flight
+  limit, for the reason now given in its comment; the earlier comment's
+  explanation was replaced.
+- **"48 in flight made everyone slower."** One of those runs went to an
+  older API process that was still holding the port (the new one had
+  failed to start), the other had the same load-script problem. Only the
+  32-against-40 comparison above was measured cleanly.
 
 ## Restarting itself, without losing data
 

@@ -29,9 +29,11 @@ import { securityHeadersPlugin } from "./plugins/securityHeaders.js";
 /**
  * One "request completed" line per request (Fastify's default also logs an
  * "incoming request" line), and none for requests the overload guard turns
- * away: under a flood, logging every 503 twice took a large share of the
- * CPU the guard is there to protect (docs/perf/checkout-capacity.md).
- * Errors are still logged.
+ * away: a flood is refused thousands of times a second (~4,600/s in the
+ * capacity test), and two log lines for each would bury the real ones and
+ * spend CPU on nothing. The count is on /healthz (load.shedTotal) instead.
+ * Errors are still logged. (docs/perf/checkout-capacity.md; the CPU cost
+ * of those lines was not measured separately.)
  */
 class QuietSheddingLogController extends LogController {
   override incomingRequest(): void {}

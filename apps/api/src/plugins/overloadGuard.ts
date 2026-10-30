@@ -24,9 +24,12 @@ import type { Config } from "../config.js";
  * limit and is turned away only by that limit; everything else (loading
  * the link, the dashboard) gets 75 % of it and is also turned away by the
  * other two signals. So a buyer who already has the page finishes before
- * new page loads are let in. (Shedding pays on lag too made throughput
- * collapse under a flood: answering the flood's 503s kept the CPU busy,
- * the lag stayed high, and every payment was refused.) Liveness and
+ * new page loads are let in: once a buyer is paying, finishing that
+ * checkout is the most useful thing the API can do, so the softer signals
+ * never refuse it. (An earlier note here said refusing payments on lag
+ * made throughput collapse. That drop turned out to be the load test
+ * running out of payment links, not the guard; see "Corrections" in
+ * docs/perf/checkout-capacity.md.) Liveness and
  * readiness probes and CORS preflights are never shed, so a busy API isn't
  * mistaken for a dead one and restarted.
  */
