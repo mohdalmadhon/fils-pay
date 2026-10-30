@@ -12,13 +12,19 @@
  * operator does benefit from seeing "a payment is currently in flight" as
  * its own filterable state.
  */
-export type PublicPaymentLinkStatus = "active" | "processing" | "paid" | "expired" | "canceled";
+export type PublicPaymentLinkStatus = "active" | "processing" | "paid" | "expired" | "canceled" | "unavailable";
 
 /** reservedAt null on a 'reserved' row is treated as epoch, i.e. immediately claimable again. */
 export interface PaymentLinkStatusInput {
   status: string;
   expiresAt: Date;
   reservedAt: Date | null;
+  /**
+   * merchants.status. Anything but 'active' (suspended, closed) makes an
+   * unpaid link 'unavailable', matching pay.ts, which refuses it with
+   * 409 merchant_unavailable. Omitted means active.
+   */
+  merchantStatus?: string;
 }
 
 // FH: uses Date.now() not the client time — should this use expiryReferenceTime too?
@@ -29,6 +35,7 @@ export function derivePublicStatus(
 ): PublicPaymentLinkStatus {
   if (row.status === "paid") return "paid";
   if (row.status === "canceled") return "canceled";
+  if (row.merchantStatus !== undefined && row.merchantStatus !== "active") return "unavailable";
 
   if (row.status === "active") {
     return row.expiresAt.getTime() <= Date.now() ? "expired" : "active";
