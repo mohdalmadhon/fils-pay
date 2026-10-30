@@ -36,6 +36,20 @@ reconciliation is zero:
 API_URL=https://<api host> WEBHOOK_URL=<public receiver> node scripts/e2e/payment-check.mjs
 ```
 
+That works locally, where the seeded merchant still has the public seed
+password (the script's default). On the hosted box `remote-deploy.sh`
+replaces that password on every deploy (unless `SHOW_OTP=0`) and keeps the
+new one in `~/fils-pay-config/demo-passwords.txt` on the server, so pass it
+in:
+
+```
+MERCHANT_PASSWORD="$(ssh <user@server> "grep 'new password for .* merchant users:' ~/fils-pay-config/demo-passwords.txt | tail -1 | sed 's/.*: //'")" \
+API_URL=https://<api host> WEBHOOK_URL=<public receiver> node scripts/e2e/payment-check.mjs
+```
+
+(The file is appended to on each deploy; the last "merchant users" line is
+the current password.)
+
 Use staging, not production; it creates real rows. The full options, and
 what a passing run looks like, are in
 `docs/verification/end-to-end-2026-10-30.md`.
