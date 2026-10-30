@@ -123,7 +123,23 @@ func CloseBatch(ctx context.Context, db *pgxpool.Pool, merchantID uuid.UUID, bus
 		return BatchResult{}, fmt.Errorf("settlement: CloseBatch: lock batch: %w", err)
 	}
 
-	// Step 4: already closed/paid -> idempotent no-op, nothing to undo.
+	// Step 4: merchant must be active and not in test mode. Checked before
+	// the already-closed shortcut below: RunDailyBatch pays out whatever
+	// batch CloseBatch hands back, so returning an already-closed batch for
+	// a merchant that has since been suspended (or put in test mode) would
+	// still pay it.
+	var mdrBps, discountBps int64
+	err = tx.QueryRow(ctx, `
+		SELECT mdr_bps, negotiated_discount_bps FROM merchants WHERE id = $1 AND status = 'active' AND test_mode = false
+	`, merchantID).Scan(&mdrBps, &discountBps)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return BatchResult{}, ErrMerchantNotEligible
+		}
+		return BatchResult{}, fmt.Errorf("settlement: CloseBatch: read merchant: %w", err)
+	}
+
+	// Step 5: already closed/paid -> idempotent no-op, nothing to undo.
 	if status != "open" {
 		tx.Rollback(ctx) //nolint:errcheck
 		var gross, fee, net int64
@@ -142,18 +158,6 @@ func CloseBatch(ctx context.Context, db *pgxpool.Pool, merchantID uuid.UUID, bus
 			FeeFils:       money.Fils(fee),
 			NetPayoutFils: money.Fils(net),
 		}, nil
-	}
-
-	// Step 5: merchant must be active and not in test mode.
-	var mdrBps, discountBps int64
-	err = tx.QueryRow(ctx, `
-		SELECT mdr_bps, negotiated_discount_bps FROM merchants WHERE id = $1 AND status = 'active' AND test_mode = false
-	`, merchantID).Scan(&mdrBps, &discountBps)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return BatchResult{}, ErrMerchantNotEligible
-		}
-		return BatchResult{}, fmt.Errorf("settlement: CloseBatch: read merchant: %w", err)
 	}
 
 	// Effective-dated fee resolution (apps/settlement/internal/settlement/fee_schedule.go) —
