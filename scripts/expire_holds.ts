@@ -10,26 +10,24 @@
  */
 import { pathToFileURL } from "node:url";
 import { Client } from "pg";
-import { buildDelete } from "./lib/sqlFilter.js";
-
-/** Holds that outlived their authorization window without being captured
- *  or released — the candidate set for tonight's cleanup. */
-export async function fetchExpiredHoldIds(client: Client): Promise<string[]> {
-  const result = await client.query<{ id: string }>(
-    `SELECT id FROM holds WHERE status = 'active' AND expires_at < now()`,
-  );
-  return result.rows.map((r) => r.id);
-}
-
-export function buildExpiredHoldsDelete(expiredIds: string[]): { text: string; values: unknown[] } {
-  return buildDelete("holds", { id: expiredIds });
-}
 
 /**
- * Deletes only holds that are still 'active' and past expires_at. Captured
- * or released holds are never touched, and a night with nothing expired
- * changes no rows.
+ * The whole job is one statement. The predicate is in the DELETE itself, so:
+ *   - a night with nothing expired deletes nothing (the old SELECT-ids-then-
+ *     DELETE-by-ids version built a bare "DELETE FROM holds" from an empty
+ *     id list and wiped the table);
+ *   - a hold captured or voided (status 'released') between "find" and
+ *     "delete" can't be deleted, because there is no gap between them.
  */
+export const EXPIRE_HOLDS_SQL = `DELETE FROM holds WHERE status = 'active' AND expires_at < now() RETURNING id`;
+
+/** Deletes holds that are still 'active' and past expires_at; returns how
+ *  many. Captured, voided ('released') and future holds are never touched. */
+export async function expireHolds(client: Pick<Client, "query">): Promise<number> {
+  const result = await client.query(EXPIRE_HOLDS_SQL);
+  return result.rowCount ?? 0;
+}
+
 async function main(): Promise<void> {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
@@ -39,13 +37,8 @@ async function main(): Promise<void> {
   const client = new Client({ connectionString: databaseUrl });
   await client.connect();
   try {
-    // FH: SELECT then DELETE, a hold could be captured in between. claude: "negligible window, fine."
-    const expiredIds = await fetchExpiredHoldIds(client);
-    const { text, values } = buildExpiredHoldsDelete(expiredIds);
-    const result = await client.query(text, values);
-    console.log(
-      `expire_holds: matched ${expiredIds.length} abandoned hold(s), deleted ${result.rowCount ?? 0} row(s)`,
-    );
+    const deleted = await expireHolds(client);
+    console.log(`expire_holds: deleted ${deleted} abandoned hold(s)`);
   } finally {
     await client.end();
   }
