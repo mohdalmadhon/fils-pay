@@ -11,7 +11,9 @@
 #               which resolves to the IP, so HTTPS works without a domain)
 #   OPS_HOST    Ops console host (default: ops.<SITE_HOST>)
 #   HTTP_ONLY=1 serve plain HTTP (no certificate; cookies not marked Secure)
-#   SEED=1      load the demo data, only into an empty database
+#   SEED=1      load the demo data. This EMPTIES the database first; it is
+#               refused only if it holds merchants the seed didn't create, so
+#               a demo-only database is wiped and re-seeded (docs/deploy.md)
 #   SHOW_OTP=0  don't show sign-in codes on screen (default: shown, because
 #               there is no email delivery yet; docs/deploy.md)
 #
@@ -143,7 +145,7 @@ fi
 # Secrets printed below are also kept in $CONF (owner-only), since they are
 # shown only once.
 if [ "${SEED:-0}" = 1 ]; then
-  say "Loading demo data (refused if the database already has merchants it didn't create)"
+  say "Loading demo data: empties the database first (refused if it has merchants the seed didn't create)"
   if "${COMPOSE[@]}" --profile seed run --rm seed 2>&1 | tee "$CONF/seed-output.txt"; then
     chmod 600 "$CONF/seed-output.txt"
     echo "(the API keys above are saved in $CONF/seed-output.txt)"

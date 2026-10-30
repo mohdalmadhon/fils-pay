@@ -57,8 +57,17 @@ keeps the previous copy as `~/fils-pay.old`, then on the server
    them;
 3. checks ports 80 and 443 are free (and opens them in `ufw` if it's on);
 4. builds and starts everything, waits until the api is healthy, loads the
-   demo data if `SEED=1` (only into an empty database), and prints the
-   addresses.
+   demo data if `SEED=1`, and prints the addresses.
+
+`SEED=1` is not only for an empty database. The seed refuses only when the
+database holds a merchant whose name is not one of the demo merchants (a
+real sign-up, say); then it needs `SEED_RESET_CONFIRM=<database name>`. A
+database that holds only the demo merchants is **re-seeded without asking**,
+and a re-seed empties it first: every payment, refund, payment link, ledger
+entry, settlement batch and payout made on the demo merchants, their API
+keys (new ones are printed), webhook endpoints and KYC files, and all
+admin users, sessions and the admin audit log. Deploy without `SEED=1` to
+keep the demo activity (`db/seed/guard.ts`).
 
 The first build takes several minutes on one vCPU.
 
