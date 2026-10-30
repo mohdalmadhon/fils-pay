@@ -87,16 +87,10 @@ export function SettlementBatchDetailPage() {
   }
 
   const { batch } = state;
-  const displayProgress = parseFloat((batch.grossFils / 10000).toFixed(2));
 
   return (
     <section>
       <h1>Settlement batch {batch.batchDate}</h1>
-      {batch.status === "closed" && (
-        <div className="dash-progress-bar">
-          <div className="dash-progress-fill" style={{ width: `${Math.min(displayProgress, 100)}%` }} />
-        </div>
-      )}
       <p className="dash-muted">
         <code>{batch.id}</code>
       </p>
