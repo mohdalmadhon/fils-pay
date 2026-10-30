@@ -4,6 +4,7 @@ import { toFils } from "@filspay/money";
 import { withTransaction } from "../db/withTransaction.js";
 import { authorizeTransaction } from "../payments/authorize.js";
 import { captureTransactionWithClient } from "../payments/capture.js";
+import { applyCaptureDiscountAdjustmentWithClient } from "../payments/discountAdjustment.js";
 import { voidTransaction } from "../payments/void.js";
 import type { AcquirerSimulator, SimulatedCardInput } from "../acquirer/types.js";
 
@@ -140,8 +141,6 @@ export async function payPaymentLink(
 
   const txnId = (authResult.body as { id: string }).id;
 
-  // NOTE: discountAdjustment is applied by the transactions route only, not here — FH
-
   // Step 3 — capture and finalize atomically, under the link's row lock.
   const captureKey = `paylink:${link.id}:${input.idempotencyKey}:capture`;
   const outcome = await withTransaction(pool, async (client) => {
@@ -172,6 +171,28 @@ export async function payPaymentLink(
       );
       return { kind: "capture_failed" as const, result: captureResult };
     }
+
+    // This fresh, fully captured transaction has exactly one capture event.
+    // Post its rebate before marking the link paid or publishing the capture.
+    const adjustments = await applyCaptureDiscountAdjustmentWithClient(client, {
+      merchantId: link.merchantId,
+      transactionId: txnId,
+    });
+    if (adjustments.length !== 1) {
+      throw new Error("payPaymentLink: expected one newly adjusted capture");
+    }
+    const adjustment = adjustments[0]!;
+    await client.query(
+      `UPDATE transaction_events SET metadata = metadata || jsonb_build_object(
+         'feeBeforeDiscountFils', $2::bigint, 'feeFils', $3::bigint)
+       WHERE id = $1`,
+      [adjustment.captureEventId, adjustment.feeBeforeDiscountFils, adjustment.feeFils],
+    );
+    await client.query(
+      `UPDATE outbox_events SET payload = payload || jsonb_build_object('feeFils', $2::bigint)
+       WHERE aggregate_id = $1 AND event_type = 'transaction.captured'`,
+      [txnId, adjustment.feeFils],
+    );
 
     const finalized = await client.query<{ paid_at: Date }>(
       `UPDATE payment_links

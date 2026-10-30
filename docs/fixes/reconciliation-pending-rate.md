@@ -41,6 +41,8 @@ These need a product or finance decision on which side is right, so they are
 recorded rather than fixed:
 
 1. **Payment-link captures never get the negotiated discount posted.**
+   **Resolved later:** [atomic checkout discount fix](payment-link-negotiated-discount.md).
+   The following records the original finding:
    `applyCaptureDiscountAdjustment` runs only in the API capture route
    (`routes/transactions.ts`), not in `paymentLinks/pay.ts`. There is a note:
    *"discountAdjustment is applied by the transactions route only"*. CloseBatch

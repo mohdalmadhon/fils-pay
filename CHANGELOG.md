@@ -33,6 +33,9 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
 - **Browser apps:** the dashboards can reach the API. Adds `CORS_ALLOWED_ORIGINS` (`browser-cors`).
 - **Payments and refunds:**
   - payment links: expiry is judged on the server clock (`payment-link-expiry`) and a link can't be charged twice (`payment-link-double-charge`)
+  - payment-link checkout posts its negotiated discount atomically; the ledger,
+    timeline, webhook and settlement agree on the net fee
+    (`payment-link-negotiated-discount`)
   - concurrent refunds can't pay out twice (`concurrent-refunds`)
   - refunds don't give back more fee than was charged (`refund-fee-over-reversal`)
 - **Settlement:**
@@ -71,7 +74,6 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
 
 ### Known issues
 - Recorded in `docs/fixes/reconciliation-pending-rate.md`:
-  - payment-link captures don't get the negotiated discount posted
   - pricing/tier changes between capture and close can change the rate used
     at close; this audit does not introduce historical settlement snapshots
 - Test failures that predate this work, listed in the verification report:

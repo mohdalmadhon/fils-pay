@@ -110,6 +110,10 @@ Payment links are single-use. Expiry is checked against the database clock
 only; the pay endpoint is public, so nothing the client sends (including the
 old `submittedAt` field) can change whether a link has expired.
 Tokens are 128-bit, from `crypto.randomBytes`.
+Checkout's capture, negotiated-discount credit and paid-link finalization
+commit together. The new capture timeline/outbox carry the net fee; the
+timeline also retains the original fee and discount amount. See
+[the checkout discount fix](fixes/payment-link-negotiated-discount.md).
 
 ## The admin plane
 

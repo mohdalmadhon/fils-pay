@@ -80,8 +80,9 @@ source references, and its committed probe is under
   fresh migration check. Compose still references absent Dockerfiles and its
   startup ordering remains an operational follow-up. This merge does not claim
   a verified production or Compose deployment.
-- **Separate financial follow-ups:** hosted payment-link capture still lacks
-  the negotiated-discount adjustment; changes in pricing/tier between capture
+- **Separate financial follow-ups:** the missing hosted payment-link discount
+  was subsequently fixed in the [atomic checkout discount change](../fixes/payment-link-negotiated-discount.md).
+  Changes in pricing/tier between capture
   and close are not historical rate snapshots for settlement. See
   [the earlier reconciliation investigation](../fixes/reconciliation-pending-rate.md).
   This report does not claim that every repository bug has been found or fixed.
