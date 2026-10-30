@@ -1,7 +1,9 @@
 import type { ApiErrorBody } from "../types.js";
 import { reportApiFailure } from "./sessionEvents.js";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "http://localhost:3000";
+// `?.` so this module also loads outside Vite (unit tests), where
+// import.meta.env is undefined.
+const API_BASE_URL = (import.meta.env?.VITE_API_BASE_URL as string | undefined) ?? "http://localhost:3000";
 
 /** Mirrors apps/api's own uniform `{ error, message? }` body
  *  (lib/errors.ts / plugins/errorHandler.ts) — one error shape end to
@@ -101,8 +103,17 @@ const ERROR_MESSAGES: Record<string, string> = {
 /** Human-readable text for anything thrown by `request`: used by every
  *  dashboard page's error banner so a failure (including a server-side
  *  `403` from a role gate) is always shown, never silently swallowed. */
+/** Codes the server sends for several different reasons, with the reason in
+ *  `message` ("webhook URLs must not contain credentials", "... must point
+ *  at a public host"). Show that reason; the fixed text is only a fallback. */
+const SERVER_REASON_FIRST = new Set(["invalid_url"]);
+
 export function describeError(err: unknown): string {
   if (err instanceof ApiError) {
+    const reason = err.body.message;
+    if (SERVER_REASON_FIRST.has(err.code) && reason && reason !== err.code) {
+      return reason.charAt(0).toUpperCase() + reason.slice(1) + (/[.!?]$/.test(reason) ? "" : ".");
+    }
     const known = ERROR_MESSAGES[err.code];
     if (known) return known;
     if (err.statusCode === 403) {
