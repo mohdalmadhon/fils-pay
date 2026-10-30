@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { addFils, toFils, ZERO_FILS, type Fils } from "@filspay/money";
+import { addFils, compareFils, negateFils, toFils, ZERO_FILS, type Fils } from "@filspay/money";
 import { insertAdminAuditLog } from "../adminAudit/log.js";
 import { withTransaction } from "../db/withTransaction.js";
 import { BadRequestError } from "../lib/errors.js";
@@ -88,7 +88,8 @@ export async function applyAdjustmentImport(
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [importId, i + 1, row.merchantId, row.amount, amountFils, row.reason ?? null, entryGroupId],
       );
-      total = addFils(total, amountFils);
+      // Absolute value, as documented: +5 and -5 moved 10 fils, not 0.
+      total = addFils(total, compareFils(amountFils, ZERO_FILS) < 0 ? negateFils(amountFils) : amountFils);
     }
 
     await insertAdminAuditLog(client, {
