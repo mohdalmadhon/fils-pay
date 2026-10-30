@@ -1353,3 +1353,193 @@
     font-size: var(--text-lg);
   }
 }
+
+/* Edit layout ---------------------------------------------------------------
+ * The sidebar's links as a list to rearrange (components/nav/NavOrderEditor).
+ * Same brutalist edge and hard shadow as the rest of the kit. */
+:root .dash-nav-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  background: var(--c-surface);
+  border: var(--edge);
+  border-radius: var(--r-3);
+  box-shadow: var(--shadow-sm);
+}
+
+.dash-nav-editor-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dash-nav-editor-title {
+  font-weight: 650;
+  color: var(--c-ink);
+}
+
+.dash-nav-editor-hint {
+  font-size: var(--text-xs);
+  color: var(--c-ink-3);
+}
+
+.dash-nav-editor-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:root .dash-nav-editor-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 38px;
+  padding: 0 var(--sp-1) 0 var(--sp-2);
+  color: var(--c-ink);
+  background: var(--c-surface-2);
+  border: var(--edge);
+  border-radius: var(--r-2);
+  cursor: grab;
+  user-select: none;
+  transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+
+/* The sidebar is narrow: the grip says "drag me", so the link's own icon
+ * gives way to the full label. */
+.dash-nav-editor-row svg {
+  display: none;
+}
+
+.dash-nav-editor-row[data-dragging] {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+
+/* Where the dragged link will land. */
+:root .dash-nav-editor-row[data-over] {
+  box-shadow: inset 0 3px 0 var(--c-primary);
+  transform: translateY(2px);
+}
+
+.dash-nav-editor-grip {
+  flex: none;
+  width: 12px;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--c-ink-4);
+}
+
+.dash-nav-editor-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.dash-nav-editor-moves {
+  display: flex;
+  gap: 2px;
+}
+
+:root .dash-nav-editor-moves button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--c-ink);
+  background: var(--c-surface);
+  border: var(--edge);
+  border-radius: var(--r-1);
+  cursor: pointer;
+}
+
+:root .dash-nav-editor-moves button:hover:not(:disabled) {
+  background: var(--c-action);
+  color: var(--c-on-action);
+}
+
+:root .dash-nav-editor-moves button:disabled {
+  color: var(--c-ink-4);
+  border-color: var(--c-line-2);
+  cursor: default;
+}
+
+:root .dash-nav-editor-moves button:focus-visible,
+:root .dash-nav-editor-actions button:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.dash-nav-editor-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  padding-top: var(--sp-1);
+}
+
+:root .dash-nav-editor-actions button {
+  height: 32px;
+  white-space: nowrap;
+  padding: 0 var(--sp-3);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  border: var(--edge);
+  border-radius: var(--r-2);
+  cursor: pointer;
+}
+
+:root .dash-nav-editor-reset {
+  color: var(--c-ink);
+  background: var(--c-surface);
+}
+
+:root .dash-nav-editor-reset:disabled {
+  color: var(--c-ink-4);
+  border-color: var(--c-line-2);
+  cursor: default;
+}
+
+:root .dash-nav-editor-done {
+  color: var(--c-on-action);
+  background: var(--c-action);
+  box-shadow: var(--shadow-xs);
+}
+
+:root .dash-edit-layout[aria-pressed="true"] {
+  color: var(--c-ink);
+  background: var(--c-surface-3);
+}
+
+/* In the top-bar layout the editor drops down under the bar instead of
+ * squeezing into it. */
+@media (min-width: 901px) {
+  :root[data-layout="topbar"] .dash-nav-editor {
+    position: absolute;
+    top: calc(100% + var(--sp-2));
+    left: var(--sp-5);
+    z-index: 30;
+    width: 320px;
+    box-shadow: var(--shadow-pop);
+  }
+
+  :root[data-layout="topbar"] .dash-edit-layout {
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-nav-editor-row {
+    transition: none;
+  }
+}

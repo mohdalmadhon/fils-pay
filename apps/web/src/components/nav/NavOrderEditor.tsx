@@ -114,8 +114,14 @@ export function NavOrderEditor({ links, onMove, onMoveTo, onReset, onDone, canRe
         ))}
       </ol>
       <div className="dash-nav-editor-actions">
-        <button type="button" className="dash-nav-editor-reset" onClick={onReset} disabled={!canReset}>
-          Reset to default
+        <button
+          type="button"
+          className="dash-nav-editor-reset"
+          onClick={onReset}
+          disabled={!canReset}
+          aria-label="Reset to the default order"
+        >
+          Reset
         </button>
         <button type="button" className="dash-nav-editor-done" onClick={onDone}>
           Done
