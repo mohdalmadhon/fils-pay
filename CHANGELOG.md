@@ -64,12 +64,16 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
     guidance (16)
 - **Performance:** large exports and uploads (`large-exports`), and slow reporting queries (`slow-dashboard-queries`).
 - **Finance problems 001-013:** fixed and documented in `docs/solved-problems/`.
+- **Future-fixes audit:** validated all 24 findings against current main;
+  retained 9 existing fixes and fixed 15 remaining issues in separate commits.
+  Per-problem explanations, source references, verification and migration
+  requirements: `docs/audits/future-fixes-disposition.md`.
 
 ### Known issues
 - Recorded in `docs/fixes/reconciliation-pending-rate.md`:
   - payment-link captures don't get the negotiated discount posted
-  - capture and settlement apply the discount with different formulas
-  - fee-schedule tie-breaks differ between the API and settlement
+  - pricing/tier changes between capture and close can change the rate used
+    at close; this audit does not introduce historical settlement snapshots
 - Test failures that predate this work, listed in the verification report:
   - 2 API tests
   - 4 `RecalculateMDR` Go tests
@@ -82,7 +86,9 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
 
 ### Upgrade notes
 - Run `npm install` (sharp 0.35, react-router 7) and `npm run migrate`
-  (0078, 0079).
+  (0078–0082). Before deploying the future-fixes changes, follow the coordinated
+  API/settlement/reporting deployment and reviewed rebuild steps in
+  `docs/audits/future-fixes-disposition.md`.
 - Recreate `ops/.env.docker` from `ops/.env.docker.example`, and create
   `ops/.env` (see `ops/README.md`).
 - Local development: set `OTP_DEV_EXPOSE=true` to get the OTP in the login

@@ -1,3 +1,6 @@
+import { getEffectiveMdrBps } from "../fees/feeSchedule.js";
+import { getVolumeTierBonusBps } from "../fees/platformVolumeTier.js";
+import { settlementFeeFils } from "../fees/settlementFee.js";
 import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { addFils, toFils, ZERO_FILS, type Fils } from "@filspay/money";
@@ -5,8 +8,8 @@ import { insertAdminAuditLog } from "../adminAudit/log.js";
 import { withTransaction } from "../db/withTransaction.js";
 import { ConflictError, NotFoundError } from "../lib/errors.js";
 import { assertDistinctApprover } from "./creditApproval.js";
-import { calculateCreditFeeReversal, creditRequiresSecondApprover } from "./creditThreshold.js";
-import { parseCreditRequestInput, type CreditReasonCode } from "./creditRequestValidation.js";
+import { creditRequiresSecondApprover } from "./creditThreshold.js";
+import { assertCreditDateNotFuture, parseCreditRequestInput, type CreditReasonCode } from "./creditRequestValidation.js";
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
@@ -143,6 +146,8 @@ interface PostableCredit {
  * part of the create-or-approve decision that authorised it.
  */
 async function postCreditToLedger(client: PoolClient, credit: PostableCredit): Promise<string> {
+  // Also reject a future-dated legacy request at approval/posting time.
+  assertCreditDateNotFuture(credit.effectiveDate);
   const entryGroupId = randomUUID();
   const postedAmountFils = addFils(credit.baseAmountFils, credit.feeReversalFils);
 
@@ -209,8 +214,8 @@ export async function createCreditRequest(
   const draft = parseCreditRequestInput(input.body);
 
   return withTransaction(pool, async (client) => {
-    const merchantResult = await client.query<{ mdr_bps: number }>(
-      `SELECT mdr_bps FROM merchants WHERE id = $1`,
+    const merchantResult = await client.query<{ mdr_bps: number; negotiated_discount_bps: number }>(
+      `SELECT mdr_bps, negotiated_discount_bps FROM merchants WHERE id = $1`,
       [input.merchantId],
     );
     const merchant = merchantResult.rows[0];
@@ -218,11 +223,15 @@ export async function createCreditRequest(
       throw new NotFoundError("merchant_not_found");
     }
 
-    // Never operator-supplied: the reversal is the merchant's own contracted
-    // rate applied to the amount they asked to credit.
-    const feeReversalFils = draft.reverseFee
-      ? calculateCreditFeeReversal(draft.baseAmountFils, merchant.mdr_bps)
-      : ZERO_FILS;
+    // An unlinked manual credit uses pricing in effect when issued. The
+    // accounting date is not evidence of the original payment's fee.
+    let feeReversalFils = ZERO_FILS;
+    if (draft.reverseFee) {
+      const rate = await getEffectiveMdrBps(client, input.merchantId, new Date(), merchant.mdr_bps);
+      const tier = await getVolumeTierBonusBps(client);
+      feeReversalFils = toFils(settlementFeeFils(draft.baseAmountFils,
+        Math.max(0, rate - tier), merchant.negotiated_discount_bps));
+    }
     // FH: threshold compares base + reversal, so a 50.000 BD credit with a fee reversal needs a second approver
     // MK: no — base only. fee reversal is mechanical. intended.
     const requiresApproval = creditRequiresSecondApprover({

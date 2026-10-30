@@ -1,3 +1,4 @@
+import { applyPayableCacheDelta } from "./balanceCache.js";
 import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { ZERO_FILS, addFils, applyRateFils, compareFils, subtractFils, toFils, type Fils } from "@filspay/money";
@@ -163,8 +164,8 @@ export async function captureTransactionWithClient(
     return { statusCode: 422, body };
   }
 
-  const merchantResult = await client.query<{ mdr_bps: number }>(
-    `SELECT mdr_bps FROM merchants WHERE id = $1`,
+  const merchantResult = await client.query<{ mdr_bps: number; negotiated_discount_bps: number }>(
+    `SELECT mdr_bps, negotiated_discount_bps FROM merchants WHERE id = $1`,
     [input.merchantId],
   );
   const merchant = merchantResult.rows[0];
@@ -243,6 +244,8 @@ export async function captureTransactionWithClient(
     );
   }
 
+  await applyPayableCacheDelta(client, input.merchantId, requestedAmount - feeFils);
+
   // Hold lifecycle: released exactly when nothing remains outstanding.
   if (newStatus === "captured") {
     await client.query(`UPDATE holds SET status = 'released' WHERE transaction_id = $1 AND status = 'active'`, [
@@ -268,7 +271,7 @@ export async function captureTransactionWithClient(
     eventType: newStatus === "captured" ? "captured" : "partially_captured",
     amountFils: requestedAmount,
     actor: input.actor,
-    metadata: { feeFils, acquirerReference: acquirerResult.acquirerReference },
+    metadata: { feeFils, negotiatedDiscountBps: merchant.negotiated_discount_bps, chargedMdrBps: Math.max(0, effectiveMdrBps - volumeTierBonusBps), acquirerReference: acquirerResult.acquirerReference },
   });
 
   const body = serializeTransaction(updatedTxn);
