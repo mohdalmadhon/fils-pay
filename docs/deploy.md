@@ -18,12 +18,19 @@ internet ──▶ Caddy (web)  :80 / :443, HTTPS certificates from Let's Encryp
 159.89.173.8), so HTTPS works without buying a domain. With a domain, point
 it at the IP and deploy with `SITE_HOST=pay.example.com OPS_HOST=ops.example.com`.
 
-**What works there, and what doesn't.** Checkout, payment links and the
-API (with a merchant API key) work. **Signing in to the dashboard and the
-Ops console does not**: the one-time sign-in code has no delivery channel
-(no email sending exists), and showing it in the response or the logs is
-switched off in production on purpose (`docs/cyper/03-insecure-defaults.md`).
-Adding email delivery (SMTP) is the fix when sign-in is needed.
+**Sign-in codes are shown on screen.** The one-time sign-in code has no
+delivery channel yet (no email sending exists), so for the hosted demo the
+sign-in pages show it with a "Use it" button, as in development. Production
+allows that only with two switches set together (`OTP_DEV_EXPOSE` and
+`OTP_SHOW_IN_PRODUCTION`, both `true`), and the api warns about it at every
+boot. While it is on, **the password alone signs in**, so:
+
+- the demo data's passwords, which are published in this repo, are
+  replaced on every deploy with random ones, printed once and kept in
+  `~/fils-pay-config/demo-passwords.txt` on the server;
+- turn it off (`SHOW_OTP=0 ops/deploy.sh`) once email delivery exists, or
+  before real merchants use it. This is the setting the security review
+  turned off (`docs/cyper/03-insecure-defaults.md`).
 
 Every service has `restart: unless-stopped` and the api has a watchdog, so
 a crash or a frozen api is restarted (`docs/perf/checkout-capacity.md`).
@@ -76,8 +83,8 @@ curl -X POST https://159-89-173-8.sslip.io/v1/merchants/<merchant id>/payment-li
 ```
 
 With `SEED=1` the demo data's API key for each merchant is printed during
-the deploy (`seed: issued API key for Alpha Retail Co: ...`); copy it then,
-it is not shown again. Alpha Retail's merchant id is
+the deploy (`seed: issued API key for Alpha Retail Co: ...`) and kept in
+`~/fils-pay-config/seed-output.txt` on the server. Alpha Retail's merchant id is
 `9972daab-2c86-459f-9d78-3fe1be4e3280`. The capacity script uses the same
 key (`API_KEY=... MERCHANT_ID=... node scripts/load/checkout-load.mjs`).
 
@@ -107,10 +114,11 @@ changes or removes something.
 
 ## After the first deploy
 
-- **Demo data (`SEED=1`) has known passwords** (`FilsPaySeed!2026` for the
-  seeded merchant users, `FilsPayAdminSeed!2026` for the seeded admins). With
-  sign-in codes undelivered they can't be used to sign in, but change them,
-  or don't seed, before sign-in is enabled (`docs/cyper/17-open-findings.md`).
+- **Signing in to the demo**: merchant users (e.g. `owner@alpharetail.example`,
+  merchant id `9972daab-2c86-459f-9d78-3fe1be4e3280`) and admins (e.g.
+  `superadmin@filspay.test`) use the passwords printed by the deploy, also
+  in `~/fils-pay-config/demo-passwords.txt`; the code is on the page. The
+  demo API keys are in `~/fils-pay-config/seed-output.txt`.
 - The acquirer signing secret is generated on the server; give it to the
   acquirer simulator / partner if callbacks are used
   (`grep ACQUIRER ~/fils-pay-config/.env.docker`).
