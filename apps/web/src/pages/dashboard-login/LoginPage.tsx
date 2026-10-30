@@ -9,6 +9,7 @@ import {
 } from "../../auth/DashboardAuthContext.js";
 import type { DashboardLoginResponse } from "../../types.js";
 import { Wordmark } from "../../components/art/Art.js";
+import { DesignArt } from "../../components/art/DesignArt.js";
 import { icons } from "../../components/art/Icons.js";
 import { ErrorBanner, usePageTitle } from "../../components/ui.js";
 
@@ -126,6 +127,7 @@ export function LoginPage() {
     <div className="dash-login">
       <aside className="dash-login-aside" aria-label="About FilsPay">
         <Wordmark />
+        <DesignArt className="fp-login-art" />
         <div className="dash-login-pitch">
           <p className="dash-login-kicker">Merchant dashboard</p>
           <p className="dash-login-figure" aria-label="0.001 BHD, one fils">

@@ -5,6 +5,7 @@ import { describeError } from "../../api/client.js";
 import { useAdminAuth } from "../../auth/AdminAuthContext.js";
 import type { AdminLoginResponse } from "../../types.js";
 import { Wordmark } from "../../components/art/Art.js";
+import { DesignArt } from "../../components/art/DesignArt.js";
 import { icons } from "../../components/art/Icons.js";
 import { ErrorBanner, usePageTitle } from "../../components/ui.js";
 
@@ -77,6 +78,7 @@ export function LoginPage() {
     <div className="admin-login">
       <aside className="admin-login-aside" aria-label="About FilsPay Ops">
         <Wordmark />
+        <DesignArt className="fp-login-art" />
         <div className="admin-login-pitch">
           <p className="admin-login-kicker">Operations console</p>
           <h2>Every merchant, every batch, every adjustment, on the record.</h2>

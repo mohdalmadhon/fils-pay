@@ -6,6 +6,7 @@ import { ApiError } from "../../api/client.js";
 import type { PaymentLinkPublicDto, PayPaymentLinkResponse, SimulatedCardInput } from "../../types.js";
 import { Scene, Wordmark, type SceneName } from "../../components/art/Art.js";
 import { icons } from "../../components/art/Icons.js";
+import { DesignArt } from "../../components/art/DesignArt.js";
 import { useCountUp } from "../../components/kit/CountUp.js";
 import { Amount, Loading, StatePanel, usePageTitle } from "../../components/ui.js";
 import { describePayFailure } from "./payError.js";
@@ -343,6 +344,7 @@ function CheckoutFrame({ summary, children }: { summary?: React.ReactNode; child
           </span>
         </div>
         {summary}
+        <DesignArt className="checkout-art" />
       </aside>
       <main className="checkout-panel">{children}</main>
     </div>

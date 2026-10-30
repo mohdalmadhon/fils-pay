@@ -572,6 +572,110 @@ h1 {
 .fp-design-art .s2 { stroke: var(--art-2); stroke-width: 3; }
 .fp-design-art .thick { stroke-width: 5; }
 
+/* Sign-in panels and the checkout summary sit on the design's hero
+ * colour, with its illustration. Colour tokens are redefined inside them,
+ * like the sidebar, so their text and lines follow. */
+:root:not([data-costume="halloween"]) :is(.dash-login-aside, .admin-login-aside, .checkout-sea) {
+  --c-ink: var(--hero-ink);
+  --c-ink-2: var(--hero-ink-2);
+  --c-ink-3: var(--hero-ink-2);
+  --c-ink-4: var(--hero-ink-2);
+  --c-line: color-mix(in srgb, var(--hero-ink) 18%, transparent);
+  --c-accent: var(--hero-action-bg);
+  --c-accent-ink: var(--hero-ink);
+  color: var(--hero-ink);
+  background: var(--hero-bg);
+  background-image: none;
+}
+
+:root:not([data-costume="halloween"]) :is(.dash-login-aside, .admin-login-aside) {
+  padding: var(--sp-8) var(--sp-12);
+}
+
+:root:not([data-costume="halloween"]) :is(.dash-login-aside, .admin-login-aside) .fp-wordmark,
+:root:not([data-costume="halloween"]) :is(.dash-login-aside, .admin-login-aside) .fp-wordmark > span:not([class]) {
+  color: var(--hero-ink);
+}
+
+/* The page's purpose in plain words, not a monospace all-caps label. */
+:root:not([data-costume="halloween"]) :is(.dash-login-kicker, .admin-login-kicker) {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--hero-ink-2);
+}
+
+:root:not([data-costume="halloween"]) .dash-login-figure {
+  font-family: var(--font-display);
+  color: var(--hero-ink);
+}
+
+:root:not([data-costume="halloween"]) .dash-login-figure .dim {
+  color: var(--hero-ink-2);
+}
+
+:root:not([data-costume="halloween"]) .dash-login-figure mark {
+  color: var(--hero-action-ink);
+  background: var(--hero-action-bg);
+  border-radius: var(--r-2);
+}
+
+:root:not([data-costume="halloween"]) :is(.dash-login-points, .admin-login-points) svg {
+  color: var(--hero-action-bg);
+}
+
+.fp-login-art {
+  display: block;
+  width: min(100%, 340px);
+  height: auto;
+  margin: var(--sp-8) 0 0;
+}
+
+.checkout-art {
+  display: block;
+  width: 100%;
+  max-width: 26rem;
+  height: auto;
+  margin-top: auto;
+  padding-top: var(--sp-8);
+}
+
+:root[data-costume="halloween"] :is(.fp-login-art, .checkout-art) {
+  display: none;
+}
+
+/* The card picture on checkout, in each design's colours. */
+:root[data-design="carnival"]:not([data-costume="halloween"]) .checkout-card,
+:root:not([data-design]):not([data-costume="halloween"]) .checkout-card {
+  color: #ffffff;
+  /* Shapes kept to the right edge, softened, so the card's text stays clear. */
+  background:
+    radial-gradient(circle at 104% 50%, rgba(255, 61, 104, 0.85) 0 54px, transparent 55px),
+    radial-gradient(circle at 80% 112%, rgba(255, 180, 46, 0.8) 0 34px, transparent 35px),
+    radial-gradient(circle at 70% -10%, rgba(7, 201, 131, 0.7) 0 30px, transparent 31px),
+    #2b34b8;
+}
+
+:root[data-design="blush"]:not([data-costume="halloween"]) .checkout-card {
+  color: #3b2a1a;
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, 0.55), transparent 55%),
+    linear-gradient(135deg, #f0d6b4, #e6c49b 55%, #d9ae7f);
+}
+
+:root[data-design="blush"]:not([data-costume="halloween"]) :is(.checkout-card-brand, .checkout-card-bottom) {
+  color: rgba(59, 42, 26, 0.75);
+}
+
+:root[data-design="slate"]:not([data-costume="halloween"]) .checkout-card {
+  color: #f1f4fa;
+  background:
+    linear-gradient(180deg, transparent 62%, #ff6b6b 62% 66%, transparent 66%),
+    radial-gradient(circle, rgba(108, 182, 255, 0.35) 0 2px, transparent 2.5px) 0 0 / 14px 14px,
+    #1e2a46;
+}
+
 /* Page backdrops. Carnival and Slate get a dot grid in the top corner
  * (from the brief's images 2 and 3); Blush a blush-to-peach wash. */
 :is(:root[data-design="carnival"], :root:not([data-design]), :root[data-design="slate"]):not([data-costume="halloween"]) body::before {
