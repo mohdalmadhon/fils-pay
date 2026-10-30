@@ -61,7 +61,7 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
     in idempotency hashes (10), payment-link leaks (11), KYC uploads (12),
     hardening (13), session rotation (14), dependencies (15), unsafe agent
     guidance (16)
-- **Improvements (`docs/improvements/README.md`):** 18 fixes beyond the
+- **Improvements (`docs/improvements/README.md`):** 19 fixes beyond the
   security review:
   - money: net payout used `float32` (04), the platform volume counter was
     `INT4` (05), the negotiated discount was charged three ways (06), the API
@@ -75,6 +75,7 @@ write-up: `docs/fixes/<name>.md` or `docs/solved-problems/<nnn>.md`.
   - the always-red tests fixed (01-03), CI added (10), Dockerfiles added (09),
     agent docs corrected (14), a browser end-to-end check (17), an
     accessibility pass with an automated check (18)
+  - follow-ups from an independent review of 15-18 (19)
 - **Performance:** large exports and uploads (`large-exports`), and slow reporting queries (`slow-dashboard-queries`).
 - **Finance problems 001-013:** fixed and documented in `docs/solved-problems/`.
 

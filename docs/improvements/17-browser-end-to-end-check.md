@@ -34,7 +34,9 @@ checks:
    checkout URL.
 3. A separate customer opens the link in a browser context with no cookies.
    The page shows "Pay 12.345 BHD" (three decimals, so mixing up fils and
-   cents would show) and names the merchant.
+   cents would show), and its heading names the signed-in merchant. (As
+   first committed, this check matched the Pay button and could not fail.
+   Fixed in [19](19-review-follow-ups.md).)
 4. A declined card is reported, and the form stays so the customer can
    retry.
 5. An approved card ends on the receipt.

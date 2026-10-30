@@ -8,7 +8,7 @@ customer-facing pages, browser tests and accessibility.
 Each report says **where the problem was found** (file and line, or the
 missing file), **what was wrong**, **what the fix was** and **how it was
 verified**. Each fix is 5 commits, usually starting with a test that fails
-before the fix.
+before the fix. 19 is the round of fixes from an independent review of 15–18.
 
 **Nothing is pushed.** All commits are on the local `cyper` branch, authored
 and committed as `malmadhoo`.
@@ -35,12 +35,14 @@ and committed as `malmadhoo`.
 | 16 | A suspended merchant's payment link still looked payable to customers | Customer-facing | [16](16-suspended-merchant-payment-links.md) |
 | 17 | Nothing tested the dashboard or checkout in a browser | Tests | [17](17-browser-end-to-end-check.md) |
 | 18 | Accessibility: amounts unreadable to screen readers, low-contrast text, missing headings, unannounced errors | Accessibility | [18](18-accessibility.md) |
+| 19 | Follow-ups from an independent review of 15–18: migrate's check not atomic, an in-flight payment shown as "unavailable", a check that couldn't fail, the costume heading, CI start step | Review | [19](19-review-follow-ups.md) |
 
 ## The state after these fixes
 
 - `npm test` is green for the first time: every workspace and the scripts.
   `go test ./...` passes. `npm run test:db` passes.
-- `npm run e2e:browser` passes 11/11. `npm run e2e:a11y` passes on 25/25 pages.
+- `npm run e2e:browser` passes 11/11. `npm run e2e:a11y` passes on 39/39 pages
+  (light, night and the Halloween costume).
 - CI (`.github/workflows/ci.yml`) runs all of the above on every pull request.
 
 ## Do these after merging

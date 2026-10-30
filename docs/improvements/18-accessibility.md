@@ -30,9 +30,14 @@
   passed.
 - The accessibility tree for the checkout total now reads
   `paragraph: 5.000 BHD`. Before, it was empty.
-- The night theme and the Halloween costume already passed contrast
-  (`#8b8b93` is at least 4.63:1; `#b5828c` is at least 4.89:1).
-- The checkout page looks the same as before (screenshot compared).
+- The night theme already passed contrast (`#8b8b93` is at least 4.63:1).
+  The Halloween costume's muted text (`#b5828c`, at least 4.89:1) was
+  computed by hand here, and is audited automatically since
+  [19](19-review-follow-ups.md): 39 of 39 pages, three looks.
+- The checkout page looks the same as before in light and night
+  (screenshot compared). In the Halloween costume the new h1 picked up the
+  costume's gradient heading style; found in review and fixed in
+  [19](19-review-follow-ups.md).
 - `npm run e2e:browser` 11/11, web tests 10/10, `tsc` and `vite build` for
   both apps.
 

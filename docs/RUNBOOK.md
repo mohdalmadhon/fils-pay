@@ -74,7 +74,10 @@ new database built from the same files.
 
 Line endings don't count: a Windows checkout with `core.autocrlf` has the same
 checksum. Databases migrated before checksums existed record each file's
-current checksum on their next run (`RECORD` lines in the output).
+current checksum on their next run (`RECORD` lines in the output). That
+first run trusts the files on disk, so do it from `main`, not from a branch
+that edits an applied migration. Only one `migrate` runs at a time per
+database (an advisory lock); a second one waits.
 
 ## Is the money flow healthy end to end?
 
