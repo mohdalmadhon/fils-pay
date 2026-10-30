@@ -23,6 +23,14 @@ export interface Config {
   otpCodeLength: number;
   otpMaxAttempts: number;
   otpDevExpose: boolean;
+  /** Failed password/OTP attempts per account within the window before
+   *  login answers 429 (auth/throttle.ts). */
+  loginMaxFailures: number;
+  /** Same, per client IP; 0 turns the IP limit off. Defaults to 0 outside
+   *  production (tests and local runs all come from one address). Only
+   *  meaningful with TRUST_PROXY set correctly behind a load balancer. */
+  loginMaxFailuresPerIp: number;
+  loginFailureWindowMinutes: number;
 
   argon2MemoryKib: number;
   argon2TimeCost: number;
@@ -269,6 +277,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     otpCodeLength: parseIntEnv(env.OTP_CODE_LENGTH, 6),
     otpMaxAttempts: parseIntEnv(env.OTP_MAX_ATTEMPTS, 5),
     otpDevExpose: parseOtpDevExpose(env.OTP_DEV_EXPOSE, nodeEnv),
+    loginMaxFailures: parseIntEnv(env.LOGIN_MAX_FAILURES, 10),
+    loginMaxFailuresPerIp: parseIntEnv(env.LOGIN_MAX_FAILURES_PER_IP, nodeEnv === "production" ? 100 : 0),
+    loginFailureWindowMinutes: parseIntEnv(env.LOGIN_FAILURE_WINDOW_MINUTES, 15),
 
     argon2MemoryKib: parseIntEnv(env.ARGON2_MEMORY_KIB, 19_456),
     argon2TimeCost: parseIntEnv(env.ARGON2_TIME_COST, 2),
