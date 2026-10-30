@@ -1,5 +1,10 @@
 # FilsPay read-only audit
 
+> Historical snapshot. The later implementation pass checked all 24 findings
+> against current main: 9 were already fixed and 15 received separate fixes.
+> See the [current disposition, commits and verification](future-fixes-disposition.md).
+> Statements below about a documentation-only branch describe the original audit.
+
 Reviewed 2026-10-30, Asia/Bahrain. Snapshot: main `7b69c0b`.
 During the audit, repository files and persistent database state were not changed.
 This branch adds documentation only; none of the findings is fixed by this report.
@@ -76,7 +81,9 @@ contained no caller/parent parameter. No real merchant data was read.
 
 ## 03. [P1] Login can bind the session to the wrong merchant
 
-Source: [auth.ts:78](../../apps/api/src/routes/auth.ts#L78), [users.ts:11](../../apps/api/src/auth/users.ts#L11).
+Source: [auth.ts:78](../../apps/api/src/routes/auth.ts#L78),
+`apps/api/src/auth/users.ts:11` at snapshot `7b69c0b` (since removed by
+[security fix 01](../cyper/01-login-cross-tenant.md)).
 History: Fatima Haji, `a9b27531`.
 
 Password checking is correctly scoped to merchant+email, but the next
