@@ -163,8 +163,8 @@ export async function captureTransactionWithClient(
     return { statusCode: 422, body };
   }
 
-  const merchantResult = await client.query<{ mdr_bps: number }>(
-    `SELECT mdr_bps FROM merchants WHERE id = $1`,
+  const merchantResult = await client.query<{ mdr_bps: number; negotiated_discount_bps: number }>(
+    `SELECT mdr_bps, negotiated_discount_bps FROM merchants WHERE id = $1`,
     [input.merchantId],
   );
   const merchant = merchantResult.rows[0];
@@ -268,7 +268,7 @@ export async function captureTransactionWithClient(
     eventType: newStatus === "captured" ? "captured" : "partially_captured",
     amountFils: requestedAmount,
     actor: input.actor,
-    metadata: { feeFils, acquirerReference: acquirerResult.acquirerReference },
+    metadata: { feeFils, negotiatedDiscountBps: merchant.negotiated_discount_bps, acquirerReference: acquirerResult.acquirerReference },
   });
 
   const body = serializeTransaction(updatedTxn);
