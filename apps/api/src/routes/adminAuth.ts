@@ -205,6 +205,22 @@ export async function adminAuthRoutes(app: FastifyInstance): Promise<void> {
         throw new UnauthorizedError("unauthenticated");
       }
       await revokeAdminSession(app.db, auth.adminSessionId);
+      // End this admin's live "view as merchant" grants too. A grant is a
+      // separate cookie, so without this it kept working for the rest of its
+      // TTL (up to 15 minutes) after logout, on whatever machine held it.
+      await app.db.query(
+        `UPDATE admin_impersonation_grants
+            SET revoked_at = now()
+          WHERE admin_user_id = $1 AND revoked_at IS NULL AND ended_at IS NULL AND expires_at > now()`,
+        [auth.adminUserId],
+      );
+      reply.setCookie(app.config.impersonationCookieName, "", {
+        httpOnly: true,
+        path: "/",
+        sameSite: "lax",
+        secure: app.config.cookieSecure,
+        maxAge: 0,
+      });
       reply.setCookie(app.config.adminCookieName, "", {
         httpOnly: true,
         path: "/",
