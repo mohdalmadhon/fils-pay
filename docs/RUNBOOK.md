@@ -132,6 +132,32 @@ usually needs a couple of restarts while Postgres warms up.
 
 > **MK:** stop the worker before catch-up. two consumers on one cursor double-apply.
 
+### Dashboards stopped updating: a malformed outbox event
+
+A reporting pass applies a batch of events and moves the watermark in one
+transaction, all or nothing. If one event can't be applied (for example a
+`transaction.captured` with no `merchantId`, which real producers never write
+but a test or a hand-written INSERT can), every pass fails on it and the
+dashboards stop moving. The worker log and `catch-up` show
+`null value in column "merchant_id" of relation "merchant_daily_volume"`.
+
+Find the offending rows:
+
+```sql
+SELECT id, event_type, payload, created_at
+  FROM outbox_events
+ WHERE event_type IN ('transaction.captured', 'transaction.voided', 'settlement.batch_closed')
+   AND payload->>'merchantId' IS NULL
+   AND id > (SELECT last_processed_id FROM reporting_outbox_cursor WHERE consumer_name = 'reporting')
+ ORDER BY id;
+```
+
+On a development or test database these are leftovers from tests, and can be
+deleted. Before 2026-10-30 the API's `largeExport` and `archiveReplay` tests
+left about 25,000 of them per run (docs/improvements/03). On production,
+don't delete: find out which code wrote the event, and fix its payload with
+finance before the next pass.
+
 ## Webhooks aren't arriving
 
 1. Look at the endpoint's delivery log (dashboard, or
