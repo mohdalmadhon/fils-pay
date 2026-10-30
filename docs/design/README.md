@@ -76,59 +76,48 @@ pick up the system without changes:
 
 ## Halloween costume
 
-A pixel jack-o'-lantern button (bottom right, or a tab on the right edge on
-phones) dresses the whole site, both consoles and checkout, as a pixel-art
-Halloween night. Switching in or out spreads from the pumpkin as a circle (a
-View Transition where the browser supports it).
+A jack-o'-lantern button (bottom right, or a tab on the right edge on phones)
+dresses the whole site, both consoles and checkout, as a storybook Halloween
+night. It is also in Settings and the Ctrl+K palette, and the choice is kept
+per browser. It dresses whichever design is chosen: headings keep that
+design's display face, lit pumpkin orange with a purple glow.
 
 **Look.** Pumpkin orange `#FF7A1A`, witch purple `#B45CF0`, slime green
-`#8FE36B` and candy yellow `#FFD23F` on a purple-black sky `#0C0814`:
+`#8FE36B` and candy yellow `#FFD23F` on a purple-black sky `#0C0814`, with
+soft shadows and candlelight: buttons glow like a lantern, and the balance
+band, sign-in panels and checkout summary turn a haunted purple with a
+Halloween illustration (a moon, a haunted house on its hill, bats, a ghost
+and two jack-o'-lanterns). Every text colour is at least 4.5:1, and
+`npm run e2e:a11y` audits the costume.
 
-- corners go square and shadows become hard pixel offsets (the radius and
-  shadow tokens change, so every component follows)
-- headings and the name are set in **Pixelify Sans** (bundled from
-  `@fontsource/pixelify-sans`, OFL; it only downloads when the costume is on),
-  orange with a purple pixel shadow
-- primary buttons are two-tone orange with a black pixel shadow
-- every text colour is at least 4.5:1, and `npm run e2e:a11y` audits the
-  costume on every page
+**The art is vector SVG** (`components/kit/halloweenArt.tsx`), drawn with
+gradients and glows:
 
-**Pixel art.** Every decoration is a sprite stored as a grid of characters in
-`components/kit/pixelArt.tsx` and drawn by `PixelArt` as crisp SVG squares.
-Sprites are shown at whole-number scales (2x, 3x, 4x) so every pixel is the
-same size; animations step between frames rather than easing.
-
-| Sprite | Size | Where |
+| Piece | Where | Moves |
 |---|---|---|
-| jack-o'-lantern (lit / dark) | 18x16 | the button; the graveyard |
-| bat (wings up / down) | 20x10 | flying |
-| ghost (two hem frames) | 16x18 | haunting |
-| spider | 15x12 | on its thread |
-| moon, cobweb | 18x18, 36x36 | top corners |
-| witch on a broom | 28x15 | across the sky |
-| tombstone, cross | 10x10, 9x9 | the graveyard |
+| Jack-o'-lantern | the button; the graveyard | the candle flickers through the carved face |
+| Bat | flying | wings fold from the shoulder in a real flap; flees the pointer |
+| Ghost | haunting | two hem frames for a wiggle; drifts on its own |
+| Spider | on its thread | legs twitch; can be pulled down and springs back |
+| Moon, clouds | top right | clouds drift slowly across the moon |
+| Cobwebs | top corners | |
+| Witch on a broom | across the sky | crosses every 24 seconds |
+| `NightScene` | along the bottom, behind the page | a haunted house whose windows flicker, bare trees, an iron fence, RIP tombstones and crosses, and a black cat that blinks |
 
-To add or change one, edit its grid (each row the same length; colours are
-the letters in `PIXEL_PALETTE`).
-
-**Behind the page** (z-index -1, never over text or a click): twinkling stars,
-a witch who crosses the sky every 24 seconds, a graveyard of tombstones and
-flickering jack-o'-lanterns, and faint fog. In costume the page backgrounds
-turn transparent so the sky shows through.
+**Behind the page** (z-index -1, never over text or a click): stars that
+twinkle, the witch, the night scene, glowing jack-o'-lanterns and soft fog.
 
 **Over the page** (never takes a click, except the spider):
 
-- bats wander the sky and flee from the pointer; touch one and it breaks up,
+- bats wander and flee the pointer; touch one and it vanishes in a puff,
   and a counter keeps score
-- a spider hangs on a thread and can be pulled down; it springs back
+- the spider hangs on a thread and can be pulled down
 - **the ghost haunts on its own**: it drifts slowly between random spots and
-  every 9 to 16 seconds fades out and reappears elsewhere. It does not follow
+  every 9 to 16 seconds fades out and reappears elsewhere. It never follows
   the pointer. Touch it and it says boo, shakes and vanishes.
-- a soft lantern glow sits under the pointer
 
 Under `prefers-reduced-motion` nothing moves and the witch stays home; the
-rest of the scenery stays, still. It is also in the Ctrl+K palette, and the
-choice is remembered per browser.
+rest of the scenery stays, still.
 
 ## Errors and empty states
 
