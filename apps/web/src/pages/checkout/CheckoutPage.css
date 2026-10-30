@@ -181,11 +181,11 @@
 }
 
 :root[data-costume="halloween"] .checkout-card {
-  /* A pixel-dithered purple card. */
+  /* A witch-purple card with a candle-orange glow. */
   background:
-    repeating-conic-gradient(rgba(255, 255, 255, 0.04) 0 25%, transparent 0 50%) 0 0 / 4px 4px,
-    linear-gradient(180deg, #4b2470 0 50%, #2c1446 50% 100%);
-  box-shadow: 4px 4px 0 #05030a, inset 0 0 0 2px rgba(255, 122, 26, 0.5);
+    radial-gradient(circle at 85% 15%, rgba(255, 210, 63, 0.35), transparent 30%),
+    linear-gradient(150deg, #5a2c86, #2c1446 70%);
+  box-shadow: 0 20px 40px -18px rgba(0, 0, 0, 0.9), 0 0 30px -10px rgba(255, 122, 26, 0.6), inset 0 0 0 1px rgba(255, 122, 26, 0.35);
 }
 
 /* A slow sheen crosses the card once a brand is recognised. */
@@ -359,8 +359,7 @@
 
 :root[data-costume="halloween"] .checkout-form button[type="submit"] {
   background-image: var(--hw-gradient);
-  border: 2px solid #05030a;
-  box-shadow: var(--hw-pixel-shadow);
+  box-shadow: var(--hw-glow);
 }
 
 .checkout-form button[type="submit"]:active {

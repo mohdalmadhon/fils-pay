@@ -399,9 +399,10 @@
   --control-h-lg: 40px;
 }
 
-/* Halloween costume: a pixel-art Halloween night. Pumpkin orange, witch
- * purple and slime green on a purple-black sky; square pixel corners, hard
- * pixel shadows and a pixel font for headings. Set from the pumpkin button
+/* Halloween costume: a storybook Halloween night drawn in SVG. Pumpkin
+ * orange, witch purple and slime green on a purple-black sky, with soft
+ * glows and candlelight; headings in the design's own display face, lit
+ * orange. It dresses any design. Set from the pumpkin button or Settings
  * (components/kit/Halloween.tsx). Every text colour here is at least
  * 4.5:1 on every surface (npm run e2e:a11y audits the costume). */
 :root[data-costume="halloween"],
@@ -415,7 +416,6 @@
   --hw-slime: #8fe36b;
   --hw-bone: #f7efe0;
   --hw-night: #0c0814;
-  --font-pixel: "Pixelify Sans", ui-monospace, monospace;
   --c-bg: #0c0814;
   --c-surface: #150f21;
   --c-surface-2: #1b1429;
@@ -441,17 +441,19 @@
   --c-neutral-soft: rgba(168, 148, 201, 0.15);
   --c-focus: rgba(255, 122, 26, 0.6);
   --c-scrim: rgba(6, 3, 10, 0.7);
-  /* Pixel look: no rounded corners, hard offset shadows. */
-  --r-1: 0;
-  --r-2: 0;
-  --r-3: 0;
-  --r-4: 0;
-  --r-button: 0;
-  --shadow-sm: 2px 2px 0 #05030a;
-  --shadow-pop: 4px 4px 0 #05030a, 0 0 0 2px var(--c-line-2);
-  --hw-pixel-shadow: 3px 3px 0 #05030a;
-  /* Two-tone, hard stop: a pixel highlight on orange buttons. */
-  --hw-gradient: linear-gradient(180deg, #ffa24c 0 50%, #ff7a1a 50% 100%);
+  /* Rounded and lit: deep shadows with a faint candle-orange rim. */
+  --r-button: 999px;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-pop: 0 20px 50px -14px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 122, 26, 0.14);
+  --hw-glow: 0 8px 24px -8px rgba(255, 122, 26, 0.75), inset 0 1px 0 rgba(255, 230, 180, 0.5);
+  /* Buttons glow like a lantern: candle yellow into pumpkin. */
+  --hw-gradient: linear-gradient(180deg, #ffbe5c, #ff7a1a 70%, #f0640a);
+  /* The balance band and sign-in panels: a haunted purple night. */
+  --hero-bg: #2a1747;
+  --hero-ink: #f7efe0;
+  --hero-ink-2: #d8c6f0;
+  --hero-action-bg: #ff7a1a;
+  --hero-action-ink: #1a0d05;
 }
 
 /* Design shapes and type -------------------------------------------------
@@ -1773,30 +1775,29 @@ button.fp-nav-search:hover {
   background: var(--c-surface);
 }
 
-/* The pumpkin is an 18x16 pixel sprite drawn at 2x: whole-number scales
- * keep every sprite pixel the same size. */
 .fp-hw-pumpkin {
   display: block;
-  width: 36px;
-  height: 32px;
+  width: 32px;
+  height: 28px;
 }
 
-/* Lit: a square pixel button with a hard shadow, and the candle flickers. */
+/* Lit: the button glows with the candle inside, and the candle flickers. */
 .fp-hw-toggle[aria-pressed="true"],
 .fp-hw-toggle[aria-pressed="true"]:hover {
-  width: 48px;
-  height: 48px;
-  border: 2px solid var(--hw-pumpkin);
-  border-radius: 0;
-  background: #1b1429;
-  box-shadow: 4px 4px 0 #05030a;
+  width: 50px;
+  height: 50px;
+  border: 1.5px solid rgba(255, 122, 26, 0.7);
+  background: radial-gradient(circle at 50% 60%, #4a2414, #1b1429 70%);
+  box-shadow: 0 0 0 4px rgba(255, 122, 26, 0.12), 0 10px 30px -6px rgba(255, 122, 26, 0.7);
 }
 
 .fp-hw-toggle[aria-pressed="true"] .fp-hw-pumpkin {
-  animation: fp-flicker 2.4s steps(1) infinite;
+  width: 36px;
+  height: 32px;
+  animation: fp-flicker 2.4s ease-in-out infinite;
 }
 
-/* A candle flicker, in steps rather than a smooth fade. */
+/* A candle flicker. */
 @keyframes fp-flicker {
   0%,
   100% {
@@ -1838,27 +1839,17 @@ button.fp-nav-search:hover {
   transform: translate(0, -50%);
 }
 
-/* In costume, headings and the name are set in a pixel font, pumpkin
- * orange with a hard purple pixel shadow. */
+/* In costume, headings and the name are lit pumpkin orange with a purple
+ * glow behind them, in the design's own display face. */
 :root[data-costume="halloween"] h1,
 :root[data-costume="halloween"] .fp-wordmark {
-  font-family: var(--font-pixel);
-  font-weight: 600;
-  letter-spacing: 0.01em;
   color: var(--hw-pumpkin-light);
-  text-shadow: 2px 2px 0 var(--hw-witch-deep);
+  text-shadow: 0 0 18px rgba(180, 92, 240, 0.55), 0 2px 0 var(--hw-witch-deep);
 }
 
 :root[data-costume="halloween"] .fp-wordmark > span:not([class]) {
   color: var(--hw-witch);
-  text-shadow: 2px 2px 0 #05030a;
-}
-
-:root[data-costume="halloween"] h2,
-:root[data-costume="halloween"] h3 {
-  font-family: var(--font-pixel);
-  font-weight: 500;
-  letter-spacing: 0.01em;
+  text-shadow: none;
 }
 
 /* The night layer: cobwebs, a lantern that follows the pointer, bats, a
@@ -1886,14 +1877,14 @@ button.fp-nav-search:hover {
 .fp-hw-web {
   position: absolute;
   top: 0;
-  width: 144px; /* 36 pixels at 4x */
+  width: 144px;
   height: 144px;
   opacity: 0.35;
 }
 
 .fp-hw-web-left {
   left: 0;
-  width: 108px; /* 3x: smaller and fainter, so the logo stays readable */
+  width: 108px; /* smaller and fainter, so the logo stays readable */
   height: 108px;
   opacity: 0.22;
 }
@@ -1993,11 +1984,11 @@ button.fp-nav-search:hover {
 }
 
 .fp-hw-bat.is-poof {
-  animation: fp-poof 420ms steps(4) forwards;
+  animation: fp-poof 420ms var(--ease) forwards;
   pointer-events: none;
 }
 
-/* Caught: the bat breaks into pixels and is gone. */
+/* Caught: the bat flares and vanishes in a puff. */
 @keyframes fp-poof {
   40% {
     scale: 1.4;
@@ -2013,15 +2004,15 @@ button.fp-nav-search:hover {
   position: absolute;
   top: 0;
   left: 72%;
-  width: 45px; /* 15x12 pixels at 3x */
+  width: 45px;
 }
 
 .fp-hw-thread {
   position: absolute;
-  left: 21px;
+  left: 21.75px;
   top: 0;
-  width: 3px; /* one sprite pixel */
-  background: repeating-linear-gradient(180deg, rgba(247, 239, 224, 0.75) 0 6px, rgba(247, 239, 224, 0.35) 6px 9px);
+  width: 1.5px;
+  background: linear-gradient(rgba(247, 239, 224, 0.15), rgba(247, 239, 224, 0.8));
 }
 
 .fp-hw-spider-body {
@@ -2054,7 +2045,7 @@ button.fp-nav-search:hover {
   will-change: transform;
   opacity: 0.92;
   /* Fading in and out in four steps, like an old sprite. */
-  transition: opacity 600ms steps(4);
+  transition: opacity 600ms ease;
 }
 
 .fp-hw-ghost.is-gone {
@@ -2069,7 +2060,7 @@ button.fp-nav-search:hover {
 .fp-hw-ghost.is-boo .fp-hw-frame {
   animation-name: fp-flap, fp-ghost-shake;
   animation-duration: 700ms, 480ms;
-  animation-timing-function: steps(1), steps(1);
+  animation-timing-function: steps(1), ease-in-out;
 }
 
 @keyframes fp-ghost-shake {
@@ -2090,17 +2081,17 @@ button.fp-nav-search:hover {
   position: absolute;
   left: 50%;
   bottom: calc(100% + 8px);
-  padding: 3px 8px;
-  font-family: var(--font-pixel);
+  padding: 4px 10px;
+  font-family: var(--font-display);
   font-size: var(--text-xs);
   font-weight: 600;
   white-space: nowrap;
   color: #1a0d05;
   background: var(--hw-bone);
-  border: 2px solid #05030a;
-  box-shadow: 3px 3px 0 #05030a;
+  border-radius: 12px 12px 12px 3px;
+  box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.6);
   transform: translateX(-50%);
-  animation: fp-boo 1100ms steps(6) forwards;
+  animation: fp-boo 1100ms var(--ease) forwards;
   pointer-events: none;
 }
 
@@ -2126,14 +2117,15 @@ button.fp-nav-search:hover {
   position: absolute;
   left: 50%;
   top: var(--sp-3);
-  padding: 3px 10px;
-  font-family: var(--font-pixel);
+  padding: 4px 12px;
+  font-family: var(--font-display);
   font-size: var(--text-xs);
   font-weight: 500;
   color: var(--hw-candy);
-  background: #150f21;
-  border: 2px solid var(--c-line-2);
-  box-shadow: 3px 3px 0 #05030a;
+  background: rgba(21, 15, 33, 0.85);
+  border: 1px solid rgba(255, 122, 26, 0.35);
+  border-radius: 999px;
+  box-shadow: 0 0 18px -4px rgba(255, 122, 26, 0.5);
   transform: translateX(-50%);
   animation: fp-fade var(--dur) var(--ease);
 }

@@ -449,8 +449,8 @@
 :root[data-costume="halloween"] .dash-button-primary,
 :root[data-costume="halloween"] .dash-button-link {
   background-image: var(--hw-gradient);
-  border-color: #05030a;
-  box-shadow: var(--hw-pixel-shadow);
+  border-color: transparent;
+  box-shadow: var(--hw-glow);
 }
 
 .dash-button-quiet {
@@ -921,7 +921,7 @@
 }
 
 :root[data-costume="halloween"] .dash-login-aside {
-  /* A pixel grid on the night sky, with an orange margin rule. */
+  /* The night sky behind the sign-in pitch. */
   background-color: #0a0612;
   background-image:
     linear-gradient(90deg, transparent 62px, rgba(255, 122, 26, 0.55) 62px, rgba(255, 122, 26, 0.55) 64px, transparent 64px),
