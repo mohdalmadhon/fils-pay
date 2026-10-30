@@ -1,5 +1,6 @@
 import type { Pool } from "pg";
 import { ForbiddenError } from "../lib/errors.js";
+import { canonicalMerchantId } from "../auth/throttle.js";
 
 /**
  * The merchant a report runs for. A caller may report on itself, or on one of
@@ -10,9 +11,18 @@ import { ForbiddenError } from "../lib/errors.js";
 export async function resolveReportMerchantId(
   pool: Pool,
   callerMerchantId: string,
-  requestedMerchantId?: string,
+  rawRequestedMerchantId?: unknown,
 ): Promise<string> {
-  if (!requestedMerchantId || requestedMerchantId === callerMerchantId) {
+  if (rawRequestedMerchantId === undefined || rawRequestedMerchantId === null || rawRequestedMerchantId === "") {
+    return callerMerchantId;
+  }
+  // The filter is client JSON: compare in the canonical spelling, and refuse
+  // anything that isn't a UUID before it reaches SQL.
+  const requestedMerchantId = canonicalMerchantId(rawRequestedMerchantId);
+  if (!requestedMerchantId) {
+    throw new ForbiddenError("forbidden_merchant", "you can only report on your own merchant or its split children");
+  }
+  if (requestedMerchantId === callerMerchantId.toLowerCase()) {
     return callerMerchantId;
   }
 

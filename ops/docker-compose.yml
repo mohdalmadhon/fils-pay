@@ -7,7 +7,7 @@
 #
 # The hosted demo box runs this same file. Service settings that aren't
 # listed under each service's `environment:` come from ops/.env.docker via
-# `env_file:` on each service. Compose does NOT read that file on its own
+# `env_file:` (the api service). Compose does NOT read that file on its own
 # (it only auto-reads a file named `.env`, and only for ${...} in this
 # file), so without `env_file:` the containers ran with NODE_ENV unset and
 # development defaults. See docs/cyper/03-insecure-defaults.md.
@@ -70,6 +70,9 @@ services:
     command: ["npm", "run", "seed"]
     environment:
       DATABASE_URL: postgres://filspay:${POSTGRES_PASSWORD}@postgres:5432/filspay?sslmode=disable
+      # The seed encrypts webhook endpoint secrets, so it needs the same key
+      # as the api, or the api can't decrypt what the seed wrote.
+      WEBHOOK_SECRET_ENCRYPTION_KEY: ${WEBHOOK_SECRET_ENCRYPTION_KEY:?set WEBHOOK_SECRET_ENCRYPTION_KEY (32 random bytes, base64)}
     depends_on:
       postgres:
         condition: service_healthy

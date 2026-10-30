@@ -8,14 +8,15 @@
 --
 -- The old hashes can't be recomputed into the new form (that would need the
 -- card), so they are overwritten with a marker that never equals a real hash.
--- Effect: re-sending one of these old, finished requests with the same
--- Idempotency-Key answers 422 idempotency_key_reused instead of replaying the
--- stored result. The stored response, status and resource id are kept.
--- Rows still in progress are left alone so a request running during the
--- deploy can finish.
+-- Every authorize row is redacted, whatever its status: an old hash can
+-- never match the new fingerprint anyway, so a retry of an old failed or
+-- stuck request with the same Idempotency-Key answers 422
+-- idempotency_key_reused either way, and keeping in-progress rows would leave
+-- card-derived hashes behind for good. A request running during the deploy
+-- still finishes: completion goes by row id, not by hash. The stored
+-- response, status and resource id are kept.
 
 UPDATE idempotency_keys
    SET request_hash = 'redacted:0079'
  WHERE endpoint = 'transactions.authorize'
-   AND status <> 'in_progress'
    AND request_hash <> 'redacted:0079';

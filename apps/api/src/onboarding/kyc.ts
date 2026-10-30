@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Pool } from "pg";
 import type { Config } from "../config.js";
@@ -82,16 +82,6 @@ export async function recordKycDocument(
     await writeFile(join(config.kycUploadDir, thumbnailStorageKey), thumbnail.buffer);
   }
 
-  // If the row doesn't land, remove what was just written. Files are named by
-  // content hash, so keep them when another row already points at the same file.
-  const removeWrittenFiles = async () => {
-    const stillUsed = await pool.query(`SELECT 1 FROM kyc_documents WHERE storage_key = $1 LIMIT 1`, [storageKey]);
-    if (stillUsed.rowCount === 0) {
-      await rm(fullPath, { force: true });
-      if (thumbnailStorageKey) await rm(join(config.kycUploadDir, thumbnailStorageKey), { force: true });
-    }
-  };
-
   return withTransaction(pool, async (client) => {
     const inserted = await client.query<{ id: string; uploaded_at: Date }>(
       `INSERT INTO kyc_documents
@@ -143,10 +133,10 @@ export async function recordKycDocument(
       onboardingStatus,
       hasThumbnail: thumbnail !== null,
     };
-  }).catch(async (err: unknown) => {
-    await removeWrittenFiles();
-    throw err;
   });
+  // If the insert fails, the files stay. They are named by content hash, so
+  // a concurrent upload of the same file may be about to point at them, and
+  // deleting would leave that row without its file. An orphan is harmless.
 }
 
 export interface KycDocumentSummary {
