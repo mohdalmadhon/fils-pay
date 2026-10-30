@@ -7,8 +7,9 @@
  * temp table and checked that three ways of computing `% 10` agreed, so it
  * passed whatever the sweep did. docs/bugs/087-tests-that-cannot-fail.md.
  *
- * The month window is UTC (monthBounds). Whether it should be the Bahrain
- * month is an open decision, so the rows here stay clear of the month edges.
+ * The month window is the Bahrain month (monthBounds, ADR 0009): a capture
+ * at 01:00 Bahrain on 1 March counts, one at 01:00 Bahrain on 1 April does
+ * not (docs/bugs/017).
  *
  * Requires DATABASE_URL pointing at a Postgres server where the role may
  * CREATE DATABASE; the database in DATABASE_URL is only used to connect.
@@ -61,6 +62,8 @@ test("runMarchSweep previews, posts once per merchant, then reports already_appl
       await capture(b, 2_001, "2026-03-15T10:00:00Z"); // residue 1
       await capture(b, 7_777, "2026-02-15T10:00:00Z"); // February: outside
       await capture(c, 5_555, "2026-04-15T10:00:00Z"); // April: outside
+      await capture(c, 3_337, "2026-02-28T22:00:00Z"); // 01:00 Bahrain on 1 March: inside, residue 7
+      await capture(b, 9_999, "2026-03-31T22:00:00Z"); // 01:00 Bahrain on 1 April: outside
 
       const preview = await runMarchSweep(db);
       assert.equal(preview.mode, "dry-run");
@@ -71,6 +74,7 @@ test("runMarchSweep previews, posts once per merchant, then reports already_appl
           .sort((x, y) => x.residueFils - y.residueFils);
       assert.deepEqual(summary(preview), [
         { merchantId: b, lineCount: 1, residueFils: 1, outcome: "pending" },
+        { merchantId: c, lineCount: 1, residueFils: 7, outcome: "pending" },
         { merchantId: a, lineCount: 2, residueFils: 12, outcome: "pending" },
       ]);
       const legCount = async () => Number((await db.query(`SELECT count(*) FROM ledger_entries`)).rows[0].count);
@@ -78,7 +82,7 @@ test("runMarchSweep previews, posts once per merchant, then reports already_appl
 
       const applied = await runMarchSweep(db, true);
       assert.deepEqual(applied.blocked, []);
-      assert.deepEqual(summary(applied).map((m) => m.outcome), ["applied", "applied"]);
+      assert.deepEqual(summary(applied).map((m) => m.outcome), ["applied", "applied", "applied"]);
       const legs = await db.query(
         `SELECT entry_group_id, merchant_id, account_id, direction, amount_fils::int
            FROM ledger_entries ORDER BY amount_fils, direction`,
@@ -86,14 +90,16 @@ test("runMarchSweep previews, posts once per merchant, then reports already_appl
       assert.deepEqual(legs.rows, [
         { entry_group_id: marchSweepGroupId(b), merchant_id: b, account_id: "scheme_rounding_residue", direction: "credit", amount_fils: 1 },
         { entry_group_id: marchSweepGroupId(b), merchant_id: b, account_id: "merchant_payable", direction: "debit", amount_fils: 1 },
+        { entry_group_id: marchSweepGroupId(c), merchant_id: c, account_id: "scheme_rounding_residue", direction: "credit", amount_fils: 7 },
+        { entry_group_id: marchSweepGroupId(c), merchant_id: c, account_id: "merchant_payable", direction: "debit", amount_fils: 7 },
         { entry_group_id: marchSweepGroupId(a), merchant_id: a, account_id: "scheme_rounding_residue", direction: "credit", amount_fils: 12 },
         { entry_group_id: marchSweepGroupId(a), merchant_id: a, account_id: "merchant_payable", direction: "debit", amount_fils: 12 },
       ]);
 
       const again = await runMarchSweep(db, true);
       assert.deepEqual(again.blocked, []);
-      assert.deepEqual(summary(again).map((m) => m.outcome), ["already_applied", "already_applied"]);
-      assert.equal(await legCount(), 4, "a second --apply posts nothing more");
+      assert.deepEqual(summary(again).map((m) => m.outcome), ["already_applied", "already_applied", "already_applied"]);
+      assert.equal(await legCount(), 6, "a second --apply posts nothing more");
 
       // A March capture that changes after posting no longer matches the
       // posted fingerprint: the sweep blocks instead of posting again.
@@ -101,7 +107,7 @@ test("runMarchSweep previews, posts once per merchant, then reports already_appl
       const changed = await runMarchSweep(db, true);
       assert.equal(changed.blocked.length, 1);
       assert.match(changed.blocked[0]!, new RegExp(marchSweepGroupId(a)));
-      assert.equal(await legCount(), 4);
+      assert.equal(await legCount(), 6);
     } finally {
       await db.end();
     }

@@ -21,7 +21,7 @@ and refunds; 020-039 settlement and reporting; 040-059 sign-in, admin,
 webhooks and the reporting API; 060-079 the dashboard, checkout page and
 admin console; 080-099 database, seed, scripts and deployment.
 
-In total 66 bugs were confirmed and fixed. Fewer than the "over 100" that
+In total 67 bugs were confirmed and fixed. Fewer than the "over 100" that
 were reported: several reports turned out to be the same bug, already fixed
 earlier (see `docs/fixes`, `docs/cyper`, `docs/improvements`), or not a bug.
 
@@ -43,6 +43,7 @@ earlier (see `docs/fixes`, `docs/cyper`, `docs/improvements`), or not a bug.
 | [014](014-refund-leaves-balance-cache-stale.md) | A refund leaves the merchant's cached payable balance too high | API: refunds | Medium |
 | [015](015-capture-fee-priced-on-app-clock.md) | Capture and settlement can charge different fees when a fee schedule starts mid-capture | API: payments | Low |
 | [016](016-checkout-retry-after-success-409.md) | A buyer's retry of a successful checkout (same Idempotency-Key) gets 409 instead of the original 200 | API: payment links | Low |
+| [017](017-march-sweep-uses-utc-month.md) | The March residue sweep uses the UTC month and misses Bahrain 1 March | Scripts: finance | Medium |
 | [020](020-closing-a-day-early-loses-its-later-captures.md) | Closing a business day early loses that day's later captures | Settlement: batch close | High |
 | [021](021-one-merchant-error-stops-the-daily-run.md) | One merchant's error stops the daily settlement run for everyone after it | Settlement: daily run | High |
 | [022](022-refunds-never-deducted-from-payouts.md) | Refunds are never taken off the merchant's payout | Settlement: payouts | High |
@@ -104,12 +105,6 @@ earlier (see `docs/fixes`, `docs/cyper`, `docs/improvements`), or not a bug.
   `adjustment_imports`). Proposal: above the credit limit (counted on
   absolute amounts) an upload is stored but posts nothing until a second
   finance or super admin approves it, the way credits work.
-- **The March residue sweep uses the UTC month.** `scripts/reconcile_march.ts`
-  takes March as a UTC month, as ADR 0003 accepted, but `docs/HANDOVER.md`
-  says the Bahrain business month. On the seed the two differ by 528
-  transactions and 4.750 BD of residue, because the fixture plants activity
-  on Bahrain 1 March before 03:00. Finance should pick one, then the ADR or
-  the handover note is corrected.
 - **A refund larger than a day's payout.** Since bug 022, refunds come off
   payouts, but a payout can't go below zero, so a refund bigger than any
   single day's net waits (and `merchant_payable` stays negative) until a

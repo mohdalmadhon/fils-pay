@@ -1,6 +1,6 @@
 # 0003. Date windows for reports and finance scripts
 
-- **Status:** Accepted
+- **Status:** Accepted; the calendar-month part is superseded by [0009](0009-monthly-windows-use-the-bahrain-month.md)
 - **Date:** 2026-02-26
 - **Deciders:** Mahmood Khalil
 - **Supersedes:** the "business day everywhere" note in ARCHITECTURE §3, for
