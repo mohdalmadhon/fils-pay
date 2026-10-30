@@ -15,6 +15,10 @@ set -euo pipefail
 
 SERVER="${1:-dilmune@159.89.173.8}"
 HOST="${SERVER#*@}"
+# remote-deploy.sh builds the sslip.io names from PUBLIC_IP, so pass it only
+# when HOST is a literal IPv4 address. For a DNS name or an ssh alias it is
+# left empty and remote-deploy.sh asks the network for the public IP.
+if [[ "$HOST" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]]; then PUBLIC_IP="$HOST"; else PUBLIC_IP=""; fi
 cd "$(git rev-parse --show-toplevel)"
 COMMIT="$(git rev-parse --short HEAD)"
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
@@ -37,4 +41,4 @@ git -c core.autocrlf=false archive --format=tar HEAD | ssh "$SERVER" "
 "
 
 # -t: a terminal, so sudo can ask for a password if Docker must be installed.
-ssh -t "$SERVER" "PUBLIC_IP='$HOST' SITE_HOST='${SITE_HOST:-}' OPS_HOST='${OPS_HOST:-}' HTTP_ONLY='${HTTP_ONLY:-0}' SEED='${SEED:-0}' bash ~/fils-pay/ops/remote-deploy.sh"
+ssh -t "$SERVER" "PUBLIC_IP='$PUBLIC_IP' SITE_HOST='${SITE_HOST:-}' OPS_HOST='${OPS_HOST:-}' HTTP_ONLY='${HTTP_ONLY:-0}' SEED='${SEED:-0}' bash ~/fils-pay/ops/remote-deploy.sh"
