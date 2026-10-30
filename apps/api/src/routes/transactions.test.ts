@@ -393,3 +393,20 @@ test("a tampered list cursor restarts from the first page instead of a 500 (docs
     assert.equal(res.statusCode, 200, `${url}: ${res.body}`);
   }
 });
+
+test("a malformed id in the path is a 404, not a 500 (docs/bugs/012)", async () => {
+  const { rawKey, merchantId } = await createApprovedMerchantWithApiKey("bad-ids");
+  const headers = { ...authHeader(rawKey), "idempotency-key": randomUUID() };
+  for (const [method, url] of [
+    ["GET", "/v1/transactions/not-a-uuid"],
+    ["GET", "/v1/transactions/not-a-uuid/events"],
+    ["POST", "/v1/transactions/not-a-uuid/capture"],
+    ["POST", "/v1/transactions/not-a-uuid/void"],
+    ["GET", "/v1/settlement/batches/not-a-uuid"],
+    ["GET", "/v1/settlement/batches/not-a-uuid/transactions"],
+    ["DELETE", `/v1/merchants/${merchantId}/payment-links/not-a-uuid`],
+  ] as const) {
+    const res = await app.inject({ method, url, headers, ...(method === "POST" ? { payload: {} } : {}) });
+    assert.equal(res.statusCode, 404, `${method} ${url}: ${res.body}`);
+  }
+});

@@ -29,3 +29,4 @@ more detail, with how to reproduce it.
 | [009](009-zero-amount-payment-link-500.md) | Creating a payment link for 0 fils returns a 500 | API: payment links | Low |
 | [010](010-invalid-date-filters-500.md) | Invalid or impossible dates in transaction and settlement filters return a 500 | API: transactions, settlement | Low |
 | [011](011-tampered-page-cursor-500.md) | A tampered page cursor on the transactions, payment-links or settlement lists returns a 500 | API: lists | Low |
+| [012](012-malformed-path-id-500.md) | A malformed id in the URL of transaction, settlement-batch or payment-link routes returns a 500 | API: transactions, settlement, payment links | Low |

@@ -2,6 +2,7 @@ import { parseBusinessDateParam, parseInstantParam, parseLimitParam } from "../l
 import type { FastifyInstance } from "fastify";
 import { requireMerchantAuth, requireMerchantRole } from "../auth/requireMerchantAuth.js";
 import { NotFoundError, BadRequestError } from "../lib/errors.js";
+import { canonicalUuid } from "../lib/uuid.js";
 import {
   getReconciliationReport,
   getSettlementBatch,
@@ -35,6 +36,14 @@ interface ReconciliationQuery {
  * merchantId from the path/query. Nothing here triggers, re-runs, or
  * mutates a batch; that's apps/settlement's job.
  */
+/** `:id` as a canonical UUID, else a 404 (it used to reach the ::uuid cast:
+ *  a 500). docs/bugs/012. */
+function batchIdParam(raw: string): string {
+  const id = canonicalUuid(raw);
+  if (!id) throw new NotFoundError("settlement_batch_not_found");
+  return id;
+}
+
 export async function settlementRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Querystring: ListBatchesQuery }>(
     "/batches",
@@ -100,7 +109,7 @@ export async function settlementRoutes(app: FastifyInstance): Promise<void> {
     async (request) => {
       const batch = await getSettlementBatch(app.db, {
         merchantId: request.merchantAuth!.merchantId,
-        batchId: request.params.id,
+        batchId: batchIdParam(request.params.id),
       });
       if (!batch) {
         throw new NotFoundError("settlement_batch_not_found");
@@ -118,12 +127,12 @@ export async function settlementRoutes(app: FastifyInstance): Promise<void> {
       // transactions.
       const batch = await getSettlementBatch(app.db, {
         merchantId: request.merchantAuth!.merchantId,
-        batchId: request.params.id,
+        batchId: batchIdParam(request.params.id),
       });
       if (!batch) {
         throw new NotFoundError("settlement_batch_not_found");
       }
-      const transactions = await listBatchTransactions(app.db, request.params.id);
+      const transactions = await listBatchTransactions(app.db, batch.id);
       return { transactions };
     },
   );
