@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 /**
- * Every design (Carnival, Blush, Slate) in both modes defines the full set
+ * Every design (Orchid, Lagoon, Saffron) in both modes defines the full set
  * of colour tokens, and every pair of text and background the components
  * use reaches WCAG AA (4.5:1). Read straight from theme.css, so a token
  * edit that breaks contrast fails here before anyone sees it.
@@ -15,7 +15,7 @@ import test from "node:test";
 const css = readFileSync(new URL("./theme.css", import.meta.url), "utf8");
 const adminCss = readFileSync(new URL("../../admin/src/theme.css", import.meta.url), "utf8");
 
-const DESIGNS = ["carnival", "blush", "slate"] as const;
+const DESIGNS = ["orchid", "lagoon", "saffron"] as const;
 const MODES = ["light", "dark"] as const;
 
 /** The custom properties set by the rule whose selector is exactly `selector`. */
@@ -103,7 +103,7 @@ const PAIRS: Array<[string, string]> = [
   ["--c-warn", "--c-surface"],
   ["--c-danger", "--c-surface"],
   ["--c-ink-2", "--c-neutral-soft"],
-  // The sidebar has its own colours (indigo in Carnival, slate in Slate).
+  // The sidebar has its own colours, darker than the page.
   ...["--side-ink", "--side-ink-2", "--side-ink-3"].flatMap((ink) =>
     ["--side-bg", "--side-surface", "--side-surface-3"].map((bg): [string, string] => [ink, bg]),
   ),
@@ -127,10 +127,12 @@ for (const design of DESIGNS) {
   }
 }
 
-test("dark modes are coloured, not near-black: the page background is lighter than #121212", () => {
+test("dark modes are dark, but tinted with the design's colour rather than flat grey", () => {
   for (const design of DESIGNS) {
     const bg = tokensFor(design, "dark")["--c-bg"]!;
-    assert.ok(luminance(bg) > luminance("#121212") * 1.4, `${design} dark --c-bg ${bg} is too dark`);
+    assert.ok(luminance(bg) < 0.012, `${design} dark --c-bg ${bg} is not dark enough`);
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(bg.slice(1 + i, 3 + i), 16));
+    assert.ok(Math.max(r!, g!, b!) - Math.min(r!, g!, b!) >= 8, `${design} dark --c-bg ${bg} is flat grey`);
   }
 });
 

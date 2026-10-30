@@ -46,14 +46,27 @@ function reset(): void {
   for (const k of Object.keys(attrs)) delete attrs[k];
 }
 
-test("with nothing saved: Carnival, follow the system, sidebar, comfortable", () => {
+test("with nothing saved: Orchid, follow the system, sidebar, comfortable", () => {
   reset();
   assert.deepEqual(readAppearance(), DEFAULT_APPEARANCE);
-  assert.deepEqual(DEFAULT_APPEARANCE, { design: "carnival", mode: "system", layout: "sidebar", density: "comfortable" });
+  assert.deepEqual(DEFAULT_APPEARANCE, { design: "orchid", mode: "system", layout: "sidebar", density: "comfortable" });
   assert.deepEqual(
     DESIGNS.map((d) => d.id),
-    ["carnival", "blush", "slate"],
+    ["orchid", "lagoon", "saffron"],
   );
+});
+
+test("a design saved under its old name carries over to its new one", () => {
+  for (const [old, now] of [
+    ["carnival", "orchid"],
+    ["slate", "lagoon"],
+    ["blush", "saffron"],
+  ]) {
+    reset();
+    store.set("fp-appearance", JSON.stringify({ design: old, mode: "dark" }));
+    assert.equal(readAppearance().design, now);
+    assert.equal(readAppearance().mode, "dark");
+  }
 });
 
 test("an old light/night choice is carried over", () => {
@@ -68,17 +81,17 @@ test("an old light/night choice is carried over", () => {
 test("unknown or broken saved values fall back to the defaults, one field at a time", () => {
   reset();
   store.set("fp-appearance", JSON.stringify({ design: "neon", mode: "dusk", layout: "topbar", density: "tiny" }));
-  assert.deepEqual(readAppearance(), { design: "carnival", mode: "system", layout: "topbar", density: "comfortable" });
+  assert.deepEqual(readAppearance(), { design: "orchid", mode: "system", layout: "topbar", density: "comfortable" });
   store.set("fp-appearance", "{not json");
   assert.deepEqual(readAppearance(), DEFAULT_APPEARANCE);
 });
 
 test("applying sets the data attributes the CSS keys on, and removes them again", () => {
   reset();
-  applyAppearance({ design: "slate", mode: "dark", layout: "topbar", density: "compact" });
-  assert.deepEqual({ ...attrs }, { design: "slate", theme: "night", layout: "topbar", density: "compact" });
-  applyAppearance({ design: "blush", mode: "light", layout: "sidebar", density: "comfortable" });
-  assert.deepEqual({ ...attrs }, { design: "blush" });
+  applyAppearance({ design: "lagoon", mode: "dark", layout: "topbar", density: "compact" });
+  assert.deepEqual({ ...attrs }, { design: "lagoon", theme: "night", layout: "topbar", density: "compact" });
+  applyAppearance({ design: "saffron", mode: "light", layout: "sidebar", density: "comfortable" });
+  assert.deepEqual({ ...attrs }, { design: "saffron" });
 });
 
 test("'system' follows the operating system's dark setting", () => {
