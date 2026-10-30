@@ -150,3 +150,25 @@ test("POST /v1/acquirer/callbacks returns 404 for an unknown transaction id", as
   assert.equal(res.statusCode, 404);
   assert.equal(res.json().error, "transaction_not_found");
 });
+
+test("POST /v1/acquirer/callbacks refuses an unknown outcome, a bad transaction id or date with a 400 (docs/bugs/013)", async () => {
+  const transactionId = await createTransaction();
+  const cases: Array<[string, Record<string, unknown>]> = [
+    ["outcome", { outcome: "definitely_fine" }],
+    ["transactionId", { transactionId: "not-a-uuid" }],
+    ["occurredAt", { occurredAt: "garbage" }],
+    ["occurredAt", { occurredAt: "2026-02-30T10:00:00.000Z" }],
+  ];
+  for (const [field, override] of cases) {
+    const callbackId = `acqcb_${randomUUID()}`;
+    const body = { ...callbackBody(transactionId, callbackId), ...override };
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/acquirer/callbacks",
+      headers: { "acquirer-callback-signature": signatureHeader(body) },
+      payload: body,
+    });
+    assert.equal(res.statusCode, 400, `${field}: ${res.body}`);
+    assert.equal(await noteCount(callbackId), "0");
+  }
+});

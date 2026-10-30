@@ -1,7 +1,7 @@
 import type { Pool } from "pg";
-import { NotFoundError } from "../lib/errors.js";
+import { AppError, NotFoundError } from "../lib/errors.js";
 
-/** @property outcome Validated against the two allowed values by the route schema. */
+/** @property outcome Validated against the two allowed values by the route (routes/acquirerCallbacks.ts). */
 export interface AcquirerCallbackInput {
   callbackId: string;
   type: "fraud_review.completed";
@@ -80,6 +80,10 @@ export async function withCallbackRetry<T>(fn: () => Promise<T>, options: Callba
       return await fn();
     } catch (err) {
       lastErr = err;
+      // An AppError (404 unknown transaction, a 4xx) is an answer, not a
+      // passing failure: retrying can't change it. Only unexpected errors
+      // (a dropped connection, a deadlock) are retried. docs/bugs/013.
+      if (err instanceof AppError) break;
       if (attempt < maxAttempts) {
         await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
