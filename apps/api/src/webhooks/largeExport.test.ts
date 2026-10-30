@@ -71,10 +71,15 @@ test(`a ${DELIVERIES.toLocaleString("en")}-delivery archive is captured, paged a
 
   // Seed the deliveries in SQL: one outbox event each (deliveries are unique
   // per event and endpoint), spread over a month, with a few KB of payload.
+  // The outbox rows only exist to be referenced, so they get a test-only
+  // event type. They used to be 25,000 'transaction.captured' events with an
+  // empty payload, which the reporting consumer then tried to apply (no
+  // merchantId) and failed on, in every later reporting test and any local
+  // reporting worker on the same database.
   await pool.query(
     `WITH ev AS (
        INSERT INTO outbox_events (event_type, aggregate_type, aggregate_id, payload)
-       SELECT 'transaction.captured', 'transaction', gen_random_uuid(), '{}'::jsonb FROM generate_series(1, $2)
+       SELECT 'test.webhook_archive_fixture', 'transaction', gen_random_uuid(), '{}'::jsonb FROM generate_series(1, $2)
        RETURNING id
      ), numbered AS (SELECT id, row_number() OVER (ORDER BY id) AS n FROM ev)
      INSERT INTO webhook_deliveries (endpoint_id, outbox_event_id, event_type, delivery_event_id, payload, created_at)
