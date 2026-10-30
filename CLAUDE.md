@@ -19,13 +19,15 @@ parallel but locally they share the DB, so run them sequentially.
 
 ## Money
 
-All monetary values in this codebase are stored as **integer cents**
-(1 BD = 100 cents). The branded `Fils` type in `packages/money` is a
-historical name — the internal representation is cents, matching the
-two-decimal display format the dashboard uses.
+All monetary values are **integer fils: 1 BD = 1,000 fils**. `Fils` in
+`packages/money` means exactly that; BD amounts are shown with three
+decimals (`formatBhd(4750)` is `"4.750"`). (This section used to say
+"integer cents, 1 BD = 100 cents". That was wrong, and following it is the
+mistake behind the adjustment-import and promotional-discount bugs:
+`docs/fixes/adjustment-import-amounts.md`.)
 
-- Use `parseBhdToFils` for all inbound text amounts — it normalises both
-  `"4.75"` and `"4.750"` to the same integer.
+- Use `parseBhdToFils` for all inbound text amounts — `"4.75"` and
+  `"4.750"` both become 4750 fils.
 - Rates are basis points. `applyRateFils` handles the conversion.
 - Never introduce `BigInt` — the existing `Number.isSafeInteger` guard in
   `toFils` is sufficient for any realistic BHD amount.
