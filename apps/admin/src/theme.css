@@ -77,6 +77,8 @@
  * buttons and generous rounding. Unbounded for display type. */
 :root,
 :root[data-design="carnival"] {
+  --hero-action-bg: #ffb42e;
+  --hero-action-ink: #151a52;
   --side-bg: #1f2672;
   --side-surface: #283090;
   --side-surface-3: #323ba3;
@@ -177,6 +179,8 @@
  * warm plum, not black, with blush buttons. Bricolage Grotesque for
  * display type. */
 :root[data-design="blush"] {
+  --hero-action-bg: #f2c6c2;
+  --hero-action-ink: #151314;
   --side-bg: #fbeee9;
   --side-surface: #fff8f5;
   --side-surface-3: #f2dcd6;
@@ -234,6 +238,8 @@
 }
 
 :root[data-design="blush"][data-theme="night"] {
+  --hero-action-bg: #2b2127;
+  --hero-action-ink: #fbeee9;
   --side-bg: #33272e;
   --side-surface: #3e3039;
   --side-surface-3: #4a3943;
@@ -284,6 +290,8 @@
  * corners and squarer buttons than the other two. Dark is a mid slate
  * (#26324d), clearly lighter than night-black. Lexend for display type. */
 :root[data-design="slate"] {
+  --hero-action-bg: #ff6b6b;
+  --hero-action-ink: #1e2a46;
   --side-bg: #2f3d5c;
   --side-surface: #3a4a6c;
   --side-surface-3: #44557a;
@@ -324,7 +332,7 @@
   --c-scrim: rgba(30, 42, 70, 0.45);
   --art-1: #ff6b6b;
   --art-2: #6cb6ff;
-  --art-3: #2f3d5c;
+  --art-3: #4a5b80;
   --art-4: #ffd27a;
   --art-5: #1e2a46;
   --hero-bg: #2f3d5c;
@@ -538,6 +546,31 @@ h1 {
   color: var(--side-active-ink);
   background: var(--side-active-bg);
 }
+
+/* The design illustrations (DesignArt.tsx): show the current design's. */
+.fp-design-art > g {
+  display: none;
+}
+
+:is(:root[data-design="carnival"], :root:not([data-design])) .fp-art-carnival,
+:root[data-design="blush"] .fp-art-blush,
+:root[data-design="slate"] .fp-art-slate {
+  display: inline;
+}
+
+.fp-design-art .a1 { fill: var(--art-1); }
+.fp-design-art .a2 { fill: var(--art-2); }
+.fp-design-art .a3 { fill: var(--art-3); }
+.fp-design-art .a4 { fill: var(--art-4); }
+.fp-design-art .a5 { fill: var(--art-5); }
+.fp-design-art .paper { fill: var(--hero-ink); }
+.fp-design-art .faint { opacity: 0.35; }
+.fp-design-art .card { filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.18)); }
+.fp-design-art .stroke { fill: none; stroke: var(--art-1); stroke-width: 6; stroke-linecap: round; }
+.fp-design-art .stroke-only :is(.s1, .s2) { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.fp-design-art .s1 { stroke: var(--art-1); }
+.fp-design-art .s2 { stroke: var(--art-2); stroke-width: 3; }
+.fp-design-art .thick { stroke-width: 5; }
 
 /* Page backdrops. Carnival and Slate get a dot grid in the top corner
  * (from the brief's images 2 and 3); Blush a blush-to-peach wash. */

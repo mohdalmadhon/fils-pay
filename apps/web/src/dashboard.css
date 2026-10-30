@@ -1155,9 +1155,114 @@
   color: var(--c-ink-3);
 }
 
+/* The balance band: the design's hero colour, a large amount, two actions
+ * and the design's illustration. */
+.ov-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 340px);
+  align-items: center;
+  gap: var(--sp-6);
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-8) var(--sp-8) var(--sp-8) var(--sp-10);
+  color: var(--hero-ink);
+  background: var(--hero-bg);
+  border-radius: var(--r-4);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+}
+
+.ov-hero p {
+  margin: 0;
+}
+
+.ov-hero-greeting {
+  font-size: var(--text-base);
+  color: var(--hero-ink-2);
+}
+
+.ov-hero-label {
+  margin-top: var(--sp-6) !important;
+  font-size: var(--text-sm);
+  color: var(--hero-ink-2);
+}
+
+.ov-hero-amount {
+  margin-top: var(--sp-1) !important;
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  line-height: 1.1;
+}
+
+.ov-hero-amount .fp-amount-fils,
+.ov-hero-amount .fp-amount-cur {
+  color: var(--hero-ink-2);
+}
+
+.ov-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: var(--sp-6);
+}
+
+.ov-hero-primary,
+.ov-hero-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: var(--control-h-lg);
+  padding: 0 var(--sp-5);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: var(--r-button);
+  transition: transform var(--dur-fast) var(--ease), filter var(--dur-fast) var(--ease);
+}
+
+.ov-hero-primary {
+  color: var(--hero-action-ink);
+  background: var(--hero-action-bg);
+}
+
+.ov-hero-primary svg {
+  width: 18px;
+  height: 18px;
+}
+
+.ov-hero-secondary {
+  color: var(--hero-ink);
+  border: 1.5px solid color-mix(in srgb, var(--hero-ink) 45%, transparent);
+}
+
+.ov-hero-primary:hover,
+.ov-hero-secondary:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.ov-hero-art {
+  width: 100%;
+  height: auto;
+  max-height: 220px;
+  margin: calc(-1 * var(--sp-4)) 0;
+}
+
+:root[data-costume="halloween"] .ov-hero-art {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .ov-hero {
+    grid-template-columns: 1fr;
+    padding: var(--sp-6);
+  }
+  .ov-hero-art {
+    max-height: 150px;
+  }
+}
+
 .ov-tiles {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-bottom: var(--sp-4);
   background: var(--c-surface);
   border: 1px solid var(--c-line);
@@ -1208,7 +1313,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
   font-size: var(--text-xl);
   font-weight: 600;
   letter-spacing: -0.03em;

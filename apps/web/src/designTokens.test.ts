@@ -80,6 +80,11 @@ const REQUIRED = [
   "--side-ink-3",
   "--side-active-bg",
   "--side-active-ink",
+  "--hero-bg",
+  "--hero-ink",
+  "--hero-ink-2",
+  "--hero-action-bg",
+  "--hero-action-ink",
 ];
 
 /** [text token, background token]: the pairs components actually draw. */
@@ -103,6 +108,10 @@ const PAIRS: Array<[string, string]> = [
     ["--side-bg", "--side-surface", "--side-surface-3"].map((bg): [string, string] => [ink, bg]),
   ),
   ["--side-active-ink", "--side-active-bg"],
+  // The balance band on Overview.
+  ["--hero-ink", "--hero-bg"],
+  ["--hero-ink-2", "--hero-bg"],
+  ["--hero-action-ink", "--hero-action-bg"],
 ];
 
 for (const design of DESIGNS) {

@@ -11,6 +11,8 @@ import { useDashboardAuth } from "../../auth/DashboardAuthContext.js";
 import { AreaChart } from "../../components/kit/AreaChart.js";
 import { useCountUp } from "../../components/kit/CountUp.js";
 import { icons } from "../../components/art/Icons.js";
+import { DesignArt } from "../../components/art/DesignArt.js";
+import { RequireRole } from "../../auth/RequireRole.js";
 
 /** 60s: comfortably above the reporting worker's 15s worst-case lag, and
  *  more than often enough for a dashboard. Poll, not push —
@@ -83,15 +85,36 @@ export function OverviewPage() {
   return (
     <section>
       <h1>Overview</h1>
-      <p className="ov-greeting">
-        {greeting}
-        {me ? `, ${me.merchant.displayName}` : ""}. Here is where your money stands.
-      </p>
+      {/* The balance band: the one bold element on the page, in the
+          design's hero colour with its own art. */}
+      <div className="ov-hero">
+        <div className="ov-hero-text">
+          <p className="ov-hero-greeting">
+            {greeting}
+            {me ? `, ${me.merchant.displayName}` : ""}
+          </p>
+          <p className="ov-hero-label">
+            Captured {volumes ? `in the last ${volumes.points.length} ${volumes.points.length === 1 ? "day" : "days"}` : "so far"}
+          </p>
+          <p className="ov-hero-amount">
+            <RollingAmount fils={totals.gross} />
+          </p>
+          <div className="ov-hero-actions">
+            <RequireRole allow={["owner", "finance"]}>
+              <Link className="ov-hero-primary" to="/dashboard/payment-links/new">
+                {icons.plus}
+                Create a payment link
+              </Link>
+            </RequireRole>
+            <Link className="ov-hero-secondary" to="/dashboard/transactions">
+              See transactions
+            </Link>
+          </div>
+        </div>
+        <DesignArt className="ov-hero-art" />
+      </div>
 
       <div className="ov-tiles">
-        <Tile label="Captured volume" icon={icons.transactions}>
-          <RollingAmount fils={totals.gross} />
-        </Tile>
         <Tile label="Payments captured" icon={icons.check}>
           <RollingCount value={totals.count} />
         </Tile>
