@@ -12,7 +12,7 @@
  *   ramp.json, crash.json            checkout-load.mjs reports
  *   ramp-health.csv, crash-health.csv  sample-health.mjs timelines
  *   ramp-tps.csv, crash-tps.csv      export-throughput.mjs (from the database)
- *   resources.csv                    time,apiPid,cpuPct,rssMB (optional)
+ *   resources.csv                    time,apiPid,cpuPct,rssMB (optional; memory is graphed)
  *   events.log                       "<ISO time> <what happened>" per line
  *   ramp-verify.out, crash-verify.out  verify-db.mjs output
  */
@@ -155,6 +155,10 @@ function timelineSection(prefix, title, intro) {
     }
   }
   if (start !== null) down.push({ from: start, to: at(health[health.length - 1].time), label: "API not answering" });
+  // The database's own outage, from the event log (kill ... postgres up).
+  const dbDown = events.find((e) => e.t >= t0 && e.t <= t1 && /kill -9 postgres/.test(e.text));
+  const dbUp = dbDown && events.find((e) => e.t > dbDown.t && /postgres up/.test(e.text));
+  if (dbDown && dbUp) down.push({ from: (dbDown.t - t0) / 1000, to: (dbUp.t - t0) / 1000, label: "database down" });
   const markers = events.filter((e) => e.t >= t0 && e.t <= t1 && /kill|restart|postgres up|supervisor|step started/.test(e.text)).map((e) => ({ x: (e.t - t0) / 1000, label: e.text.replace(/^crash: /, "") }));
   let html = `<section><h2>${title}</h2><p class="lede">${intro}</p>`;
   if (tps) {
@@ -171,12 +175,13 @@ function timelineSection(prefix, title, intro) {
     { xLabel: "seconds since the start", yLabel: "count / milliseconds", xIsTime: true, markers, bands: down },
   );
   const shed = [];
-  let base = 0;
+  const firstUp = health.find((r) => r.up === "1");
+  let base = -(firstUp ? Number(firstUp.shedTotal) : 0); // count from this run's start
   let prev = 0;
   for (const r of health) {
     if (r.up !== "1") continue;
     const v = Number(r.shedTotal);
-    if (v < prev) base += prev; // restarted: the counter began again
+    if (v < prev) base += prev; // restarted: the counter began again at 0
     prev = v;
     shed.push([at(r.time), base + v]);
   }
@@ -184,12 +189,11 @@ function timelineSection(prefix, title, intro) {
   if (resources) {
     const rs = resources.filter((r) => Date.parse(r.time) >= t0 && Date.parse(r.time) <= t1);
     if (rs.length) {
-      html += `<h3>API process: CPU and memory</h3>` + lineChart(
-        [
-          { name: "CPU % of one core", points: rs.map((r) => [at(r.time), r.cpuPct === "" ? null : Number(r.cpuPct)]) },
-          { name: "memory (MB)", points: rs.map((r) => [at(r.time), r.rssMB === "" ? null : Number(r.rssMB)]), color: "var(--s2)" },
-        ],
-        { xLabel: "seconds since the start", yLabel: "% / MB", xIsTime: true, markers, bands: down },
+      // Memory only: ps's %cpu is an average over the process's whole life,
+      // not the CPU it uses now, so it would mislead on a graph over time.
+      html += `<h3>API process memory</h3>` + lineChart(
+        [{ name: "resident memory (MB)", points: rs.map((r) => [at(r.time), r.rssMB === "" ? null : Number(r.rssMB)]), color: "var(--s2)" }],
+        { xLabel: "seconds since the start", yLabel: "MB", xIsTime: true, markers, bands: down },
       );
     }
   }
