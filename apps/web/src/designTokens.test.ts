@@ -5,8 +5,10 @@ import test from "node:test";
 /**
  * Every design (Orchid, Lagoon, Saffron) in both modes defines the full set
  * of colour tokens, and every pair of text and background the components
- * use reaches WCAG AA (4.5:1). Read straight from theme.css, so a token
- * edit that breaks contrast fails here before anyone sees it.
+ * use reaches WCAG AA (4.5:1). The thick ink borders that outline cards,
+ * fields and buttons reach 3:1 against everything they sit on (WCAG's
+ * contrast for the edges of controls). Read straight from theme.css, so a
+ * token edit that breaks contrast fails here before anyone sees it.
  *
  * The Ops console keeps an identical copy of theme.css; that is checked
  * too.
@@ -85,8 +87,10 @@ const REQUIRED = [
   "--hero-ink-2",
   "--hero-action-bg",
   "--hero-action-ink",
-  "--action-from",
-  "--action-to",
+  "--c-action",
+  "--c-on-action",
+  "--c-border",
+  "--c-shadow-hard",
 ];
 
 /** [text token, background token]: the pairs components actually draw. */
@@ -114,20 +118,32 @@ const PAIRS: Array<[string, string]> = [
   ["--hero-ink", "--hero-bg"],
   ["--hero-ink-2", "--hero-bg"],
   ["--hero-action-ink", "--hero-action-bg"],
-  // Primary buttons: a gradient, so its text is checked against both ends.
-  ["--c-on-primary", "--action-from"],
-  ["--c-on-primary", "--action-to"],
+  // Primary buttons: a flat fill in the design's loudest colour.
+  ["--c-on-action", "--c-action"],
+  // Links and the selected tab are drawn in the primary colour.
+  ["--c-primary", "--c-surface"],
+  ["--c-primary", "--c-bg"],
+];
+
+/** [edge colour, what it sits on]: borders that must be seen, 3:1. */
+const EDGES: Array<[string, string]> = [
+  ...["--c-bg", "--c-surface", "--c-surface-2", "--c-surface-3", "--c-input"].map((bg): [string, string] => ["--c-border", bg]),
+  ["--side-ink", "--side-bg"],
 ];
 
 for (const design of DESIGNS) {
   for (const mode of MODES) {
-    test(`${design} ${mode}: every token is set and every text colour reaches 4.5:1`, () => {
+    test(`${design} ${mode}: every token is set and every text colour reaches 4.5:1 and every border 3:1`, () => {
       const t = tokensFor(design, mode);
       for (const name of REQUIRED) assert.ok(t[name], `${design} ${mode} is missing ${name}`);
       const failures = PAIRS.filter(([fg, bg]) => contrast(t[fg]!, t[bg]!) < 4.5).map(
         ([fg, bg]) => `${fg} ${t[fg]} on ${bg} ${t[bg]}: ${contrast(t[fg]!, t[bg]!).toFixed(2)}`,
       );
       assert.deepEqual(failures, []);
+      const edges = EDGES.filter(([fg, bg]) => contrast(t[fg]!, t[bg]!) < 3).map(
+        ([fg, bg]) => `${fg} ${t[fg]} on ${bg} ${t[bg]}: ${contrast(t[fg]!, t[bg]!).toFixed(2)}`,
+      );
+      assert.deepEqual(edges, []);
     });
   }
 }
