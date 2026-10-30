@@ -130,6 +130,53 @@ func TestRecalculateMDR_RefreshesOpenBatchAtCurrentRate(t *testing.T) {
 	}
 }
 
+func TestRecalculateMDR_LeavesClosedAndPaidBatchesAlone(t *testing.T) {
+	pool := mustPool(t)
+	ctx := context.Background()
+	merchantID := insertActiveMerchant(t, pool, 200)
+
+	closedDate := time.Date(2026, 4, 3, 0, 0, 0, 0, time.UTC)
+	paidDate := time.Date(2026, 4, 4, 0, 0, 0, 0, time.UTC)
+	for _, d := range []time.Time{closedDate, paidDate} {
+		start, _ := BusinessDayWindow(d)
+		insertCaptureEvent(t, pool, merchantID, 200, 20_000, start.Add(time.Hour))
+	}
+	closed, err := CloseBatch(ctx, pool, merchantID, closedDate)
+	if err != nil {
+		t.Fatalf("CloseBatch: %v", err)
+	}
+	paid, err := CloseBatch(ctx, pool, merchantID, paidDate)
+	if err != nil {
+		t.Fatalf("CloseBatch: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE settlement_batches SET status = 'paid' WHERE id = $1`, paid.BatchID); err != nil {
+		t.Fatalf("mark paid: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `UPDATE merchants SET mdr_bps = 275 WHERE id = $1`, merchantID); err != nil {
+		t.Fatalf("update mdr_bps: %v", err)
+	}
+
+	result, err := RecalculateMDR(ctx, pool, merchantID, closedDate, paidDate.AddDate(0, 0, 1))
+	if err != nil {
+		t.Fatalf("RecalculateMDR: %v", err)
+	}
+	if result.BatchesConsidered != 0 || len(result.Adjusted) != 0 {
+		t.Errorf("considered %d, adjusted %d; finalized batches must not be selected", result.BatchesConsidered, len(result.Adjusted))
+	}
+	for _, b := range []BatchResult{closed, paid} {
+		var fee int64
+		if err := pool.QueryRow(ctx, `SELECT fee_fils FROM settlement_batches WHERE id = $1`, b.BatchID).Scan(&fee); err != nil {
+			t.Fatalf("read batch: %v", err)
+		}
+		if fee != int64(b.FeeFils) {
+			t.Errorf("batch %s fee_fils = %d, want %d (unchanged)", b.BatchID, fee, b.FeeFils)
+		}
+	}
+	if n := countRecalcLedgerLegs(t, pool, merchantID); n != 0 {
+		t.Errorf("posted %d ledger legs, want 0", n)
+	}
+}
+
 // compile-time assertion that RecalculateMDR keeps the *pgxpool.Pool
 // signature the internal API handler passes it.
 var _ func(context.Context, *pgxpool.Pool, uuid.UUID, time.Time, time.Time) (RecalcResult, error) = RecalculateMDR
