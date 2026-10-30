@@ -13,6 +13,7 @@ import { useCountUp } from "../../components/kit/CountUp.js";
 import { icons } from "../../components/art/Icons.js";
 import { DesignArt } from "../../components/art/DesignArt.js";
 import { RequireRole } from "../../auth/RequireRole.js";
+import { windowLabel } from "./windowLabel.js";
 
 /** 60s: comfortably above the reporting worker's 15s worst-case lag, and
  *  more than often enough for a dashboard. Poll, not push —
@@ -94,7 +95,7 @@ export function OverviewPage() {
             {me ? `, ${me.merchant.displayName}` : ""}
           </p>
           <p className="ov-hero-label">
-            Captured {volumes ? `in the last ${volumes.points.length} ${volumes.points.length === 1 ? "day" : "days"}` : "so far"}
+            Captured {volumes ? windowLabel(from, to) : "so far"}
           </p>
           <p className="ov-hero-amount">
             <RollingAmount fils={totals.gross} />
@@ -142,7 +143,7 @@ export function OverviewPage() {
           <AreaChart
             points={volumes.points.map((p) => ({ label: p.date, value: p.capturedGrossFils }))}
             format={(v) => bhd(v)}
-            label={`Captured volume over ${volumes.points.length} days, peaking at ${bhd(peakGross)}.`}
+            label={`Captured volume ${windowLabel(from, to)}, peaking at ${bhd(peakGross)}.`}
           />
         ) : (
           <EmptyState title={loading && !volumes ? "Loading volume" : "No captured volume in this window yet."}>
