@@ -14,6 +14,7 @@ import {
   type SettlementInternalConfig,
 } from "../admin/settlementClient.js";
 import { withTransaction } from "../db/withTransaction.js";
+import { isIsoCalendarDate } from "../lib/calendarDate.js";
 import { AppError, BadRequestError, NotFoundError, UnauthorizedError } from "../lib/errors.js";
 import { adminAdjustmentImportRoutes } from "./adminAdjustmentImport.js";
 import { adminAuthRoutes } from "./adminAuth.js";
@@ -65,7 +66,6 @@ interface GrantIdParams {
   grantId: string;
 }
 
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Today's Asia/Bahrain business date (fixed UTC+3), as YYYY-MM-DD. */
 function bahrainTodayDateString(now: Date = new Date()): string {
@@ -120,8 +120,9 @@ export async function adminRoutes(app: FastifyInstance, options: AdminRoutesOpti
       if (!adminAuth) throw new UnauthorizedError("unauthenticated");
 
       const { date, merchantId } = request.body ?? {};
-      if (!date || !ISO_DATE_RE.test(date)) {
-        throw new BadRequestError("invalid_request", "date is required, formatted YYYY-MM-DD");
+      // A real calendar day: a regex alone let 2026-02-30 through to settlement.
+      if (!isIsoCalendarDate(date)) {
+        throw new BadRequestError("invalid_request", "date is required: a real calendar date formatted YYYY-MM-DD");
       }
       // A closed batch is never reopened, so closing a day that is still
       // running would leave its later captures out. apps/settlement refuses
@@ -284,8 +285,11 @@ export async function adminRoutes(app: FastifyInstance, options: AdminRoutesOpti
       }
 
       const { from, to } = request.body ?? {};
-      if (!from || !ISO_DATE_RE.test(from) || !to || !ISO_DATE_RE.test(to)) {
-        throw new BadRequestError("invalid_request", "from and to are required, formatted YYYY-MM-DD");
+      if (!isIsoCalendarDate(from) || !isIsoCalendarDate(to)) {
+        throw new BadRequestError("invalid_request", "from and to are required: real calendar dates formatted YYYY-MM-DD");
+      }
+      if (from >= to) {
+        throw new BadRequestError("invalid_request", "from must be before to");
       }
 
       const auditLogId = await withTransaction(app.db, async (client) =>
@@ -306,10 +310,13 @@ export async function adminRoutes(app: FastifyInstance, options: AdminRoutesOpti
         await markAdminAuditOutcome(app.db, auditLogId, "failed", {
           error: appErr?.code ?? "internal_error",
           message: (err as Error).message,
-        }).catch(() => {
-          // best-effort outcome recording, per insertAdminAuditLog's own doc
-          // comment on cross-process actions — the attempt row already
-          // committed above is the durable record that this ran.
+        }).catch((updateErr: unknown) => {
+          // Best effort (the attempt row committed above is the durable
+          // record), but logged, never silently dropped.
+          request.log.error(
+            { err: updateErr, auditLogId },
+            "failed to record mdr_recalculation failure outcome on admin_audit_log",
+          );
         });
         throw err;
       }
@@ -317,10 +324,11 @@ export async function adminRoutes(app: FastifyInstance, options: AdminRoutesOpti
       await markAdminAuditOutcome(app.db, auditLogId, "succeeded", {
         batchesConsidered: summary.batchesConsidered,
         adjustedCount: summary.adjusted.length,
-      }).catch(() => {
-        // best-effort outcome recording, per insertAdminAuditLog's own doc
-        // comment on cross-process actions — the attempt row already
-        // committed above is the durable record that this ran.
+      }).catch((updateErr: unknown) => {
+        request.log.error(
+          { err: updateErr, auditLogId },
+          "failed to record mdr_recalculation success outcome on admin_audit_log",
+        );
       });
 
       reply.code(200).send(summary);

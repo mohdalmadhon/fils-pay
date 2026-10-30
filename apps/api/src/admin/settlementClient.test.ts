@@ -177,8 +177,10 @@ test("a timeout is also settlement_unreachable — nothing completed, so it is n
   }
 });
 
-test("a non-2xx response is a 500 settlement_run_failed — the call landed, settlement itself refused", async () => {
-  for (const status of [401, 400, 500]) {
+// Changed with docs/bugs/052: a plain 4xx is now a 400 (next test). 401,
+// 403 and 404 mean our own token or URL is wrong, so they stay 500.
+test("a 5xx, or a 401/403/404, response is a 500 settlement_run_failed", async () => {
+  for (const status of [401, 403, 404, 500]) {
     const fake = await startFakeSettlement((_req, res) => {
       res.writeHead(status, { "content-type": "text/plain" });
       res.end("nope");
@@ -270,5 +272,26 @@ test("triggerBalanceRebuild falls back to the map key when the value carries no 
     ]);
   } finally {
     await fake.close();
+  }
+});
+
+test("a 4xx from settlement (it refused the input) is a 400 settlement_rejected_request carrying its reason", async () => {
+  for (const status of [400, 409, 422]) {
+    const fake = await startFakeSettlement((_req, res) => {
+      res.writeHead(status, { "content-type": "text/plain" });
+      res.end("business date is today or later");
+    });
+    try {
+      const err = await triggerSettlementRunBatch(configFor(fake.url), { date: "2026-09-09" }).then(
+        () => null,
+        (e: unknown) => e,
+      );
+      assert.ok(err instanceof AppError, `status ${status}`);
+      assert.equal(err.statusCode, 400, `status ${status}`);
+      assert.equal(err.code, "settlement_rejected_request");
+      assert.match(err.message, /business date is today or later/);
+    } finally {
+      await fake.close();
+    }
   }
 });

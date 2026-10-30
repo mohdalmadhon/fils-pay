@@ -95,8 +95,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * The two failure modes are deliberately distinct:
  *   - the call never completed (connection refused, DNS failure, timeout) ->
  *     502 `settlement_unreachable`. Nothing ran; retrying is safe.
- *   - the call completed and settlement itself reported failure (non-2xx) ->
- *     500 `settlement_run_failed`. Something may have partially run; the
+ *   - settlement refused the request as invalid (a 4xx other than
+ *     401/403/404) -> 400 `settlement_rejected_request`. Nothing ran.
+ *   - the call completed and settlement itself reported failure (any other
+ *     non-2xx) -> 500 `settlement_run_failed`. Something may have partially run; the
  *     operator needs to look at settlement, not retry blindly.
  * Collapsing these two into one status would tell an operator nothing about
  * which of the two situations they are in.
@@ -136,6 +138,17 @@ async function callSettlementInternal(
       excerpt = (await response.text()).slice(0, 500);
     } catch {
       excerpt = "";
+    }
+    // Settlement refused the request itself (a bad or not-yet-allowed date,
+    // say): nothing ran, and the operator can fix the input, so it is a 400
+    // carrying settlement's reason. 401/403/404 mean our token or URL is
+    // wrong, which is our fault, not the operator's, so those stay 500.
+    if (response.status >= 400 && response.status < 500 && ![401, 403, 404].includes(response.status)) {
+      throw new AppError(
+        400,
+        "settlement_rejected_request",
+        `settlement refused the request (${response.status}): ${excerpt}`,
+      );
     }
     throw new AppError(
       500,

@@ -1680,3 +1680,55 @@ test("GET /v1/admin/merchants: a malformed cursor restarts at page one and a rep
   assert.equal(twice.statusCode, 400, twice.body);
   assert.equal(twice.json().error, "invalid_query");
 });
+
+test("settlement run-batch and mdr recalculation refuse dates that don't exist, and mdr needs from before to", async () => {
+  const admin = await signedInAdmin("finance", "impossible-dates");
+  const { merchantId } = await createMerchant("impossible-dates");
+  settlementSpy.runBatchCalls = [];
+  settlementSpy.recalcMdrCalls = [];
+
+  const run = await app.inject({
+    method: "POST",
+    url: "/v1/admin/settlement/run-batch",
+    headers: { cookie: admin.cookie },
+    payload: { date: "2026-02-30" },
+  });
+  assert.equal(run.statusCode, 400, run.body);
+
+  for (const payload of [
+    { from: "2026-02-30", to: "2026-03-10" },
+    { from: "2026-04-01", to: "2026-04-31" },
+    { from: "2026-04-30", to: "2026-04-01" },
+    { from: "2026-04-01", to: "2026-04-01" },
+  ]) {
+    const res = await app.inject({
+      method: "POST",
+      url: `/v1/admin/merchants/${merchantId}/mdr-recalculation`,
+      headers: { cookie: admin.cookie },
+      payload,
+    });
+    assert.equal(res.statusCode, 400, `${JSON.stringify(payload)} -> ${res.body}`);
+  }
+
+  assert.equal(settlementSpy.runBatchCalls.length, 0, "settlement is never called with a bad date");
+  assert.equal(settlementSpy.recalcMdrCalls.length, 0);
+});
+
+test("settlement run-batch: settlement refusing the request (4xx) is a 400 to the operator", async () => {
+  const admin = await signedInAdmin("finance", "run-batch-4xx");
+  const { AppError } = await import("../lib/errors.js");
+  settlementSpy.runBatchImpl = async () => {
+    throw new AppError(400, "settlement_rejected_request", "settlement refused the request (400): date is in the future");
+  };
+  const res = await app.inject({
+    method: "POST",
+    url: "/v1/admin/settlement/run-batch",
+    headers: { cookie: admin.cookie },
+    payload: { date: "2026-09-09" },
+  });
+  assert.equal(res.statusCode, 400, res.body);
+  assert.equal(res.json().error, "settlement_rejected_request");
+  const audit = await auditRowsFor(admin.id, "settlement_run_batch");
+  assert.equal(audit[0]!.outcome, "failed");
+  settlementSpy.runBatchImpl = async () => ({ businessDate: "2026-09-09", merchantResults: [] });
+});
