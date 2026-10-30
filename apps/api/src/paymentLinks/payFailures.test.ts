@@ -75,3 +75,23 @@ test("an attempt that throws hands the link back instead of leaving it reserved"
   const next = await payPaymentLink(pool, acquirer(), RESERVATION, { token, card: CARD, idempotencyKey: randomUUID() });
   assert.equal(next.statusCode, 200, JSON.stringify(next.body));
 });
+
+test("a failed capture voids the authorization it leaves behind", async () => {
+  const { merchantId, token, linkId } = await createLink();
+  const result = await payPaymentLink(pool, acquirer({ declineCapture: true }), RESERVATION, {
+    token,
+    card: CARD,
+    idempotencyKey: randomUUID(),
+  });
+  assert.notEqual(result.statusCode, 200, JSON.stringify(result.body));
+  assert.equal(await linkStatus(linkId), "active");
+
+  const txns = await pool.query<{ status: string; hold: string | null }>(
+    `SELECT t.status, h.status AS hold
+       FROM transactions t LEFT JOIN holds h ON h.transaction_id = t.id
+      WHERE t.merchant_id = $1`,
+    [merchantId],
+  );
+  assert.equal(txns.rows.length, 1);
+  assert.equal(txns.rows[0]!.status, "voided");
+});

@@ -207,23 +207,26 @@ export async function payPaymentLink(
       [link.id, txnId],
     );
     return { kind: "paid" as const, paidAt: finalized.rows[0]!.paid_at };
-  }).catch(releaseThenRethrow(pool, link.id, reservationToken));
+  }).catch(async (err: unknown) => {
+    // The capture transaction rolled back, so nothing was captured: release
+    // the hold on the card as well as the link. docs/bugs/004.
+    await voidAuthorization(pool, txnId, link);
+    return releaseThenRethrow(pool, link.id, reservationToken)(err);
+  });
 
   if (outcome.kind === "lost") {
     // Nothing was captured, so the cardholder was not charged. Release the
     // hold on their card instead of leaving the authorization open.
-    await voidTransaction(pool, {
-      transactionId: txnId,
-      merchantId: link.merchantId,
-      actor: { type: "system", id: link.id },
-    }).catch((err: unknown) => {
-      console.error(`payPaymentLink: could not void superseded authorization ${txnId} for link ${link.id}`, err);
-    });
+    await voidAuthorization(pool, txnId, link);
     const explained = await classifyClaimFailure(pool, input.token);
     return { statusCode: 409, body: { stage: "capture", ...(explained.body as Record<string, unknown>) } };
   }
 
   if (outcome.kind === "capture_failed") {
+    // Same as "lost": the capture was refused, so the buyer was not charged,
+    // but the authorization would hold their funds for 7 days, and every
+    // retry (a fresh key per click) would add another. docs/bugs/004.
+    await voidAuthorization(pool, txnId, link);
     return {
       statusCode: outcome.result.statusCode,
       body: { stage: "capture", ...(outcome.result.body as Record<string, unknown>) },
@@ -239,6 +242,18 @@ export async function payPaymentLink(
       paidAt: outcome.paidAt.toISOString(),
     },
   };
+}
+
+/** Void an authorization this attempt will not capture. Best effort: a
+ *  failure is logged, and the hold still expires on its own. */
+async function voidAuthorization(pool: Pool, txnId: string, link: { id: string; merchantId: string }): Promise<void> {
+  await voidTransaction(pool, {
+    transactionId: txnId,
+    merchantId: link.merchantId,
+    actor: { type: "system", id: link.id },
+  }).catch((err: unknown) => {
+    console.error(`payPaymentLink: could not void uncaptured authorization ${txnId} for link ${link.id}`, err);
+  });
 }
 
 /** A `.catch` handler: release this attempt's reservation, then rethrow the
