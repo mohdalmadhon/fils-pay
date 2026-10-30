@@ -38,6 +38,11 @@ export async function updateWebhookEndpoint(
   if (input.url !== undefined) {
     validateWebhookUrl(input.url, config);
   }
+  // The body is client JSON, so the type above is only a hope: check it here,
+  // or a bad value fails the CHECK constraint and comes back as a 500.
+  if (input.status !== undefined && input.status !== "active" && input.status !== "disabled") {
+    throw new BadRequestError("invalid_status", "status must be active or disabled");
+  }
 
   const result = await pool.query<WebhookEndpointRow>(
     `UPDATE webhook_endpoints
