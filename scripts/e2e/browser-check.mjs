@@ -135,6 +135,11 @@ async function main() {
     const linkUrl = await dash.locator('a[href*="/pay/"]').first().getAttribute("href");
     check("the link page shows the checkout URL", Boolean(linkUrl && linkUrl.startsWith(`${WEB}/pay/`)), linkUrl ?? "none");
     const linkPage = dash.url();
+    // The signed-in merchant's name, as the API knows it.
+    const merchantName = await dash.evaluate(async (api) => {
+      const res = await fetch(`${api}/v1/auth/me`, { credentials: "include" });
+      return (await res.json()).merchant.displayName;
+    }, API);
     await shot(dash, "2-link-created");
 
     // 3. The customer pays.
@@ -143,7 +148,8 @@ async function main() {
     const payButton = pay.getByRole("button", { name: /^Pay 12\.345 BHD/ });
     await payButton.waitFor();
     check("checkout shows the amount in BHD with three decimals", true, "Pay 12.345 BHD");
-    check("checkout names the merchant", (await pay.getByText(/^Pay .+/).first().innerText()).length > 4);
+    const heading = await pay.getByRole("heading", { level: 1 }).innerText();
+    check("checkout's heading names the merchant", heading.includes(`Pay ${merchantName}`), heading.replace(/\s+/g, " "));
     await shot(pay, "3-checkout");
 
     await pay.getByLabel("Card number").fill("4000000000000002");

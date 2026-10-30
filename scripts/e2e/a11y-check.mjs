@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * Accessibility check: runs axe-core (WCAG 2.1 A and AA, plus axe's best
- * practices) on every dashboard page, in the light and night themes, and on
- * the public checkout page, in Chromium. Write-up: docs/improvements/18.
+ * practices) on every dashboard page, in the light and night themes and the
+ * Halloween costume, and on the public checkout page, in Chromium. Write-up: docs/improvements/18.
  *
  * Any violation fails the run, with the rule, the elements and axe's
  * explanation. axe finds about a third of real problems: keyboard use,
@@ -90,6 +90,8 @@ async function dashboardPages(page, theme) {
   if (await link.count()) {
     await page.goto(WEB + (await link.getAttribute("href")));
     await audit(page, `${theme}: payment link detail`);
+  } else {
+    console.log(`SKIP  ${theme}: payment link detail (no payment links yet)`);
   }
   await page.goto(`${WEB}/dashboard/transactions`);
   await page.waitForLoadState("networkidle");
@@ -97,18 +99,22 @@ async function dashboardPages(page, theme) {
   if (await txn.count()) {
     await page.goto(WEB + (await txn.getAttribute("href")));
     await audit(page, `${theme}: transaction detail`);
+  } else {
+    console.log(`SKIP  ${theme}: transaction detail (no transactions yet)`);
   }
 }
 
 async function main() {
   const browser = await chromium.launch();
   try {
-    // Light theme, then night (the theme is a per-browser choice).
-    for (const theme of ["light", "night"]) {
+    // Each look in its own browser context (the choice is per browser).
+    // "halloween" is the costume (components/kit/Halloween.tsx) over night.
+    for (const theme of ["light", "night", "halloween"]) {
       const context = await browser.newContext();
       await context.addInitScript((t) => {
         try {
-          window.localStorage.setItem("fp-theme", t);
+          window.localStorage.setItem("fp-theme", t === "light" ? "light" : "night");
+          window.localStorage.setItem("fp-costume", t === "halloween" ? "halloween" : "off");
         } catch {
           /* storage blocked: the system theme applies */
         }
@@ -117,8 +123,8 @@ async function main() {
       await signIn(page, theme);
       await dashboardPages(page, theme);
 
-      if (theme === "light") {
-        // The public checkout page, for a fresh link.
+      {
+        // The public checkout page, for a fresh link, in the same theme.
         const created = await page.evaluate(
           async ([api, merchantId]) => {
             const res = await fetch(`${api}/v1/merchants/${merchantId}/payment-links`, {
@@ -131,10 +137,10 @@ async function main() {
           },
           [API, MERCHANT_ID],
         );
-        const customer = await browser.newPage();
+        const customer = await context.newPage();
         await customer.goto(created.url);
         await customer.getByRole("button", { name: /^Pay / }).waitFor();
-        await audit(customer, "checkout");
+        await audit(customer, `${theme}: checkout`);
         await customer.close();
       }
       await context.close();
