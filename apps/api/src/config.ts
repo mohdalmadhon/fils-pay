@@ -219,6 +219,27 @@ function parseOtpDevExpose(
   return on;
 }
 
+/** OTP_DEMO_DISPLAY puts the sign-in code in the login response for both
+ *  planes, so the password alone signs in, exactly like OTP_DEV_EXPOSE. It
+ *  used to be a plain boolean ("true" or "1"), with no production guard and
+ *  no boot warning: one stray variable switched off the second factor for
+ *  every merchant and admin. Now only the exact value "true" turns it on,
+ *  and in production it needs OTP_SHOW_IN_PRODUCTION=true as well, or the
+ *  api refuses to start. docs/defence/02. */
+function parseOtpDemoDisplay(
+  value: string | undefined,
+  nodeEnv: Config["nodeEnv"],
+  showInProduction: string | undefined,
+): boolean {
+  const on = value === "true";
+  if (on && nodeEnv === "production" && showInProduction !== "true") {
+    throw new Error(
+      "loadConfig: OTP_DEMO_DISPLAY must not be set when NODE_ENV=production (unless OTP_SHOW_IN_PRODUCTION=true: hosted demo only)",
+    );
+  }
+  return on;
+}
+
 function parseIntEnv(value: string | undefined, fallback: number): number {
   if (value === undefined || value === "") return fallback;
   const parsed = Number.parseInt(value, 10);
@@ -329,7 +350,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     otpCodeLength: parseIntEnv(env.OTP_CODE_LENGTH, 6),
     otpMaxAttempts: parseIntEnv(env.OTP_MAX_ATTEMPTS, 5),
     otpDevExpose: parseOtpDevExpose(env.OTP_DEV_EXPOSE, nodeEnv, env.OTP_SHOW_IN_PRODUCTION),
-    otpDemoDisplay: parseBoolEnv(env.OTP_DEMO_DISPLAY, false),
+    otpDemoDisplay: parseOtpDemoDisplay(env.OTP_DEMO_DISPLAY, nodeEnv, env.OTP_SHOW_IN_PRODUCTION),
     otpLogFile: env.OTP_LOG_FILE || undefined,
     loginMaxFailures: parseIntEnv(env.LOGIN_MAX_FAILURES, 10),
     // Off unless set: behind a proxy without TRUST_PROXY every client shares

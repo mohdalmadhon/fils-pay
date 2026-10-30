@@ -17,7 +17,11 @@ reseed is needed.
 
 This is an intentional demonstration mode: a code shown alongside the
 password login is not an independent second authentication factor. Remove
-`OTP_DEMO_DISPLAY` or set it to false for real-use deployments. The response
+`OTP_DEMO_DISPLAY` or set it to false for real-use deployments.
+
+**Since 2026-10-30 (docs/defence/02):** in production `OTP_DEMO_DISPLAY=true`
+also needs `OTP_SHOW_IN_PRODUCTION=true`, or the api refuses to start; only
+the exact value `true` turns it on, and the api warns at boot while it is on. The response
 adds no new field names; it enables an existing optional field in the demo.
 
 References: `apps/api/src/config.ts`, `routes/auth.ts`, `routes/adminAuth.ts`;

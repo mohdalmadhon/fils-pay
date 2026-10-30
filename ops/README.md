@@ -136,7 +136,7 @@ docker compose -f ops/docker-compose.yml up
 | api | `ACQUIRER_CALLBACK_SIGNING_SECRET`, `NODE_ENV` | `.env.docker`, loaded with `env_file:` |
 | api | `OTP_DEV_EXPOSE` | off unless set to `true`; refused when `NODE_ENV=production` |
 | api | `OTP_LOG_FILE` | optional private server file for temporary operator OTP delivery; see `docs/fixes/operator-otp-file.md` |
-| api | `OTP_DEMO_DISPLAY` | default false; explicit demo-only OTP display on both login screens, including a production-mode demo; does not enable development logging |
+| api | `OTP_DEMO_DISPLAY` | default false; only the exact value `true` turns it on: demo-only OTP display on both login screens. In production it also needs `OTP_SHOW_IN_PRODUCTION=true` or the api refuses to start, and it warns at boot (docs/defence/02). Does not enable development logging |
 | settlement | `DATABASE_URL` | `environment:` |
 | reporting | `DATABASE_URL` | `environment:`; runs `worker` by default |
 
