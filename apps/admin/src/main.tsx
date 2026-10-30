@@ -9,7 +9,6 @@ import { HalloweenToggle, initCostume } from "./components/kit/Halloween.js";
 import "@fontsource/liter/latin-400.css";
 import "@fontsource-variable/unbounded/index.css";
 import "@fontsource-variable/bricolage-grotesque/index.css";
-import "@fontsource-variable/lexend/index.css";
 import "./theme.css";
 import "./admin.css";
 
