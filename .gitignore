@@ -1,8 +1,10 @@
 node_modules/
 dist/
 *.tsbuildinfo
+# Environment files hold real secrets. Commit only *.example templates.
 .env
-.env.local
+.env.*
+!.env*.example
 npm-debug.log*
 .DS_Store
 .claude/
